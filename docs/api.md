@@ -433,8 +433,9 @@ model:close()
   cross-entropy.
 - `metrics = { "accuracy", "top_3_accuracy" }` adds top-k accuracy for both
   sparse and one-hot labels.
-- `sample_weight = { 1, 2, ... }` scales sparse per-example losses; pass the
-  same option to `evaluate` for weighted validation.
+- `sample_weight = { 1, 2, ... }` scales per-example losses for MSE, MAE,
+  BCE, CCE, and sparse CE; pass the same option to `evaluate` for weighted
+  validation.
 - `fit` accepts `shuffle = true` and `validation_split` (fraction of the tail
   held out when `validation_data` is absent); it returns
   `{ loss = { per_epoch, ... } }`; with

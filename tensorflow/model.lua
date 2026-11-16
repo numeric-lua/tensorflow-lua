@@ -367,18 +367,26 @@ function Sequential:_build()
     "sample_weight")
 
   local loss
+  local function weighted_mean(per_example)
+    local weighted = tf.mul(graph, per_example, sample_weight,
+      "sample_weighted_loss", "float32")
+    return tf.reduce_mean(graph, weighted, { 0 }, "sample_weighted_mean",
+      "float32")
+  end
   if type(loss_spec) == "function" then
     loss = loss_spec(graph, output, target)
   elseif loss_spec == "mse" or loss_spec == "mean_squared_error" then
-    loss = tf.losses.mean_squared_error(graph, output, target, { axes = { 0, 1 } })
+    loss = weighted_mean(tf.losses.mean_squared_error(graph, output, target,
+      { axes = { 1 } }))
   elseif loss_spec == "softmax_cross_entropy" or loss_spec == "cce" then
-    loss = tf.losses.softmax_cross_entropy(graph, output, target, { axes = { 0 } })
+    loss = weighted_mean(tf.losses.softmax_cross_entropy(graph, output, target,
+      { per_example = true }))
   elseif loss_spec == "mae" or loss_spec == "mean_absolute_error" then
-    loss = tf.losses.mean_absolute_error(graph, output, target,
-      { axes = { 0, 1 } })
+    loss = weighted_mean(tf.losses.mean_absolute_error(graph, output, target,
+      { axes = { 1 } }))
   elseif loss_spec == "binary_cross_entropy" or loss_spec == "bce" then
-    loss = tf.losses.binary_cross_entropy(graph, output, target,
-      { axes = { 0, 1 } })
+    loss = weighted_mean(tf.losses.binary_cross_entropy(graph, output, target,
+      { axes = { 1 } }))
   elseif sparse then
     local one_hot = tf.one_hot(graph, target, units, { name = "target_one_hot" })
     local smoothing = self._compiled.label_smoothing or 0

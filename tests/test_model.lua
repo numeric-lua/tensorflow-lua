@@ -607,3 +607,17 @@ test("reports top-k accuracy", function()
   assert_true(history["top_2_accuracy"][5] <= 1)
   model:close()
 end)
+
+test("trains dense losses with sample weights", function()
+  math.randomseed(39)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } },
+    { epochs = 5, sample_weight = { 1, 2, 3 } })
+  assert_eq(#history.loss, 5)
+  local loss = model:evaluate({ { 0 }, { 2 } }, { { 1 }, { 5 } },
+    { sample_weight = { 1, 3 } })
+  assert_true(loss >= 0)
+  model:close()
+end)

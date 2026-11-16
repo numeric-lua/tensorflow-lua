@@ -28,6 +28,7 @@ function Losses.softmax_cross_entropy(graph, logits, labels, options)
   desc:add_input(labels)
   desc:set_type("T", dtype)
   local loss = desc:finish()
+  if options.per_example then return loss end
   return tf().reduce_mean(graph, loss, options.axes or { 0 },
     prefix .. "/mean", dtype, options.keep_dims)
 end
@@ -74,6 +75,7 @@ function Losses.sparse_softmax_cross_entropy(graph, logits, labels, options)
   desc:set_type("T", dtype)
   desc:set_type("Tlabels", labels_dtype)
   local loss = desc:finish()
+  if options.per_example then return loss end
   return tf().reduce_mean(graph, loss, options.axes or { 0 },
     prefix .. "/mean", dtype, options.keep_dims)
 end
