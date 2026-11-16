@@ -210,6 +210,18 @@ Builds a numerically stable sigmoid binary cross-entropy mean using
 Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
 `axes = {0}`). Options: `axes`, `keep_dims`, `dtype`, `name`.
 
+## Data batching
+
+```lua
+local dataset = tf.data.Dataset.new(x, y):shuffle(7):batch(32)
+for batch in dataset:each() do
+  -- batch.x and batch.y
+end
+```
+
+`Dataset.new(x[, y])`, `size()`, `batch(size)`, `shuffle([seed])`, and
+`each()` return batches as `{ x = ..., y = ... }`.
+
 ## Callbacks
 
 ### `tf.callbacks.EarlyStopping(opts)`

@@ -16,6 +16,7 @@ local Losses = require("tensorflow.losses")
 local Metrics = require("tensorflow.metrics")
 local Sequential = require("tensorflow.model")
 local Saver = require("tensorflow.saver")
+local Data = require("tensorflow.data")
 local Callbacks = require("tensorflow.callbacks")
 
 local tf = {
@@ -114,6 +115,7 @@ tf.losses = Losses
 tf.metrics = Metrics
 tf.Sequential = Sequential
 tf.callbacks = Callbacks
+tf.data = Data
 tf.reshape = Ops.reshape
 tf.cast = Ops.cast
 tf.concat = Ops.concat
