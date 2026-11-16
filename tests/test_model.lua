@@ -508,3 +508,19 @@ test("trains sparse labels with label smoothing", function()
   assert_true(history.loss[20] >= 0)
   model:close()
 end)
+
+test("trains sparse labels with sample weights", function()
+  math.randomseed(33)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce",
+    optimizer = { type = "adam", learning_rate = 0.05 } })
+  local history = model:fit({ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+    { 0, 1, 1, 0 }, { epochs = 10, sample_weight = { 1, 2, 1, 2 } })
+  assert_eq(#history.loss, 10)
+  local loss, metrics = model:evaluate({ { 0, 0 }, { 1, 1 } }, { 0, 0 },
+    { sample_weight = { 1, 2 } })
+  assert_true(loss >= 0)
+  assert_true(metrics ~= nil)
+  model:close()
+end)

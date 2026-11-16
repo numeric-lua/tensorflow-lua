@@ -4,7 +4,7 @@
 
 - Conv2D, MaxPool2D, and BatchNormalization layers;
 - Conv2D/MaxPool/BatchNorm stacks in Sequential;
-- label smoothing for sparse classification losses;
+- label smoothing and per-sample weights for sparse classification losses;
 - resumable BatchNorm moving statistics;
 - CI coverage for libtensorflow 2.16.2/2.18.0 on Ubuntu 22.04/24.04;
 - integer-list graph attributes.

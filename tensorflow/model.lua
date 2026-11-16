@@ -285,6 +285,8 @@ function Sequential:_build()
     loss_spec == "sparse_categorical_cross_entropy"
   local target = tf.placeholder(graph, sparse and "int32" or "float32",
     sparse and { -1 } or { -1, units }, "target")
+  local sample_weight = tf.placeholder(graph, "float32", { -1 },
+    "sample_weight")
 
   local loss
   if type(loss_spec) == "function" then
@@ -314,31 +316,33 @@ function Sequential:_build()
         "label_smoothing_scale", "float32"), smooth,
         "label_smoothing_labels", "float32")
     end
+    local ce = graph:new_operation("SoftmaxCrossEntropyWithLogits",
+      "sparse_loss")
+    ce:add_input(output)
+    ce:add_input(one_hot)
+    ce:set_type("T", "float32")
+    local per_example = ce:finish()
+    local weights = sample_weight
     local class_weight = self._compiled.class_weight
     if class_weight ~= nil then
-      local weights = {}
-      for i = 0, units - 1 do weights[#weights + 1] = class_weight[i] or 1 end
-      local ce = graph:new_operation("SoftmaxCrossEntropyWithLogits",
-        "sparse_loss")
-      ce:add_input(output)
-      ce:add_input(one_hot)
-      ce:set_type("T", "float32")
-      local per_example = ce:finish()
+      local class_weights = {}
+      for i = 0, units - 1 do
+        class_weights[#class_weights + 1] = class_weight[i] or 1
+      end
       local axis = tf.constant(graph, 0, "class_axis", "int32")
       local gather = graph:new_operation("GatherV2", "class_sample_weights")
-      gather:add_input(tf.constant(graph, weights, "class_weights", "float32"))
+      gather:add_input(tf.constant(graph, class_weights, "class_weights",
+        "float32"))
       gather:add_input(target)
       gather:add_input(axis)
       gather:set_type("Tparams", "float32")
       gather:set_type("Tindices", "int32")
-      local sample_weights = gather:finish()
-      local weighted = tf.mul(graph, per_example, sample_weights,
-        "weighted_sparse_loss", "float32")
-      loss = tf.reduce_mean(graph, weighted, { 0 }, "sparse_mean", "float32")
-    else
-      loss = tf.losses.softmax_cross_entropy(graph, output, one_hot,
-        { axes = { 0 } })
+      weights = tf.mul(graph, gather:finish(), sample_weight,
+        "class_and_sample_weights", "float32")
     end
+    local weighted = tf.mul(graph, per_example, weights,
+      "weighted_sparse_loss", "float32")
+    loss = tf.reduce_mean(graph, weighted, { 0 }, "sparse_mean", "float32")
   else
     error("unsupported loss '" .. tostring(loss_spec) .. "'", 3)
   end
@@ -419,6 +423,7 @@ function Sequential:_build()
   self._input, self._target, self._loss, self._output = input, target, loss,
     output
   self._training = training
+  self._sample_weight = sample_weight
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
   self._optimizer_state = type(state) == "table" and state or nil
@@ -453,6 +458,10 @@ function Sequential:fit(x, y, options)
     if options.shuffle == nil then options.shuffle = shuffle end
     if options.seed == nil then options.seed = seed end
   end
+  local sample_weights = options.sample_weight
+  if sample_weights ~= nil and #sample_weights ~= #x then
+    error("sample_weight must have one value per sample", 2)
+  end
   if self._session == nil then self._graph = nil end
   if options.validation_split ~= nil and options.validation_data == nil then
     local fraction = options.validation_split
@@ -468,12 +477,16 @@ function Sequential:fit(x, y, options)
       validation_x[#validation_x + 1] = x[i]
       validation_y[#validation_y + 1] = y[i]
     end
-    local train_x, train_y = {}, {}
+    local train_x, train_y, train_weights = {}, {}, {}
     for i = 1, cut do
       train_x[#train_x + 1] = x[i]
       train_y[#train_y + 1] = y[i]
+      if sample_weights ~= nil then
+        train_weights[#train_weights + 1] = sample_weights[i]
+      end
     end
     x, y = train_x, train_y
+    if sample_weights ~= nil then sample_weights = train_weights end
     options.validation_data = { validation_x, validation_y }
   end
   self:_build()
@@ -489,12 +502,16 @@ function Sequential:fit(x, y, options)
       local j = math.random(i)
       order[i], order[j] = order[j], order[i]
     end
-    local shuffled_x, shuffled_y = {}, {}
+    local shuffled_x, shuffled_y, shuffled_weights = {}, {}, {}
     for i, index in ipairs(order) do
       shuffled_x[i] = x[index]
       shuffled_y[i] = y[index]
+      if sample_weights ~= nil then
+        shuffled_weights[i] = sample_weights[index]
+      end
     end
     x, y = shuffled_x, shuffled_y
+    if sample_weights ~= nil then sample_weights = shuffled_weights end
   end
   local epochs = options.epochs or 1
   local batch_size = options.batch_size or #x
@@ -525,7 +542,14 @@ function Sequential:fit(x, y, options)
       for _, output in ipairs(self._metric_outputs or {}) do
         fetch[#fetch + 1] = output
       end
-      local feeds = { [self._input] = batch_x, [self._target] = batch_y }
+      local batch_weights = {}
+      if sample_weights ~= nil then
+        for i = first, last do batch_weights[#batch_weights + 1] = sample_weights[i] end
+      else
+        for _ = first, last do batch_weights[#batch_weights + 1] = 1 end
+      end
+      local feeds = { [self._input] = batch_x, [self._target] = batch_y,
+        [self._sample_weight] = batch_weights }
       if self._training ~= nil then feeds[self._training] = true end
       if #(self._batchnorm_updates or {}) > 0 then
         self._session:run(feeds, {}, self._batchnorm_updates)
@@ -629,6 +653,10 @@ function Sequential:evaluate(x, y, options)
     local dataset_x, dataset_y = x:data()
     x, y = dataset_x, y or dataset_y
   end
+  local sample_weights = options.sample_weight
+  if sample_weights ~= nil and #sample_weights ~= #x then
+    error("sample_weight must have one value per sample", 2)
+  end
   if self._session == nil then self._graph = nil end
   if options.validation_split ~= nil and options.validation_data == nil then
     local fraction = options.validation_split
@@ -644,17 +672,25 @@ function Sequential:evaluate(x, y, options)
       validation_x[#validation_x + 1] = x[i]
       validation_y[#validation_y + 1] = y[i]
     end
-    local train_x, train_y = {}, {}
+    local train_x, train_y, train_weights = {}, {}, {}
     for i = 1, cut do
       train_x[#train_x + 1] = x[i]
       train_y[#train_y + 1] = y[i]
+      if sample_weights ~= nil then
+        train_weights[#train_weights + 1] = sample_weights[i]
+      end
     end
     x, y = train_x, train_y
+    if sample_weights ~= nil then sample_weights = train_weights end
     options.validation_data = { validation_x, validation_y }
   end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
+  local sample_weights = options.sample_weight
+  if sample_weights ~= nil and #sample_weights ~= #x then
+    error("sample_weight must have one value per sample", 2)
+  end
   local batch_size = options.batch_size or #x
   local total, batches = 0, 0
   local metric_sums = {}
@@ -664,8 +700,17 @@ function Sequential:evaluate(x, y, options)
     for _, output in ipairs(self._metric_outputs or {}) do
       fetch[#fetch + 1] = output
     end
+    local batch_weights = {}
+    if sample_weights ~= nil then
+      for i = first, last do
+        batch_weights[#batch_weights + 1] = sample_weights[i]
+      end
+    else
+      for _ = first, last do batch_weights[#batch_weights + 1] = 1 end
+    end
     local feeds = { [self._input] = batch_slice(x, first, last),
-      [self._target] = batch_slice(y, first, last) }
+      [self._target] = batch_slice(y, first, last),
+      [self._sample_weight] = batch_weights }
     if self._training ~= nil then feeds[self._training] = false end
     local values = self._session:run(feeds, fetch)
     total = total + values[1]:totable()
