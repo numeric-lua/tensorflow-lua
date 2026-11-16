@@ -160,7 +160,12 @@ function Sequential:fit(x, y, options)
   local callbacks = options.callbacks or {}
   local validation = options.validation_data
   local history = { loss = {} }
-  if validation ~= nil then history.val_loss = {} end
+  if validation ~= nil then
+    history.val_loss = {}
+    for _, name in ipairs(self._metric_names or {}) do
+      history["val_" .. name] = {}
+    end
+  end
   for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
   for epoch = 1, epochs do
     local epoch_loss, batches = 0, 0
@@ -186,8 +191,13 @@ function Sequential:fit(x, y, options)
       history[name][#history[name] + 1] = metric_sums[i] / batches
     end
     if validation ~= nil then
-      history.val_loss[#history.val_loss + 1] = self:evaluate(validation[1],
+      local val_loss, val_metrics = self:evaluate(validation[1],
         validation[2], { batch_size = batch_size })
+      history.val_loss[#history.val_loss + 1] = val_loss
+      for name, value in pairs(val_metrics or {}) do
+        local target_history = history["val_" .. name]
+        if target_history ~= nil then target_history[#target_history + 1] = value end
+      end
     end
     for _, callback in ipairs(callbacks) do
       if type(callback.on_epoch_end) == "function" then
