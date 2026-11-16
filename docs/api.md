@@ -151,6 +151,12 @@ Adds `ApplyAdadelta` updates with accumulator and update slots. Options:
 `learning_rate`/`lr` (default `1.0`), `rho` (0.95), `epsilon` (1e-8), `name`.
 Initialize `state.initializers`.
 
+### `tf.train.proximal_adagrad(graph, loss, variables[, opts])`
+
+Adds FOBOS/Adagrad updates with an accumulator slot. Options:
+`learning_rate`/`lr` (default `0.01`), `l1` (0), `l2` (0), `name`. Initialize
+`state.initializers`.
+
 ### `tf.train.ftrl(graph, loss, variables[, opts])`
 
 Adds Ftrl-Proximal updates with accumulator and linear slots. Options:
@@ -319,7 +325,7 @@ model:close()
   function
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `adamw`, `sgd`/`gradient_descent`, `rmsprop`,
-  `adagrad`, `adadelta`, `ftrl`, and `momentum`.
+  `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and `momentum`.
 - `metrics = { "accuracy" }` adds per-epoch class accuracy; targets are one-hot
   (or integer indices for sparse losses) and the output has class columns.
 - `metrics = { "binary_accuracy" }` thresholds probability outputs against

@@ -81,6 +81,9 @@ tf.train = {
   ftrl = function(graph, loss, variables, options)
     return Train.ftrl(graph, loss, variables, options)
   end,
+  proximal_adagrad = function(graph, loss, variables, options)
+    return Train.proximal_adagrad(graph, loss, variables, options)
+  end,
   momentum = function(graph, loss, variables, options)
     return Train.momentum(graph, loss, variables, options)
   end,

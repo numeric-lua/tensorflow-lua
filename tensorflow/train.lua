@@ -389,6 +389,45 @@ function Train.adadelta(graph, loss, variables, options)
   return targets, gradients, { initializers = initializers }
 end
 
+function Train.proximal_adagrad(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local l1 = options.l1 or 0
+  local l2 = options.l2 or 0
+  local name = options.name or "ProximalAdagrad"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("proximal_adagrad expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
+    dtype)
+  local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
+  local l2_op = Train.constant(graph, l2, name .. "/l2", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local accum = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/accum_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    local desc = graph:new_operation("ApplyProximalAdagrad",
+      name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(lr)
+    desc:add_input(l1_op)
+    desc:add_input(l2_op)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
 function Train.ftrl(graph, loss, variables, options)
   options = options or {}
   local learning_rate = options.learning_rate or options.lr or 0.001

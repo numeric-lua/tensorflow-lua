@@ -319,3 +319,22 @@ test("applies a finite Ftrl update", function()
     tostring(value))
   session:close()
 end)
+
+test("applies a finite ProximalAdagrad update", function()
+  local graph = tf.Graph.new()
+  local v = tf.variable(graph, 1, "prox_v")
+  local square = graph:new_operation("Square", "prox_loss")
+  square:add_input(v.read); square:set_type("T", "float32")
+  local loss = square:finish()
+  local updates, _, state = tf.train.proximal_adagrad(graph, loss, { v },
+    { learning_rate = 0.1 })
+  local session = tf.Session.new(graph)
+  local init = { v.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  session:run({}, {}, updates)
+  local value = session:run({}, { v.read })[1]:totable()
+  assert_true(type(value) == "number" and value > 0 and value < 1,
+    tostring(value))
+  session:close()
+end)

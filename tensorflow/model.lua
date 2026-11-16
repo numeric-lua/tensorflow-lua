@@ -184,6 +184,10 @@ function Sequential:_build()
   elseif optimizer_type == "ftrl" then
     local result = { tf.train.ftrl(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
+  elseif optimizer_type == "proximal_adagrad" then
+    local result = { tf.train.proximal_adagrad(graph, loss, variables,
+      optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "momentum" then
     local result = { tf.train.momentum(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
