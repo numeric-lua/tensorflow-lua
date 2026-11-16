@@ -76,3 +76,17 @@ test("round-trips every supported dtype", function()
     else assert_eq(result[1], case[2][1]) end
   end
 end)
+
+test("creates and reads TF_STRING tensors", function()
+  local graph = tf.Graph.new()
+  local constant = tf.constant(graph, { "alpha", "b" }, "strings", "string")
+  local identity = graph:new_operation("Identity", "strings_out")
+  identity:add_input(constant)
+  identity:set_type("T", "string")
+  local output = identity:finish()
+  local session = tf.Session.new(graph)
+  local values = session:run({}, { output })[1]:totable()
+  assert_eq(values[1], "alpha")
+  assert_eq(values[2], "b")
+  session:close()
+end)

@@ -23,6 +23,7 @@ local dtypes = {
   uint16 = { code = 17, ctype = "uint16_t", size = 2, name = "uint16" },
   uint32 = { code = 22, ctype = "uint32_t", size = 4, name = "uint32" },
   uint64 = { code = 23, ctype = "uint64_t", size = 8, name = "uint64" },
+  string = { code = 7, ctype = nil, size = 24, name = "string" },
 }
 
 local function canonical(dtype)
@@ -106,6 +107,12 @@ local function product(shape)
 end
 
 local function scalar(value, info)
+  if info.name == "string" then
+    if type(value) ~= "string" then
+      error("string tensors require strings, got " .. type(value), 4)
+    end
+    return value
+  end
   if info.name == "bool" then
     if value == false or value == nil or value == 0 then return 0 end
     if value == true or value == 1 then return 1 end
@@ -140,6 +147,32 @@ function Tensor.new(value, options)
   end
   local lib = capi.load()
   local dims, ndim = make_dims(shape)
+  if info.name == "string" then
+    local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
+      count * info.size)
+    if ptr == nil then error("TF_AllocateTensor failed", 2) end
+    local ok, err = pcall(function()
+      local data = lib.TF_TensorData(ptr)
+      if count > 0 and data == nil then
+        error("TF_TensorData returned NULL for a non-empty tensor", 2)
+      end
+      local array = ffi.cast("TF_TString*", data)
+      for i = 1, count do
+        local value = values[i]
+        if type(value) ~= "string" then
+          error("string tensors require strings, got " .. type(value), 2)
+        end
+        lib.TF_StringInit(array + (i - 1))
+        lib.TF_StringCopy(array + (i - 1), value, #value)
+      end
+    end)
+    if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
+    local handle = ffi.gc(ptr, function(pointer)
+      capi.release_tensor(pointer)
+    end)
+    return setmetatable({ _handle = handle, _shape = shape,
+      _dtype = dtype }, Tensor)
+  end
   local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
     count * info.size)
   if ptr == nil then error("TF_AllocateTensor failed", 2) end
@@ -227,7 +260,14 @@ function Tensor:totable()
   local lib = capi.load()
   local count = self:numel()
   local flat = {}
-  if count > 0 then
+  if count > 0 and info.name == "string" then
+    local array = ffi.cast("TF_TString*", lib.TF_TensorData(self:handle()))
+    for i = 1, count do
+      local pointer = lib.TF_StringGetDataPointer(array + (i - 1))
+      local size = tonumber(lib.TF_StringGetSize(array + (i - 1)))
+      flat[i] = pointer ~= nil and ffi.string(pointer, size) or ""
+    end
+  elseif count > 0 then
     local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
     for i = 1, count do
       local value = array[i - 1]
@@ -252,6 +292,9 @@ function Tensor:totable()
 end
 
 function Tensor:bytes()
+  if self._dtype == "string" then
+    error("string tensors do not support raw byte export", 2)
+  end
   local lib = capi.load()
   local count = self:nbytes()
   if count == 0 then return "" end
@@ -262,6 +305,9 @@ end
 
 function Tensor.from_bytes(dtype, shape, bytes)
   local name, info = dtype_info(dtype)
+  if name == "string" then
+    error("string tensors do not support from_bytes", 2)
+  end
   local count = product(shape)
   local expected = count * info.size
   if #bytes ~= expected then

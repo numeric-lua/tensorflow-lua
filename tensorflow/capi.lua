@@ -12,6 +12,7 @@ typedef struct TF_Operation TF_Operation;
 typedef struct TF_OperationDescription TF_OperationDescription;
 typedef struct TF_Tensor TF_Tensor;
 typedef struct TF_CheckpointReader TF_CheckpointReader;
+typedef struct TF_TString { uint8_t raw[24]; } TF_TString;
 typedef struct TF_ImportGraphDefOptions TF_ImportGraphDefOptions;
 typedef struct TF_Buffer {
   const void* data;
@@ -105,6 +106,12 @@ void TF_CheckpointReaderGetVariableShape(TF_CheckpointReader*, const char*,
   int64_t*, int, TF_Status*);
 TF_Tensor* TF_CheckpointReaderGetTensor(TF_CheckpointReader*, const char*,
   TF_Status*);
+
+void TF_StringInit(TF_TString*);
+void TF_StringCopy(TF_TString*, const char*, size_t);
+const char* TF_StringGetDataPointer(const TF_TString*);
+size_t TF_StringGetSize(const TF_TString*);
+void TF_StringDealloc(TF_TString*);
 
 TF_Tensor* TF_AllocateTensor(TF_DataType, const int64_t*, int, size_t);
 TF_Tensor* TF_NewTensor(TF_DataType, const int64_t*, int, void*, size_t,
