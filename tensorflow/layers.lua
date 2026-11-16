@@ -65,6 +65,23 @@ function Layers.dense(graph, input, units, options)
   }
 end
 
+function Layers.flatten(graph, input, input_size, options)
+  options = options or {}
+  if type(input_size) ~= "number" or input_size < 1 then
+    error("flatten requires a positive input_size", 3)
+  end
+  local tf = require("tensorflow")
+  local output = tf.reshape(graph, input, { -1, input_size },
+    options.name or "flatten", options.dtype or "float32")
+  return {
+    output = output,
+    input_size = input_size,
+    variables = {},
+    initializers = {},
+    dtype = options.dtype or "float32",
+  }
+end
+
 function Layers.embedding(graph, input, input_dim, output_dim, options)
   options = options or {}
   if type(input_dim) ~= "number" or type(output_dim) ~= "number" or

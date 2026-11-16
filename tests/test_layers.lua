@@ -46,3 +46,21 @@ test("builds and runs an embedding layer", function()
   assert_eq(table.concat(output:shape(), ","), "2,3")
   session:close()
 end)
+
+test("flattens per-sample features", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 2, 2, 2 }, "flat_input")
+  local layer = tf.layers.flatten(graph, input, 4, { name = "flat" })
+  local session = tf.Session.new(graph)
+  local values = { { { 1, 2 }, { 3, 4 } }, { { 5, 6 }, { 7, 8 } } }
+  local output = session:run({ [input] = values }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "2,4")
+  assert_eq(output:totable()[2][4], 8)
+  session:close()
+end)
+
+test("flatten validates input size", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1 }, "flat_bad")
+  assert_error(function() tf.layers.flatten(graph, input, 0) end, "input_size")
+end)
