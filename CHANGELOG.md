@@ -13,7 +13,9 @@
 - in-memory EarlyStopping restoration, resumable optimizer/epoch training
   state, runtime train/eval Dropout in Sequential, and broader leak/GC stress
   coverage;
-- README and API navigation refresh.
+- README and API navigation refresh;
+- resumable optimizer/epoch checkpoints and runtime train/eval Dropout;
+- Sequential inference/training benchmarks and Ubuntu 22.04/24.04 CI.
 
 ## 0.3.0
 

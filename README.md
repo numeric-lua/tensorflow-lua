@@ -214,8 +214,8 @@ See [docs/api.md](docs/api.md).
 ./scripts/bench.sh
 ```
 
-The harness measures tensor conversion and graph session execution; it is not a
-CI gate.
+The harness measures tensor conversion, graph session execution, Sequential
+inference, and training epochs; it is not a CI gate.
 
 ## Design and contributing
 

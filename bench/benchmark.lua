@@ -32,4 +32,25 @@ bench("session add", 1000, function()
 end)
 session:close()
 
+math.randomseed(1)
+local model = tf.Sequential.new({ input_shape = { 4 } })
+model:add({ units = 8, options = { activation = "relu" } })
+model:add({ units = 1 })
+model:compile({ optimizer = { type = "adam", learning_rate = 0.01 } })
+local train_x, train_y = {}, {}
+for i = 1, 32 do
+  local row = {}
+  for j = 1, 4 do row[j] = math.random() end
+  train_x[i] = row
+  train_y[i] = { math.random() }
+end
+model:fit(train_x, train_y, { epochs = 1, batch_size = 8 })
+bench("model predict x1000", 1000, function(i)
+  local _ = model:predict({ { i / 1000, 0.2, 0.3, 0.4 } }):totable()
+end)
+bench("model train epoch x20", 20, function()
+  model:fit(train_x, train_y, { epochs = 1, batch_size = 8 })
+end)
+model:close()
+
 print("version", tf.version(), "binding", tf.VERSION)
