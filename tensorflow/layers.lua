@@ -63,6 +63,39 @@ function Layers.dense(graph, input, units, options)
   }
 end
 
+function Layers.embedding(graph, input, input_dim, output_dim, options)
+  options = options or {}
+  if type(input_dim) ~= "number" or type(output_dim) ~= "number" or
+      input_dim < 1 or output_dim < 1 then
+    error("embedding requires positive input and output dimensions", 3)
+  end
+  local tf = require("tensorflow")
+  local prefix = options.name or "embedding"
+  local dtype = options.dtype or "float32"
+  local indices_dtype = options.indices_dtype or "int32"
+  local bound = 1 / math.sqrt(output_dim)
+  local weight = tf.variable(graph,
+    random_uniform(input_dim, output_dim, bound), prefix .. "/weight",
+    { dtype = dtype })
+  local axis = tf.constant(graph, 0, prefix .. "/axis", "int32")
+  local desc = graph:new_operation("GatherV2", prefix .. "/gather")
+  desc:add_input(weight.read)
+  desc:add_input(input)
+  desc:add_input(axis)
+  desc:set_type("Tparams", dtype)
+  desc:set_type("Tindices", indices_dtype)
+  desc:set_int("batch_dims", 0)
+  return {
+    output = desc:finish(),
+    weight = weight,
+    variables = { weight },
+    initializers = { weight.initializer },
+    input_dim = input_dim,
+    output_dim = output_dim,
+    dtype = dtype,
+  }
+end
+
 function Layers.sequential(graph, input, definitions, input_size)
   local layers = {}
   for i, definition in ipairs(definitions) do

@@ -34,3 +34,15 @@ test("dense validates input size", function()
   assert_error(function() tf.layers.dense(graph, input, 4, {}) end,
     "input_size")
 end)
+
+test("builds and runs an embedding layer", function()
+  math.randomseed(15)
+  local graph = tf.Graph.new()
+  local indices = tf.placeholder(graph, "int32", { 2 }, "emb_indices")
+  local layer = tf.layers.embedding(graph, indices, 5, 3, { name = "emb" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local output = session:run({ [indices] = { 0, 4 } }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "2,3")
+  session:close()
+end)

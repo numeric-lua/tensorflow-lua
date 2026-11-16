@@ -282,6 +282,12 @@ bias. Required option: `input_size`. Other options: `use_bias` (true),
 
 Returns `{ output, weight, bias, variables, initializers, input_size, units }`.
 
+### `tf.layers.embedding(graph, input, input_dim, output_dim[, opts])`
+
+Builds an embedding table and gathers `input` indices. Options: `indices_dtype`
+(default `int32`), `dtype`, `name`. Returns
+`{ output, weight, variables, initializers, input_dim, output_dim }`.
+
 ### `tf.layers.sequential(graph, input, definitions, input_size)`
 
 Chains Dense layers. Each definition is `{ units = n, options = {...} }`.
