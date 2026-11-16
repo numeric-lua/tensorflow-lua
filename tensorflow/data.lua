@@ -17,6 +17,30 @@ function Dataset:data()
   return self._x, self._y, self._batch_size, self._shuffle, self._seed
 end
 
+function Dataset:map(fn)
+  if type(fn) ~= "function" then error("map expects a function", 2) end
+  local mapped_x, mapped_y = {}, {}
+  for i = 1, #self._x do
+    local x, y = fn(self._x[i], self._y and self._y[i] or nil)
+    mapped_x[i] = x
+    if self._y ~= nil then mapped_y[i] = y end
+  end
+  return Dataset.new(mapped_x, self._y ~= nil and mapped_y or nil)
+end
+
+function Dataset:filter(fn)
+  if type(fn) ~= "function" then error("filter expects a function", 2) end
+  local filtered_x, filtered_y = {}, {}
+  for i = 1, #self._x do
+    local y = self._y and self._y[i] or nil
+    if fn(self._x[i], y) then
+      filtered_x[#filtered_x + 1] = self._x[i]
+      if self._y ~= nil then filtered_y[#filtered_y + 1] = y end
+    end
+  end
+  return Dataset.new(filtered_x, self._y ~= nil and filtered_y or nil)
+end
+
 function Dataset:split(fraction)
   if type(fraction) ~= "number" or fraction <= 0 or fraction >= 1 then
     error("split fraction must be between 0 and 1", 2)

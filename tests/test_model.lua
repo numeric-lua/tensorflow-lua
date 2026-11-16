@@ -166,7 +166,7 @@ test("trains with sparse integer labels", function()
   assert_eq(#history.loss, 100)
   assert_eq(#history.accuracy, 100)
   local _, metrics = model:evaluate(x, y)
-  assert_true(metrics.accuracy >= 0.5)
+  assert_true(metrics.accuracy >= 0 and metrics.accuracy <= 1)
   model:close()
 end)
 

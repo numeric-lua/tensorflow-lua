@@ -268,8 +268,8 @@ end
 ```
 
 `Dataset.new(x[, y])`, `size()`, `batch(size[, opts])`, `shuffle([seed])`,
-`split(fraction)`, `repeat_times(count)`, `take(count)`, and `each()` return
-batches as `{ x = ..., y = ... }`. `opts.drop_last` discards a partial final
+`map(fn)`, `filter(fn)`, `split(fraction)`, `repeat_times(count)`,
+`take(count)`, and `each()` return batches as `{ x = ..., y = ... }`. `opts.drop_last` discards a partial final
 batch. (`repeat` is a Lua keyword, so the method is
 `repeat_times`.)
 

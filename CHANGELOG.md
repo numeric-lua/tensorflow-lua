@@ -16,7 +16,7 @@
 - Embedding, Flatten, and Dropout layers;
 - Sequential parameter counts, summaries, `predict_classes`, and
   `validation_split`;
-- Dataset `repeat_times`, `take`, and `drop_last` batching;
+- Dataset `repeat_times`, `take`, `drop_last`, `map`, and `filter`;
 - Sequential `get_weights` / `set_weights`, `predict_proba`, Flatten layers,
   and Embedding/integer-input stacks with automatic int32 inputs;
 - class-weighted sparse classification losses;
