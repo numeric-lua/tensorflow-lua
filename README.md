@@ -49,10 +49,12 @@ experimental `tf.eager` surface with basic arithmetic and activations.
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
 
-# optional LuaRocks install (pure Lua, external libtensorflow)
-luarocks --lua-version=5.1 make tensorflow-lua-0.4.0-1.rockspec
+# optional LuaRocks install from the release source rock
+luarocks --lua-version=5.1 install \
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.4.0/tensorflow-lua-0.4.0-1.src.rock
 
-# or install into a local throwaway tree
+# or build from a checkout
+luarocks --lua-version=5.1 make tensorflow-lua-0.4.0-1.rockspec
 ./scripts/package.sh tensorflow-lua-0.4.0-1.rockspec
 ```
 
@@ -221,6 +223,12 @@ inference, and training epochs; it is not a CI gate.
 
 See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 [CONTRIBUTING.md](CONTRIBUTING.md) for checks and constraints.
+
+## Releases
+
+[**v0.4.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.4.0)
+ships the versioned rockspec and source rock. Release notes are in
+[RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Changelog and lint
 

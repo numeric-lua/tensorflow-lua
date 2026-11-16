@@ -6,3 +6,5 @@ tests/.tmp/
 .luacheckcache
 third_party/
 dist/
+*.src.rock
+*.all.rock
