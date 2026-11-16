@@ -47,8 +47,14 @@ function Description:add_inputs(values)
   return self
 end
 
-function Description:add_control_input(name)
-  capi.load().TF_AddControlInput(self._desc, self._graph:operation(name))
+function Description:add_control_input(value)
+  local operation
+  if type(value) == "table" and value.oper then
+    operation = value.oper
+  else
+    operation = self._graph:operation(value)
+  end
+  capi.load().TF_AddControlInput(self._desc, operation)
   return self
 end
 

@@ -11,6 +11,7 @@ typedef struct TF_SessionOptions TF_SessionOptions;
 typedef struct TF_Operation TF_Operation;
 typedef struct TF_OperationDescription TF_OperationDescription;
 typedef struct TF_Tensor TF_Tensor;
+typedef struct TF_CheckpointReader TF_CheckpointReader;
 typedef struct TF_ImportGraphDefOptions TF_ImportGraphDefOptions;
 typedef struct TF_Buffer {
   const void* data;
@@ -91,6 +92,19 @@ void TF_SessionRun(TF_Session*, const TF_Buffer*,
   const TF_Output*, TF_Tensor**, int,
   const TF_Operation* const*, int,
   TF_Buffer*, TF_Status*);
+
+TF_CheckpointReader* TF_NewCheckpointReader(const char*, TF_Status*);
+void TF_DeleteCheckpointReader(TF_CheckpointReader*);
+int TF_CheckpointReaderHasTensor(TF_CheckpointReader*, const char*);
+const char* TF_CheckpointReaderGetVariable(TF_CheckpointReader*, int);
+int TF_CheckpointReaderSize(TF_CheckpointReader*);
+TF_DataType TF_CheckpointReaderGetVariableDataType(TF_CheckpointReader*,
+  const char*);
+int TF_CheckpointReaderGetVariableNumDims(TF_CheckpointReader*, const char*);
+void TF_CheckpointReaderGetVariableShape(TF_CheckpointReader*, const char*,
+  int64_t*, int, TF_Status*);
+TF_Tensor* TF_CheckpointReaderGetTensor(TF_CheckpointReader*, const char*,
+  TF_Status*);
 
 TF_Tensor* TF_AllocateTensor(TF_DataType, const int64_t*, int, size_t);
 TF_Tensor* TF_NewTensor(TF_DataType, const int64_t*, int, void*, size_t,

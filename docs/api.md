@@ -105,6 +105,36 @@ Adds `ApplyGradientDescent` targets for the variables and returns
 `session:run({}, {}, { variable.initializer })`, then run the target list once
 per training step.
 
+### `tf.train.adam(graph, loss, variables[, opts])`
+
+Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
+(default `0.001`), `beta1` (0.9), `beta2` (0.999), `epsilon` (1e-8), `name`.
+Returns `targets, gradients, state`. Initialize each variable and every entry in
+`state.initializers` before training.
+
+### `tf.save_checkpoint(session, path, variables)`
+
+Writes a portable tensorflow-lua checkpoint. `variables` is a list of
+`{ name = ..., variable = ... }` entries. The format stores dtype, shape, and
+raw tensor bytes; it is not TensorFlow's native checkpoint format.
+
+### `tf.load_checkpoint(graph, path, variables)`
+
+Builds `Assign` targets from a portable checkpoint saved by
+`tf.save_checkpoint`. Returns the target list for `session:run`.
+
+### `tf.CheckpointReader`
+
+Reads official TensorFlow checkpoint files:
+
+```lua
+local reader = tf.CheckpointReader.new("model.ckpt")
+print(reader:size())
+for _, name in ipairs(reader:variables()) do print(name) end
+local tensor = reader:tensor(name)
+reader:close()
+```
+
 ### `tf.gradients(graph, outputs, inputs)`
 
 Adds TensorFlow gradient operations for a list of output graph outputs with

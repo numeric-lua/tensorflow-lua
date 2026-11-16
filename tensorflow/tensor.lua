@@ -251,6 +251,42 @@ function Tensor:totable()
   return build(1)
 end
 
+function Tensor:bytes()
+  local lib = capi.load()
+  local count = self:nbytes()
+  if count == 0 then return "" end
+  local data = lib.TF_TensorData(self:handle())
+  if data == nil then error("TF_TensorData returned NULL", 2) end
+  return ffi.string(data, count)
+end
+
+function Tensor.from_bytes(dtype, shape, bytes)
+  local name, info = dtype_info(dtype)
+  local count = product(shape)
+  local expected = count * info.size
+  if #bytes ~= expected then
+    error(string.format("tensor bytes have length %d, expected %d",
+      #bytes, expected), 2)
+  end
+  local lib = capi.load()
+  local dims, ndim = make_dims(shape)
+  local ptr = lib.TF_AllocateTensor(info.code, dims, ndim, expected)
+  if ptr == nil then error("TF_AllocateTensor failed", 2) end
+  if expected > 0 then
+    local data = lib.TF_TensorData(ptr)
+    if data == nil then
+      lib.TF_DeleteTensor(ptr)
+      error("TF_TensorData returned NULL", 2)
+    end
+    ffi.copy(data, bytes, expected)
+  end
+  local handle = ffi.gc(ptr, function(pointer)
+    capi.load().TF_DeleteTensor(pointer)
+  end)
+  return setmetatable({ _handle = handle, _shape = shape, _dtype = name },
+    Tensor)
+end
+
 function Tensor:format()
   return string.format("tf.Tensor(shape=[%s], dtype=%s)",
     table.concat(self._shape, ", "), self._dtype)

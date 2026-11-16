@@ -9,7 +9,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
-- add symbolic gradients, variables, and gradient-descent updates;
+- add symbolic gradients, variables, gradient-descent updates, and Adam;
+- save/restore tensorflow-lua checkpoints and read official TensorFlow
+  checkpoints;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
@@ -101,6 +103,24 @@ session:run({}, {}, { variable.initializer })
 for _ = 1, 50 do session:run({}, {}, updates) end
 print(session:run({}, { variable.read })[1]:totable())
 ```
+
+Adam is available with slot variables and bias-correction state:
+
+```lua
+local updates, _, state = tf.train.adam(graph, loss, { variable },
+  { learning_rate = 0.01 })
+session:run({}, {}, { variable.initializer, state.initializers[1],
+  state.initializers[2], state.initializers[3] })
+```
+
+Tensor checkpoints can be saved and restored:
+
+```lua
+tf.save_checkpoint(session, "model.ckpt", { { name = "v", variable = v } })
+local restore = tf.load_checkpoint(graph2, "model.ckpt", { { name = "v", variable = v2 } })
+```
+
+`tf.CheckpointReader` reads official TensorFlow checkpoint files.
 
 Symbolic gradients are also directly available:
 
