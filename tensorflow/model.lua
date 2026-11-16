@@ -194,6 +194,19 @@ function Sequential:evaluate(x, y, options)
   return total / batches
 end
 
+function Sequential:export(path)
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local file, err = io.open(path, "wb")
+  if file == nil then error("cannot open GraphDef: " .. tostring(err), 2) end
+  local ok, write_err = pcall(function()
+    file:write(self._graph:graph_def())
+  end)
+  file:close()
+  if not ok then error(write_err, 2) end
+  return path
+end
+
 function Sequential:save(path)
   if self._session == nil then error("model has no session to save", 2) end
   local entries = {}

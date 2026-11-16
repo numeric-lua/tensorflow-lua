@@ -236,6 +236,7 @@ model:close()
 - `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
   function.
 - `save`/`load` use the portable tensorflow-lua checkpoint format.
+- `export(path)` writes the graph as a GraphDef protobuf.
 
 ## Eager execution (experimental)
 

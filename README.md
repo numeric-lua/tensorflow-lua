@@ -19,7 +19,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - compositional Dense layers with graph variables and initializers;
 - loss helpers (MSE, softmax cross-entropy), accuracy, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
-  validation loss, and epoch callbacks;
+  validation loss, epoch callbacks, and GraphDef export;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
