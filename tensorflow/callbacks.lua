@@ -31,7 +31,7 @@ function Callbacks.EarlyStopping(options)
     best_path = nil,
     stopped_epoch = nil,
   }
-  function callback.on_train_begin(history, model)
+  function callback.on_train_begin(_, model)
     callback.best = nil
     callback.wait = 0
     callback.stopped_epoch = nil
