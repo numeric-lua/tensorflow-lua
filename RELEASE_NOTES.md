@@ -27,9 +27,13 @@ Native LuaJIT bindings for the TensorFlow C API.
 
 ```sh
 ./scripts/fetch_libtensorflow.sh
-# optional:
-luarocks --lua-version=5.1 make tensorflow-lua-0.4.0-1.rockspec
+luarocks --lua-version=5.1 install tensorflow-lua
 ```
+
+The package is published at
+<https://luarocks.org/modules/mateus-m-reis/tensorflow-lua>. It can also be
+installed from the release source rock or built with
+`luarocks make tensorflow-lua-0.4.0-1.rockspec` from a checkout.
 
 The 0.4.0 archive checksum is pinned by the bootstrap script.
 

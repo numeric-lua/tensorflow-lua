@@ -13,6 +13,7 @@
 - in-memory EarlyStopping restoration, resumable optimizer/epoch training
   state, runtime train/eval Dropout in Sequential, and broader leak/GC stress
   coverage;
+- published `0.4.0-1` to LuaRocks;
 - README and API navigation refresh;
 - Sequential inference/training benchmarks and Ubuntu 22.04/24.04 CI.
 

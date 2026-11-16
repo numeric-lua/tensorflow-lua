@@ -49,7 +49,10 @@ experimental `tf.eager` surface with basic arithmetic and activations.
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
 
-# optional LuaRocks install from the release source rock
+# optional LuaRocks install from the public registry
+luarocks --lua-version=5.1 install tensorflow-lua
+
+# or install the release source rock directly
 luarocks --lua-version=5.1 install \
   https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.4.0/tensorflow-lua-0.4.0-1.src.rock
 
@@ -227,8 +230,9 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 ## Releases
 
 [**v0.4.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.4.0)
-ships the versioned rockspec and source rock. Release notes are in
-[RELEASE_NOTES.md](RELEASE_NOTES.md).
+ships the versioned rockspec and source rock. It is also published on
+[LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
+notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Changelog and lint
 
