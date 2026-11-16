@@ -142,10 +142,9 @@ end
 
 function GraphBuilder.placeholder(graph, dtype, shape, name)
   local desc = GraphBuilder.new_operation(graph, "Placeholder", name)
-  local output = nil
   desc:set_type("dtype", dtype_name(dtype))
   if shape ~= nil then desc:set_shape("shape", shape) end
-  output = desc:finish()
+  local output = desc:finish()
   output.dtype = dtype_name(dtype)
   return output
 end
