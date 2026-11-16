@@ -71,3 +71,19 @@ test("reports missing operations and session errors", function()
     "no operation")
   session:close()
 end)
+
+
+test("loads a SavedModel, decodes signatures, and runs them", function()
+  local session, graph, signatures = tf.load_saved_model(
+    TEST_ROOT .. "/tests/fixtures/add_savedmodel")
+  assert_true(signatures.serving_default ~= nil)
+  assert_eq(signatures.serving_default.inputs.x.name,
+    "serving_default_x:0")
+  local result = session:run_signature("serving_default",
+    { x = { 1, 2 }, y = { 10, 20 } })
+  assert_eq(result.sum:totable()[1], 11)
+  assert_eq(result.sum:totable()[2], 22)
+  assert_error(function() session:run_signature("missing", {}) end,
+    "no signature")
+  session:close()
+end)

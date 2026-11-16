@@ -87,9 +87,22 @@ Closes and deletes the underlying TF_Session. Idempotent.
 
 ### `tf.load_saved_model(path[, tags[, opts]])`
 
-Returns a `Session` and `Graph` loaded from a SavedModel export directory.
-Default tags are `{ "serve" }`. **Experimental:** signature names are not
-decoded yet; fetch the operation names present in the SavedModel graph.
+Returns a `Session`, `Graph`, and decoded `signatures` table loaded from a
+SavedModel export directory. Default tags are `{ "serve" }`.
+
+```lua
+local session, graph, signatures = tf.load_saved_model("model")
+-- signatures.serving_default.inputs.x.name == "serving_default_x:0"
+local outputs = session:run_signature("serving_default",
+  { x = { 1, 2 }, y = { 10, 20 } })
+```
+
+### `session:run_signature(name, feeds)`
+
+Maps signature input names to operation names, runs the graph, and returns a
+table keyed by the signature output names. Feeds may be `tf.Tensor` objects or
+rectangular Lua tables. The SavedModel initializer is run by TensorFlow during
+session loading.
 
 ## Errors
 

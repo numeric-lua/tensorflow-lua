@@ -1,6 +1,7 @@
 local root = (arg and arg[0] or "tests/run.lua"):match("^(.*)/tests/") or "."
 package.path = root .. "/?.lua;" .. root .. "/?/init.lua;" .. package.path
 
+TEST_ROOT = root
 local passed, failed = 0, 0
 local failures = {}
 local current = "?"

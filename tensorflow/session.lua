@@ -4,6 +4,7 @@
 local ffi = require("ffi")
 local capi = require("tensorflow.capi")
 local Tensor = require("tensorflow.tensor")
+local Proto = require("tensorflow.protobuf")
 
 local Session = {}
 Session.__index = Session
@@ -47,13 +48,23 @@ function Session.load_saved_model(path, tags, options)
   tags = tags or { "serve" }
   local tag_array = ffi.new("const char*[?]", #tags)
   for i = 1, #tags do tag_array[i - 1] = ffi.cast("const char*", tags[i]) end
+  local meta = lib.TF_NewBuffer()
   local status = capi.status()
   local ptr = lib.TF_LoadSessionFromSavedModel(opts, nil, path, tag_array,
-    #tags, graph:handle(), nil, status)
+    #tags, graph:handle(), meta, status)
   local ok, err = pcall(capi.check, status, "SavedModel load")
   lib.TF_DeleteSessionOptions(opts)
-  if not ok or ptr == nil then error(err or "TF_LoadSessionFromSavedModel failed", 2) end
-  return setmetatable({ _ptr = ptr, _graph = graph, _closed = false }, Session), graph
+  if not ok or ptr == nil then
+    lib.TF_DeleteBuffer(meta)
+    error(err or "TF_LoadSessionFromSavedModel failed", 2)
+  end
+  local struct = lib.TF_GetBuffer(meta)
+  local signatures = Proto.saved_model_signatures(
+    struct.data ~= nil and ffi.string(struct.data, struct.length) or "")
+  lib.TF_DeleteBuffer(meta)
+  local session = setmetatable({ _ptr = ptr, _graph = graph, _closed = false,
+    signatures = signatures }, Session)
+  return session, graph, signatures
 end
 
 function Session:run(feeds, fetches, targets)
@@ -129,6 +140,30 @@ function Session:run(feeds, fetches, targets)
   local list = {}
   for i, name in ipairs(fetch_names) do list[i] = results[name] end
   return list
+end
+
+function Session:run_signature(name, feeds)
+  local signature = self.signatures and self.signatures[name]
+  if signature == nil then
+    error("SavedModel has no signature '" .. tostring(name) .. "'", 2)
+  end
+  local mapped_feeds = {}
+  for key, value in pairs(feeds or {}) do
+    local info = signature.inputs[key]
+    if info == nil then
+      error("signature '" .. name .. "' has no input '" .. tostring(key) .. "'", 2)
+    end
+    mapped_feeds[info.name] = value
+  end
+  local keys, specs = {}, {}
+  for key, info in pairs(signature.outputs) do
+    keys[#keys + 1] = key
+    specs[#specs + 1] = info.name
+  end
+  local values = self:run(mapped_feeds, specs)
+  local result = {}
+  for i, key in ipairs(keys) do result[key] = values[i] end
+  return result
 end
 
 function Session:close()

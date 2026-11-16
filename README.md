@@ -10,8 +10,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - load serialized `GraphDef` files;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
-- optional SavedModel session loading (experimental; operation names are not
-  decoded from signatures yet);
+- SavedModel loading with signature decoding and named signature execution;
 - clear TensorFlow status errors and LuaJIT `__gc` cleanup.
 
 Not yet implemented: a Lua graph builder, TensorFlow eager execution, string/
@@ -61,6 +60,15 @@ local result = session:run(
   { "z:0" })
 print(result[1]:totable())   -- { 11, 22, 33 }
 session:close()
+```
+
+SavedModels are first-class:
+
+```lua
+local session, graph, signatures = tf.load_saved_model("my_saved_model")
+local outputs = session:run_signature("serving_default",
+  { x = { 1, 2 }, y = { 10, 20 } })
+print(outputs.sum:totable())
 ```
 
 Tensors can be created explicitly with `tf.tensor(value, { dtype = "float32" })`.
