@@ -35,5 +35,6 @@ build = {
     ["tensorflow.losses"] = "tensorflow/losses.lua",
     ["tensorflow.metrics"] = "tensorflow/metrics.lua",
     ["tensorflow.model"] = "tensorflow/model.lua",
+    ["tensorflow.callbacks"] = "tensorflow/callbacks.lua",
   },
 }

@@ -204,6 +204,20 @@ Builds a numerically stable sigmoid binary cross-entropy mean using
 Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
 `axes = {0}`). Options: `axes`, `keep_dims`, `dtype`, `name`.
 
+## Callbacks
+
+### `tf.callbacks.EarlyStopping(opts)`
+
+Stops when a monitored history entry stops improving. Options: `monitor`
+(default `val_loss`), `mode` (`min`/`max`), `patience`, `min_delta`, and
+`restore_best_weights`. Records `stopped_epoch`; restoration uses the portable
+checkpoint format.
+
+### `tf.callbacks.ModelCheckpoint(path, opts)`
+
+Saves the model after epochs. `path` may contain `{epoch}`. Options: `monitor`,
+`mode`, `save_best_only`, `min_delta`.
+
 ## Metrics
 
 ### `tf.metrics.binary_accuracy(graph, predictions, labels[, opts])`
@@ -264,8 +278,9 @@ model:close()
   `0`/`1` targets.
 - `fit` accepts `shuffle = true`; it returns `{ loss = { per_epoch, ... } }`; with
   `validation_data = { x, y }` it also returns `val_loss`.
-- `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
-  function.
+- `callbacks` may contain tables with `on_train_begin(history, model)`,
+  `on_epoch_end(history, epoch, model)`, and `on_train_end(history, model)`
+  functions. Set `history.stop_training = true` to end training early.
 - `save`/`load` use the portable tensorflow-lua checkpoint format;
   `save_native`/`load_native` use TensorFlow V2 checkpoints.
 - `export(path)` writes the graph as a GraphDef protobuf.

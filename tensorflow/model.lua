@@ -225,6 +225,11 @@ function Sequential:fit(x, y, options)
     end
   end
   for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
+  for _, callback in ipairs(callbacks) do
+    if type(callback.on_train_begin) == "function" then
+      callback.on_train_begin(history, self)
+    end
+  end
   for epoch = 1, epochs do
     local epoch_loss, batches = 0, 0
     local metric_sums = {}
@@ -259,8 +264,14 @@ function Sequential:fit(x, y, options)
     end
     for _, callback in ipairs(callbacks) do
       if type(callback.on_epoch_end) == "function" then
-        callback.on_epoch_end(history, epoch)
+        callback.on_epoch_end(history, epoch, self)
       end
+    end
+    if history.stop_training then break end
+  end
+  for _, callback in ipairs(callbacks) do
+    if type(callback.on_train_end) == "function" then
+      callback.on_train_end(history, self)
     end
   end
   return history

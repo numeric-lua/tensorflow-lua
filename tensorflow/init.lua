@@ -15,6 +15,7 @@ local Layers = require("tensorflow.layers")
 local Losses = require("tensorflow.losses")
 local Metrics = require("tensorflow.metrics")
 local Sequential = require("tensorflow.model")
+local Callbacks = require("tensorflow.callbacks")
 
 local tf = {
   VERSION = "0.3.0",
@@ -110,6 +111,7 @@ tf.layers = Layers
 tf.losses = Losses
 tf.metrics = Metrics
 tf.Sequential = Sequential
+tf.callbacks = Callbacks
 tf.reshape = Ops.reshape
 tf.cast = Ops.cast
 tf.concat = Ops.concat
