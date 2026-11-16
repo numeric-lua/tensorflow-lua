@@ -5,7 +5,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.1.0` alpha. First milestone: **graph inference**.
+`0.2.0` alpha. Graph inference, graph construction, training, and checkpoints.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -33,6 +33,9 @@ variant tensors, checkpoints, and training optimizer helpers.
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
+
+# optional LuaRocks install (pure Lua, external libtensorflow)
+luarocks --lua-version=5.1 make tensorflow-lua-scm-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
