@@ -137,10 +137,10 @@ function Sequential:_build()
       }
       local layer = tf.layers.conv2d(graph, output, definition.filters,
         { kernel_h, kernel_w }, conv_options)
-      local function output_dim(input, kernel, stride, dilation)
+      local function output_dim(size, kernel, stride, dilation)
         local effective = (kernel - 1) * dilation + 1
-        if padding == "SAME" then return math.ceil(input / stride) end
-        return math.floor((input - effective) / stride) + 1
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - effective) / stride) + 1
       end
       spatial = { output_dim(spatial[1], kernel_h, stride_h, dilation_h),
         output_dim(spatial[2], kernel_w, stride_w, dilation_w),
@@ -173,9 +173,9 @@ function Sequential:_build()
       local layer = tf.layers.max_pool2d(graph, output,
         { kernel_h, kernel_w }, { stride = { stride_h, stride_w },
           padding = padding, name = options.name })
-      local function output_dim(input, kernel, stride)
-        if padding == "SAME" then return math.ceil(input / stride) end
-        return math.floor((input - kernel) / stride) + 1
+      local function output_dim(size, kernel, stride)
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - kernel) / stride) + 1
       end
       spatial = { output_dim(spatial[1], kernel_h, stride_h),
         output_dim(spatial[2], kernel_w, stride_w), spatial[3] }
