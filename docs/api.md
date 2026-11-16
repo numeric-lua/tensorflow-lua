@@ -180,6 +180,11 @@ reader:close()
 Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
 `dtype`, `name`.
 
+### `tf.losses.mean_absolute_error(graph, predictions, targets[, opts])`
+
+Builds an absolute-error mean. Options: `axes` (default `{0}`), `keep_dims`,
+`dtype`, `name`.
+
 ### `tf.losses.binary_cross_entropy(graph, logits, labels[, opts])`
 
 Builds a numerically stable sigmoid binary cross-entropy mean using
@@ -233,8 +238,8 @@ model:close()
 - Inputs are batched Lua tables: `input_shape = { features }` expects
   `{{f1, f2}, ...}`.
 - Supported losses: `"mse"`/`"mean_squared_error"`,
-  `"binary_cross_entropy"`/`"bce"`, `"softmax_cross_entropy"`/`"cce"`, or a
-  custom function
+  `"binary_cross_entropy"`/`"bce"`, `"mae"`/`"mean_absolute_error"`,
+  `"softmax_cross_entropy"`/`"cce"`, or a custom function
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.

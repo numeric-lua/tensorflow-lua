@@ -94,6 +94,9 @@ function Sequential:_build()
     loss = tf.losses.mean_squared_error(graph, output, target, { axes = { 0, 1 } })
   elseif loss_spec == "softmax_cross_entropy" or loss_spec == "cce" then
     loss = tf.losses.softmax_cross_entropy(graph, output, target, { axes = { 0 } })
+  elseif loss_spec == "mae" or loss_spec == "mean_absolute_error" then
+    loss = tf.losses.mean_absolute_error(graph, output, target,
+      { axes = { 0, 1 } })
   elseif loss_spec == "binary_cross_entropy" or loss_spec == "bce" then
     loss = tf.losses.binary_cross_entropy(graph, output, target,
       { axes = { 0, 1 } })

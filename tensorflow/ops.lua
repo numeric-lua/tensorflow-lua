@@ -47,6 +47,10 @@ function Ops.log(graph, input, name, dtype)
   return unary(graph, "Log", input, name, dtype)
 end
 
+function Ops.abs(graph, input, name, dtype)
+  return unary(graph, "Abs", input, name, dtype)
+end
+
 function Ops.softplus(graph, input, name, dtype)
   return unary(graph, "Softplus", input, name, dtype)
 end

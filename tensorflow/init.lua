@@ -113,6 +113,7 @@ tf.Sequential = Sequential
 tf.reshape = Ops.reshape
 tf.cast = Ops.cast
 tf.concat = Ops.concat
+tf.abs = Ops.abs
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax
 tf.one_hot = Ops.one_hot

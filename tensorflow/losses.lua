@@ -32,6 +32,18 @@ function Losses.softmax_cross_entropy(graph, logits, labels, options)
     prefix .. "/mean", dtype, options.keep_dims)
 end
 
+function Losses.mean_absolute_error(graph, predictions, targets, options)
+  options = options or {}
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "mae"
+  local tensorflow = require("tensorflow")
+  local error = tensorflow.sub(graph, predictions, targets, prefix .. "/error",
+    dtype)
+  local absolute = tensorflow.abs(graph, error, prefix .. "/abs", dtype)
+  return tensorflow.reduce_mean(graph, absolute, options.axes or { 0 },
+    prefix .. "/mean", dtype, options.keep_dims)
+end
+
 function Losses.binary_cross_entropy(graph, logits, labels, options)
   options = options or {}
   local dtype = options.dtype or "float32"

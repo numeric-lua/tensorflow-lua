@@ -50,3 +50,16 @@ test("computes binary cross-entropy", function()
   assert_true(math.abs(value - math.log(2)) < 1e-6)
   session:close()
 end)
+
+test("computes mean absolute error", function()
+  local graph = tf.Graph.new()
+  local predictions = tf.placeholder(graph, "float32", { 2 }, "mae_pred")
+  local targets = tf.placeholder(graph, "float32", { 2 }, "mae_true")
+  local loss = tf.losses.mean_absolute_error(graph, predictions, targets,
+    { axes = { 0 } })
+  local session = tf.Session.new(graph)
+  local value = session:run({ [predictions] = { 1, -2 }, [targets] = { 0, 0 } },
+    { loss })[1]:totable()
+  assert_true(math.abs(value - 1.5) < 1e-6)
+  session:close()
+end)
