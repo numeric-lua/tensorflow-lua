@@ -26,3 +26,18 @@ jobs:
         run: ./scripts/fetch_libtensorflow.sh
       - name: Run tests
         run: ./scripts/test.sh
+
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "luajit-2.1"
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: Install and load rock
+        run: |
+          luarocks make --deps-mode=none tensorflow-lua-scm-1.rockspec
+          eval "$(luarocks path --bin)"
+          luajit -e 'local tf = require("tensorflow"); assert(tf.VERSION == "0.3.0"); assert(tf.Sequential); assert(tf.data.Dataset)'
