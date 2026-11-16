@@ -307,6 +307,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.exp`, `tf.log`, `tf.sqrt` | elementwise unary ops |
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
+| `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |

@@ -97,15 +97,31 @@ function Ops.reshape(graph, input, shape, name, dtype)
   return desc:finish()
 end
 
-function Ops.reduce_mean(graph, input, axes, name, dtype, keep_dims)
+local function reduction(graph, op_type, input, axes, name, dtype, keep_dims)
   local axis_op = constant(graph, axes or {}, name .. "/axes", "int32")
-  local desc = graph:new_operation("Mean", name)
+  local desc = graph:new_operation(op_type, name)
   desc:add_input(input)
   desc:add_input(axis_op)
   desc:set_type("T", dtype_name(dtype))
   desc:set_type("Tidx", "int32")
   desc:set_bool("keep_dims", keep_dims and true or false)
   return desc:finish()
+end
+
+function Ops.reduce_mean(graph, input, axes, name, dtype, keep_dims)
+  return reduction(graph, "Mean", input, axes, name, dtype, keep_dims)
+end
+
+function Ops.reduce_sum(graph, input, axes, name, dtype, keep_dims)
+  return reduction(graph, "Sum", input, axes, name, dtype, keep_dims)
+end
+
+function Ops.reduce_max(graph, input, axes, name, dtype, keep_dims)
+  return reduction(graph, "Max", input, axes, name, dtype, keep_dims)
+end
+
+function Ops.reduce_min(graph, input, axes, name, dtype, keep_dims)
+  return reduction(graph, "Min", input, axes, name, dtype, keep_dims)
 end
 
 function Ops.one_hot(graph, indices, depth, options)
