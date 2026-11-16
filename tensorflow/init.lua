@@ -18,6 +18,7 @@ local tf = {
   Graph = Graph,
   Session = Session,
   tensor = Tensor.new,
+  complex = Tensor.complex,
 }
 
 function tf.placeholder(graph, dtype, shape, name)

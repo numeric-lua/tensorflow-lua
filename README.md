@@ -152,8 +152,9 @@ local dx = tf.gradients(graph, { y }, { x })[1]
 Tensors can be created explicitly with `tf.tensor(value, { dtype = "float32" })`.
 Supported dtypes are `float32`, `float64`, `int32`, `int64`, `int16`, `int8`,
 `uint8`, `uint16`, `uint32`, `uint64`, `bool`, `string`, and quantized
-`qint8`, `quint8`, `qint16`, `quint16`, `qint32`. String tensors use
-TensorFlow's native `TF_TString` representation.
+`qint8`, `quint8`, `qint16`, `quint16`, `qint32`, `complex64`, and
+`complex128`. String tensors use TensorFlow's native `TF_TString`
+representation. Complex values are built with `tf.complex(real, imag)`.
 
 `tf.VERSION` is the binding version; `tf.version()` returns the loaded
 libtensorflow version.

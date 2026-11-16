@@ -21,7 +21,7 @@ end)
 
 test("rejects malformed tensors", function()
   assert_error(function() tf.tensor({ { 1 }, { 2, 3 } }) end, "rectangular")
-  assert_error(function() tf.tensor({ 1 }, { dtype = "complex64" }) end,
+  assert_error(function() tf.tensor({ 1 }, { dtype = "half" }) end,
     "unsupported")
 end)
 
@@ -92,4 +92,16 @@ test("creates and reads TF_STRING tensors", function()
   assert_eq(values[1], "alpha")
   assert_eq(values[2], "b")
   session:close()
+end)
+
+test("round-trips complex tensors", function()
+  local values = tf.tensor({ tf.complex(1, 2), tf.complex(-3, 0.5) },
+    { dtype = "complex64" })
+  local result = values:totable()
+  assert_eq(result[1].real, 1)
+  assert_eq(result[1].imag, 2)
+  assert_eq(result[2].real, -3)
+  assert_eq(result[2].imag, 0.5)
+  assert_eq(values:dtype(), "complex64")
+  assert_true(tostring(result[1]):find("1") ~= nil)
 end)

@@ -7,6 +7,25 @@ local capi = require("tensorflow.capi")
 local Tensor = {}
 Tensor.__index = Tensor
 
+local Complex = {}
+Complex.__index = Complex
+
+local function is_complex(value)
+  return type(value) == "table" and getmetatable(value) == Complex
+end
+
+function Tensor.complex(real, imag)
+  if type(real) ~= "number" or type(imag) ~= "number" then
+    error("tf.complex expects real and imaginary numbers", 2)
+  end
+  return setmetatable({ real = real, imag = imag }, Complex)
+end
+
+function Complex:format()
+  return string.format("(%g%+gi)", self.real, self.imag)
+end
+Complex.__tostring = Complex.format
+
 local dtypes = {
   float32 = { code = 1, ctype = "float", size = 4, name = "float32" },
   ["float"] = "float32",
@@ -29,6 +48,10 @@ local dtypes = {
   uint32 = { code = 22, ctype = "uint32_t", size = 4, name = "uint32" },
   uint64 = { code = 23, ctype = "uint64_t", size = 8, name = "uint64" },
   string = { code = 7, ctype = nil, size = 24, name = "string" },
+  complex64 = { code = 8, ctype = "float", size = 8, name = "complex64",
+    complex = true },
+  complex128 = { code = 18, ctype = "double", size = 16, name = "complex128",
+    complex = true },
 }
 
 local function canonical(dtype)
@@ -56,7 +79,7 @@ local function dtype_info(dtype, level)
 end
 
 local function shape_of(value)
-  if type(value) ~= "table" then return {} end
+  if is_complex(value) or type(value) ~= "table" then return {} end
   local count = 0
   for key in pairs(value) do
     if type(key) ~= "number" or key % 1 ~= 0 or key < 1 then
@@ -94,7 +117,10 @@ local function shape_of(value)
 end
 
 local function flatten(value, out)
-  if type(value) ~= "table" then out[#out + 1] = value; return end
+  if is_complex(value) or type(value) ~= "table" then
+    out[#out + 1] = value
+    return
+  end
   for i = 1, #value do flatten(value[i], out) end
 end
 
@@ -112,6 +138,11 @@ local function product(shape)
 end
 
 local function scalar(value, info)
+  if info.complex then
+    if type(value) == "number" then return value, 0 end
+    if is_complex(value) then return value.real, value.imag end
+    error("complex tensors require tf.complex or numbers", 4)
+  end
   if info.name == "string" then
     if type(value) ~= "string" then
       error("string tensors require strings, got " .. type(value), 4)
@@ -152,6 +183,29 @@ function Tensor.new(value, options)
   end
   local lib = capi.load()
   local dims, ndim = make_dims(shape)
+  if info.complex then
+    local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
+      count * info.size)
+    if ptr == nil then error("TF_AllocateTensor failed", 2) end
+    local ok, err = pcall(function()
+      local data = lib.TF_TensorData(ptr)
+      if count > 0 and data == nil then
+        error("TF_TensorData returned NULL for a non-empty tensor", 2)
+      end
+      local array = ffi.cast(info.ctype .. "*", data)
+      for i = 1, count do
+        local real, imaginary = scalar(values[i], info)
+        array[(i - 1) * 2] = real
+        array[(i - 1) * 2 + 1] = imaginary
+      end
+    end)
+    if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
+    local handle = ffi.gc(ptr, function(pointer)
+      capi.release_tensor(pointer)
+    end)
+    return setmetatable({ _handle = handle, _shape = shape,
+      _dtype = dtype }, Tensor)
+  end
   if info.name == "string" then
     local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
       count * info.size)
@@ -265,7 +319,12 @@ function Tensor:totable()
   local lib = capi.load()
   local count = self:numel()
   local flat = {}
-  if count > 0 and info.name == "string" then
+  if count > 0 and info.complex then
+    local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
+    for i = 1, count do
+      flat[i] = Tensor.complex(array[(i - 1) * 2], array[(i - 1) * 2 + 1])
+    end
+  elseif count > 0 and info.name == "string" then
     local array = ffi.cast("TF_TString*", lib.TF_TensorData(self:handle()))
     for i = 1, count do
       local pointer = lib.TF_StringGetDataPointer(array + (i - 1))
