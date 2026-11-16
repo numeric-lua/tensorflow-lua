@@ -84,6 +84,24 @@ array; `-1` denotes an unknown dimension.
 Create `AddV2` and `MatMul` operations with the given input outputs. `dtype`
 defaults to `float32`.
 
+### `tf.constant(graph, value, name[, dtype])`
+
+Creates a Const output. Values may be Lua scalars/nested tables or an existing
+`tf.Tensor`.
+
+### `tf.variable(graph, initial, name[, opts])`
+
+Creates a `VariableV2`, its `Assign` initializer, and an `Identity` read output.
+Returns a table with `ref`, `read`, `initializer`, `dtype`, and `shape`.
+Supported options: `dtype`, `container`, `shared_name`.
+
+### `tf.train.gradient_descent(graph, loss, variables, lr[, name])`
+
+Adds `ApplyGradientDescent` targets for the variables and returns
+`targets, gradients, learning_rate`. Initialize variables first with
+`session:run({}, {}, { variable.initializer })`, then run the target list once
+per training step.
+
 ### `tf.gradients(graph, outputs, inputs)`
 
 Adds TensorFlow gradient operations for a list of output graph outputs with

@@ -126,16 +126,22 @@ function Session:run(feeds, fetches, targets)
   local target_ops = nil
   if #target_specs > 0 then
     target_ops = ffi.new("TF_Operation*[?]", #target_specs)
-    for i, name in ipairs(target_specs) do
-      target_ops[i - 1] = self._graph:operation(name)
+    for i, target in ipairs(target_specs) do
+      if type(target) == "table" and target.oper then
+        target_ops[i - 1] = target.oper
+      else
+        target_ops[i - 1] = self._graph:operation(target)
+      end
     end
   end
 
+  local target_pointer = target_ops and ffi.cast(
+    "const TF_Operation* const*", target_ops) or nil
   local status = capi.status()
   lib.TF_SessionRun(self._ptr, nil,
     input_outputs, input_tensors, #feed_values,
     output_outputs, output_tensors, #fetch_specs,
-    target_ops, #target_specs, nil, status)
+    target_pointer, #target_specs, nil, status)
   local ok, err = pcall(capi.check, status, "session run")
   if not ok then
     for i = 0, #fetch_specs - 1 do

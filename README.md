@@ -9,7 +9,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
-- add symbolic gradients for training graphs;
+- add symbolic gradients, variables, and gradient-descent updates;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
@@ -85,7 +85,23 @@ local result = session:run({ [x] = { 1, 2 }, [y] = { 10, 20 } }, { z })
 print(result[1]:totable())   -- { 11, 22 }
 ```
 
-Symbolic gradients are available for graph optimization:
+Variables and graph-mode training are available:
+
+```lua
+local variable = tf.variable(graph, 5, "v")
+local square = graph:new_operation("Square", "loss")
+square:add_input(variable.read)
+square:set_type("T", "float32")
+local loss = square:finish()
+local updates = tf.train.gradient_descent(graph, loss, { variable }, 0.1)
+
+local session = tf.Session.new(graph)
+session:run({}, {}, { variable.initializer })
+for _ = 1, 50 do session:run({}, {}, updates) end
+print(session:run({}, { variable.read })[1]:totable())
+```
+
+Symbolic gradients are also directly available:
 
 ```lua
 local square = graph:new_operation("Square", "square")
