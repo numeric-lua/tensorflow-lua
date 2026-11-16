@@ -124,3 +124,15 @@ test("rejects empty datasets and invalid layers", function()
   model:compile()
   assert_error(function() model:fit({}, {}) end, "non-empty")
 end)
+
+test("supports shuffled training", function()
+  math.randomseed(9)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 }, { 3 } },
+    { { 1 }, { 3 }, { 5 }, { 7 } }, { epochs = 3, batch_size = 2,
+      shuffle = true })
+  assert_eq(#history.loss, 3)
+  model:close()
+end)

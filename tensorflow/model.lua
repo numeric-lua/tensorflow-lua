@@ -157,6 +157,20 @@ function Sequential:fit(x, y, options)
   y = normalize_rows(y, self._units)
   if #x == 0 then error("fit requires a non-empty dataset", 2) end
   if #x ~= #y then error("x and y must have the same batch size", 2) end
+  if options.shuffle then
+    local order = {}
+    for i = 1, #x do order[i] = i end
+    for i = #order, 2, -1 do
+      local j = math.random(i)
+      order[i], order[j] = order[j], order[i]
+    end
+    local shuffled_x, shuffled_y = {}, {}
+    for i, index in ipairs(order) do
+      shuffled_x[i] = x[index]
+      shuffled_y[i] = y[index]
+    end
+    x, y = shuffled_x, shuffled_y
+  end
   local epochs = options.epochs or 1
   local batch_size = options.batch_size or #x
   local callbacks = options.callbacks or {}

@@ -233,7 +233,7 @@ model:close()
   `adagrad`, and `momentum`.
 - `metrics = { "accuracy" }` adds per-epoch classification accuracy; the target
   must be one-hot and the output must have class columns.
-- `fit` returns `{ loss = { per_epoch, ... } }`; with
+- `fit` accepts `shuffle = true`; it returns `{ loss = { per_epoch, ... } }`; with
   `validation_data = { x, y }` it also returns `val_loss`.
 - `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
   function.
