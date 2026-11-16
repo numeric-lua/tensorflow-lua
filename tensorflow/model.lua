@@ -277,6 +277,15 @@ function Sequential:fit(x, y, options)
   return history
 end
 
+function Sequential:fit_dataset(dataset, options)
+  options = options or {}
+  local x, y, batch_size, shuffle = dataset:data()
+  if y == nil then error("fit_dataset requires labeled data", 2) end
+  options.batch_size = options.batch_size or batch_size
+  if options.shuffle == nil then options.shuffle = shuffle end
+  return self:fit(x, y, options)
+end
+
 function Sequential:predict(x)
   if self._session == nil then self._graph = nil end
   self:_build()

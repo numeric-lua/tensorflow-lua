@@ -13,6 +13,10 @@ function Dataset.new(x, y)
     Dataset)
 end
 
+function Dataset:data()
+  return self._x, self._y, self._batch_size, self._shuffle, self._seed
+end
+
 function Dataset:size()
   return #self._x
 end
