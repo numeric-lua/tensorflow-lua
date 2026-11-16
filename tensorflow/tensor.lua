@@ -20,6 +20,11 @@ local dtypes = {
   int64 = { code = 9, ctype = "int64_t", size = 8, name = "int64" },
   ["long"] = "int64",
   bool = { code = 10, ctype = "uint8_t", size = 1, name = "bool" },
+  qint8 = { code = 11, ctype = "int8_t", size = 1, name = "qint8" },
+  quint8 = { code = 12, ctype = "uint8_t", size = 1, name = "quint8" },
+  qint32 = { code = 13, ctype = "int32_t", size = 4, name = "qint32" },
+  qint16 = { code = 15, ctype = "int16_t", size = 2, name = "qint16" },
+  quint16 = { code = 16, ctype = "uint16_t", size = 2, name = "quint16" },
   uint16 = { code = 17, ctype = "uint16_t", size = 2, name = "uint16" },
   uint32 = { code = 22, ctype = "uint32_t", size = 4, name = "uint32" },
   uint64 = { code = 23, ctype = "uint64_t", size = 8, name = "uint64" },
@@ -272,7 +277,7 @@ function Tensor:totable()
     for i = 1, count do
       local value = array[i - 1]
       if info.name == "bool" then value = value ~= 0
-      elseif info.name:match("^u?int") then value = tonumber(value) end
+      elseif info.name:match("^q?u?int") then value = tonumber(value) end
       flat[i] = value
     end
   end

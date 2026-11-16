@@ -67,6 +67,9 @@ test("round-trips every supported dtype", function()
     { "uint8", { 1, 2 } }, { "uint16", { 1, 2 } },
     { "uint32", { 1, 2 } }, { "uint64", { 1, 2 } },
     { "bool", { true, false } },
+    { "qint8", { -1, 2 } }, { "quint8", { 1, 2 } },
+    { "qint16", { -1, 2 } }, { "quint16", { 1, 2 } },
+    { "qint32", { -1, 2 } },
   }
   for _, case in ipairs(cases) do
     local value = tf.tensor(case[2], { dtype = case[1] })

@@ -21,7 +21,8 @@ Converts a scalar or rectangular nested Lua table to a `tf.Tensor` with a
 TF_Tensor backing. `opts.dtype` defaults to `float32`. Numeric dtypes are converted explicitly; no
 implicit dtype promotion occurs. `string` tensors accept Lua strings and use
 TensorFlow's `TF_TString` layout; raw-byte export is intentionally unsupported
-for strings.
+for strings. Quantized `qint8`, `quint8`, `qint16`, `quint16`, and `qint32`
+values are stored as their integer bit patterns.
 
 ```lua
 local a = tf.tensor({ { 1, 2 }, { 3, 4 } })
