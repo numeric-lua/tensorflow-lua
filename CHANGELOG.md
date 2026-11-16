@@ -15,6 +15,7 @@
   Ftrl;
 - Embedding layers;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;
+- public API surface test and CI LuaRocks installation job;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
   load, and GraphDef export;
 - string, complex64/128, float16, bfloat16, and quantized tensors;
