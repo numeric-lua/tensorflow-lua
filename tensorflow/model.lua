@@ -144,8 +144,10 @@ function Sequential:_build()
         { dtype = dtype, name = "metric/accuracy" })
       metric_names[i] = "accuracy"
     elseif name == "binary_accuracy" then
-      metric_outputs[i] = tf.metrics.binary_accuracy(graph, output, target,
-        { axes = { 0, 1 }, name = "metric/binary_accuracy" })
+      local probabilities = tf.nn.sigmoid(graph, output,
+        "metric/binary_sigmoid")
+      metric_outputs[i] = tf.metrics.binary_accuracy(graph, probabilities,
+        target, { axes = { 0, 1 }, name = "metric/binary_accuracy" })
       metric_names[i] = "binary_accuracy"
     else
       error("unsupported metric '" .. tostring(name) .. "'", 3)
