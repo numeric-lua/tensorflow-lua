@@ -222,7 +222,7 @@ end
 local function float_to_bfloat(value)
   float_bits.f = value
   local u = float_bits.u
-  if (u & 0x7fffffff) > 0x7f800000 then
+  if bit.band(u, 0x7fffffff) > 0x7f800000 then
     return bit.rshift(u, 16)
   end
   return bit.rshift(u + 0x8000, 16)
