@@ -169,6 +169,22 @@ local tensor = reader:tensor(name)
 reader:close()
 ```
 
+## Eager execution (experimental)
+
+```lua
+local context = tf.eager.Context.new()
+local a = context:constant({ { 1, 2 }, { 3, 4 } })
+local b = context:constant({ { 10, 20 }, { 30, 40 } })
+local sum = context:add(a, b)
+print(sum:totable())       -- { { 11, 22 }, { 33, 44 } }
+context:close()            -- deferred until live tensors are released
+```
+
+`Context:execute(op_type, inputs, { attrs = ... })` runs an arbitrary eager
+op. Type-string attributes (`T`, `dtype`, ...), booleans, numbers, and shape
+tables are supported. Convenience methods: `add`, `sub`, `mul`, `matmul`,
+`relu`, `sigmoid`, and `square`.
+
 ## Training examples
 
 `examples/linear_regression.lua` trains `y = 2x + 1` with gradient descent;

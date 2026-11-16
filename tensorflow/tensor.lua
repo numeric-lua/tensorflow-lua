@@ -345,6 +345,10 @@ end
 
 Tensor.__tostring = Tensor.format
 
+function Tensor._dtypes()
+  return dtypes
+end
+
 function Tensor.dtype_info(dtype)
   return dtype_info(dtype)
 end

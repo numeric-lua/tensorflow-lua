@@ -48,6 +48,9 @@ dofile(root .. "/tests/test_graph.lua")
 current = "test_protobuf.lua"
 dofile(root .. "/tests/test_protobuf.lua")
 
+current = "test_eager.lua"
+dofile(root .. "/tests/test_eager.lua")
+
 current = "test_ops.lua"
 dofile(root .. "/tests/test_ops.lua")
 

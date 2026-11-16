@@ -15,14 +15,16 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
+- experimental eager execution (`tf.eager.Context`);
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
 - clear TensorFlow status errors, `ffi.gc`-backed ownership, and explicit
   `Tensor:destroy` / `Graph:delete` / `Session:close` paths.
 
-Not yet implemented: a Lua graph builder, TensorFlow eager execution, string/
-variant tensors, checkpoints, and training optimizer helpers.
+Not yet implemented: complex/half-precision tensors, official SavedModel
+export, and a full layer/model API. Eager execution is available as an
+experimental `tf.eager` surface with basic arithmetic and activations.
 
 ## Requirements
 

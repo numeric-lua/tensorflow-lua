@@ -10,6 +10,7 @@ local Train = require("tensorflow.train")
 local Checkpoint = require("tensorflow.checkpoint")
 local CheckpointReader = require("tensorflow.checkpoint_reader")
 local Ops = require("tensorflow.ops")
+local Eager = require("tensorflow.eager")
 
 local tf = {
   VERSION = "0.2.0",
@@ -98,6 +99,7 @@ tf.nn = {
   softmax = Ops.softmax,
 }
 
+tf.eager = Eager
 tf.reshape = Ops.reshape
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax

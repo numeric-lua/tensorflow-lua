@@ -12,6 +12,10 @@ typedef struct TF_Operation TF_Operation;
 typedef struct TF_OperationDescription TF_OperationDescription;
 typedef struct TF_Tensor TF_Tensor;
 typedef struct TF_CheckpointReader TF_CheckpointReader;
+typedef struct TFE_ContextOptions TFE_ContextOptions;
+typedef struct TFE_Context TFE_Context;
+typedef struct TFE_TensorHandle TFE_TensorHandle;
+typedef struct TFE_Op TFE_Op;
 typedef struct TF_TString { uint8_t raw[24]; } TF_TString;
 typedef struct TF_ImportGraphDefOptions TF_ImportGraphDefOptions;
 typedef struct TF_Buffer {
@@ -113,6 +117,28 @@ void TF_StringCopy(TF_TString*, const char*, size_t);
 const char* TF_StringGetDataPointer(const TF_TString*);
 size_t TF_StringGetSize(const TF_TString*);
 void TF_StringDealloc(TF_TString*);
+
+TFE_ContextOptions* TFE_NewContextOptions(void);
+void TFE_DeleteContextOptions(TFE_ContextOptions*);
+void TFE_ContextOptionsSetAsync(TFE_ContextOptions*, unsigned char);
+TFE_Context* TFE_NewContext(const TFE_ContextOptions*, TF_Status*);
+void TFE_DeleteContext(TFE_Context*);
+TFE_TensorHandle* TFE_NewTensorHandle(const TF_Tensor*, TF_Status*);
+void TFE_DeleteTensorHandle(TFE_TensorHandle*);
+TF_DataType TFE_TensorHandleDataType(TFE_TensorHandle*);
+int TFE_TensorHandleNumDims(TFE_TensorHandle*, TF_Status*);
+int64_t TFE_TensorHandleDim(TFE_TensorHandle*, int, TF_Status*);
+TF_Tensor* TFE_TensorHandleResolve(TFE_TensorHandle*, TF_Status*);
+TFE_Op* TFE_NewOp(TFE_Context*, const char*, TF_Status*);
+void TFE_DeleteOp(TFE_Op*);
+void TFE_OpAddInput(TFE_Op*, TFE_TensorHandle*, TF_Status*);
+void TFE_OpSetAttrString(TFE_Op*, const char*, const void*, size_t);
+void TFE_OpSetAttrInt(TFE_Op*, const char*, int64_t);
+void TFE_OpSetAttrFloat(TFE_Op*, const char*, float);
+void TFE_OpSetAttrBool(TFE_Op*, const char*, unsigned char);
+void TFE_OpSetAttrType(TFE_Op*, const char*, TF_DataType);
+void TFE_OpSetAttrShape(TFE_Op*, const char*, const int64_t*, int, TF_Status*);
+void TFE_Execute(TFE_Op*, TFE_TensorHandle**, int*, TF_Status*);
 
 TF_Tensor* TF_AllocateTensor(TF_DataType, const int64_t*, int, size_t);
 TF_Tensor* TF_NewTensor(TF_DataType, const int64_t*, int, void*, size_t,
