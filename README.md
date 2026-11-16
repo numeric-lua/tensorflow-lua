@@ -75,6 +75,9 @@ Tensors can be created explicitly with `tf.tensor(value, { dtype = "float32" })`
 Supported dtypes are `float32`, `float64`, `int32`, `int64`, `int16`, `int8`,
 `uint8`, `uint16`, `uint32`, `uint64`, and `bool`.
 
+`tf.VERSION` is the binding version; `tf.version()` returns the loaded
+libtensorflow version.
+
 ## API
 
 See [docs/api.md](docs/api.md).
