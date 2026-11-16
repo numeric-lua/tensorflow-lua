@@ -142,19 +142,6 @@ local function flatten(value, out)
   for i = 1, #value do flatten(value[i], out) end
 end
 
-local function make_dims(shape)
-  if #shape == 0 then return nil, 0 end
-  local dims = ffi.new("int64_t[?]", #shape)
-  for i = 1, #shape do dims[i - 1] = shape[i] end
-  return dims, #shape
-end
-
-local function product(shape)
-  local n = 1
-  for _, d in ipairs(shape) do n = n * d end
-  return n
-end
-
 local function scalar(value, info)
   if info.complex then
     if type(value) == "number" then return value, 0 end
@@ -176,6 +163,32 @@ local function scalar(value, info)
     error("numeric tensors require numbers, got " .. type(value), 4)
   end
   return value
+end
+
+-- Fill native numeric/bool tensors without materializing an intermediate
+-- flat Lua table. The caller has already validated the shape.
+local function fill_native(value, array, info, index)
+  if is_complex(value) or type(value) ~= "table" then
+    array[index] = scalar(value, info)
+    return index + 1
+  end
+  for i = 1, #value do
+    index = fill_native(value[i], array, info, index)
+  end
+  return index
+end
+
+local function make_dims(shape)
+  if #shape == 0 then return nil, 0 end
+  local dims = ffi.new("int64_t[?]", #shape)
+  for i = 1, #shape do dims[i - 1] = shape[i] end
+  return dims, #shape
+end
+
+local function product(shape)
+  local n = 1
+  for _, d in ipairs(shape) do n = n * d end
+  return n
 end
 
 local float_bits = ffi.new("union { float f; uint32_t u; }")
@@ -269,12 +282,18 @@ function Tensor.new(value, options)
   end
   local dtype, info = dtype_info(options.dtype or infer_dtype(value))
   local shape = shape_of(value)
-  local values = {}
-  flatten(value, values)
   local count = product(shape)
-  if #values ~= count then
-    error(string.format("tensor data has %d values but shape needs %d",
-      #values, count), 2)
+  local values
+  local function flat_values()
+    if values == nil then
+      values = {}
+      flatten(value, values)
+      if #values ~= count then
+        error(string.format("tensor data has %d values but shape needs %d",
+          #values, count), 2)
+      end
+    end
+    return values
   end
   local lib = capi.load()
   local dims, ndim = make_dims(shape)
@@ -287,9 +306,10 @@ function Tensor.new(value, options)
       if count > 0 and data == nil then
         error("TF_TensorData returned NULL for a non-empty tensor", 2)
       end
+      local items = flat_values()
       local array = ffi.cast(info.ctype .. "*", data)
       for i = 1, count do
-        local real, imaginary = scalar(values[i], info)
+        local real, imaginary = scalar(items[i], info)
         array[(i - 1) * 2] = real
         array[(i - 1) * 2 + 1] = imaginary
       end
@@ -310,12 +330,13 @@ function Tensor.new(value, options)
       if count > 0 and data == nil then
         error("TF_TensorData returned NULL for a non-empty tensor", 2)
       end
+      local items = flat_values()
       local array = ffi.cast("uint16_t*", data)
       for i = 1, count do
-        if type(values[i]) ~= "number" then
+        if type(items[i]) ~= "number" then
           error("half tensors require numbers", 2)
         end
-        array[i - 1] = encode_half(values[i], info)
+        array[i - 1] = encode_half(items[i], info)
       end
     end)
     if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
@@ -334,9 +355,10 @@ function Tensor.new(value, options)
       if count > 0 and data == nil then
         error("TF_TensorData returned NULL for a non-empty tensor", 2)
       end
+      local items = flat_values()
       local array = ffi.cast("TF_TString*", data)
       for i = 1, count do
-        local element = values[i]
+        local element = items[i]
         if type(element) ~= "string" then
           error("string tensors require strings, got " .. type(element), 2)
         end
@@ -361,7 +383,11 @@ function Tensor.new(value, options)
     end
     if count > 0 then
       local array = ffi.cast(info.ctype .. "*", data)
-      for i = 1, count do array[i - 1] = scalar(values[i], info) end
+      local written = fill_native(value, array, info, 0)
+      if written ~= count then
+        error(string.format("tensor data has %d values but shape needs %d",
+          written, count), 2)
+      end
     end
   end)
   if not ok then
