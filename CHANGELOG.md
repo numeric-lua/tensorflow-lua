@@ -2,7 +2,8 @@
 
 ## 0.6.0
 
-- Conv1D, AveragePool2D, and GlobalAveragePool2D layers;
+- Conv1D, AveragePool2D, GlobalAveragePool2D, GlobalMaxPool2D, and Activation
+  layers;
 - rank-3 BatchNormalization and Conv1D+BatchNorm stack coverage;
 - average-pooling stacks in Sequential;
 - top-k accuracy metrics;

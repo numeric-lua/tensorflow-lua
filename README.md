@@ -7,7 +7,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 `0.6.0` alpha. Graph inference, construction, training, checkpoints, eager
 mode, Conv2D/BatchNorm layers, and a small Sequential model. The dependency-free
-suite currently contains 129 tests.
+suite currently contains 131 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -19,10 +19,10 @@ suite currently contains 129 tests.
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
-- compositional Dense, Conv1D, Conv2D, MaxPool2D, average/global-average
-  pooling, BatchNormalization, Embedding, Flatten, and Dropout layers,
-  including Conv1D/Conv2D/pool stacks, resumable BatchNorm statistics, and
-  runtime train/eval normalization/dropout switching in Sequential;
+- compositional Dense, Conv1D, Conv2D, pooling, BatchNormalization,
+  Activation, Embedding, Flatten, and Dropout layers, including
+  Conv1D/Conv2D/pool stacks, resumable BatchNorm statistics, and runtime
+  train/eval normalization/dropout switching in Sequential;
 - tested against libtensorflow 2.16.2 and 2.18.0 on Ubuntu 22.04/24.04;
 - loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
   binary/class accuracy, cast, concat, and OneHot;

@@ -190,3 +190,23 @@ test("runs a Conv1D layer", function()
   assert_eq(table.concat(output:shape(), ","), "1,3,3")
   session:close()
 end)
+
+test("runs global max pooling and activation layers", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "max_input")
+  local max = tf.layers.global_max_pool2d(graph, input, { name = "gmax" })
+  local relu = tf.layers.activation(graph, max.output, "relu",
+    { name = "relu" })
+  local session = tf.Session.new(graph)
+  local values = {}
+  for y = 1, 4 do
+    values[y] = {}
+    for x = 1, 4 do values[y][x] = { y, -x } end
+  end
+  local pooled = session:run({ [input] = { values } }, { relu.output })[1]
+  assert_eq(table.concat(pooled:shape(), ","), "1,2")
+  local flat = pooled:totable()[1]
+  assert_eq(flat[1], 4)
+  assert_eq(flat[2], 0)
+  session:close()
+end)

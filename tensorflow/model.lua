@@ -64,7 +64,9 @@ function Sequential:add(options)
       options.type == "dropout" or options.type == "conv2d" or
       options.type == "conv1d" or options.type == "max_pool2d" or
       options.type == "avg_pool2d" or
-      options.type == "global_avg_pool2d" or options.type == "batchnorm" or
+      options.type == "global_avg_pool2d" or
+      options.type == "global_max_pool2d" or options.type == "activation" or
+      options.type == "batchnorm" or
       options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
         self._input_dtype == nil then
@@ -292,6 +294,25 @@ function Sequential:_build()
       feature_size = spatial[1]
       layers[i] = { output = layer.output, input_size = feature_size,
         units = spatial[1], kind = "global_avg_pool2d" }
+      output = layer.output
+    elseif definition.type == "global_max_pool2d" then
+      if #spatial ~= 3 then
+        error("global_max_pool2d layers require an NHWC input", 3)
+      end
+      local layer = tf.layers.global_max_pool2d(graph, output,
+        { name = options.name })
+      spatial = { spatial[3] }
+      feature_size = spatial[1]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[1], kind = "global_max_pool2d" }
+      output = layer.output
+    elseif definition.type == "activation" then
+      local layer = tf.layers.activation(graph, output,
+        definition.activation or options.activation, {
+          name = options.name, dtype = options.dtype,
+        })
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "activation" }
       output = layer.output
     elseif definition.type == "dropout" then
       local layer = tf.layers.dropout(graph, output,
@@ -1010,6 +1031,11 @@ function Sequential:summary()
     elseif layer.kind == "global_avg_pool2d" then
       rows[#rows + 1] = string.format("  %d: GlobalAvgPool2D(%d)", i,
         layer.units)
+    elseif layer.kind == "global_max_pool2d" then
+      rows[#rows + 1] = string.format("  %d: GlobalMaxPool2D(%d)", i,
+        layer.units)
+    elseif layer.kind == "activation" then
+      rows[#rows + 1] = string.format("  %d: Activation", i)
     elseif layer.kind == "batchnorm" then
       rows[#rows + 1] = string.format("  %d: BatchNormalization", i)
     elseif layer.kind == "dropout" then

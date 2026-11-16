@@ -396,6 +396,42 @@ function Layers.global_avg_pool2d(graph, input, options)
   return { output = desc:finish(), variables = {}, initializers = {} }
 end
 
+function Layers.global_max_pool2d(graph, input, options)
+  options = options or {}
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "global_max_pool2d"
+  local tf = require("tensorflow")
+  local desc = graph:new_operation("Max", prefix .. "/max")
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, { 1, 2 }, prefix .. "/axes", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tidx", "int32")
+  desc:set_bool("keep_dims", true)
+  local pooled = desc:finish()
+  local squeeze = graph:new_operation("Squeeze", prefix .. "/squeeze")
+  squeeze:add_input(pooled)
+  squeeze:set_type("T", dtype)
+  squeeze:set_int_list("squeeze_dims", { 1, 2 })
+  return { output = squeeze:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.activation(graph, input, activation, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "activation"
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    return { output = fn(graph, input, prefix, dtype), variables = {},
+      initializers = {} }
+  elseif type(activation) == "function" then
+    return { output = activation(graph, input, prefix, dtype),
+      variables = {}, initializers = {} }
+  end
+  error("activation layer requires an activation name or function", 3)
+end
+
 function Layers.flatten(graph, input, input_size, options)
   options = options or {}
   if type(input_size) ~= "number" or input_size < 1 then

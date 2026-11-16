@@ -347,6 +347,16 @@ default), `name`. Returns `{ output, variables = {}, initializers = {} }`.
 Averages the H/W dimensions and squeezes them, producing `[batch, channels]`.
 Returns `{ output, variables = {}, initializers = {} }`.
 
+### `tf.layers.global_max_pool2d(graph, input[, opts])`
+
+Max-pools the H/W dimensions and squeezes them, producing
+`[batch, channels]`. Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.activation(graph, input, activation[, opts])`
+
+Applies a named or functional activation without parameters. Returns
+`{ output, variables = {}, initializers = {} }`.
+
 ### `tf.layers.dense(graph, input, units, opts)`
 
 Builds a Dense layer with a `[input_size, units]` weight variable and optional
@@ -391,6 +401,8 @@ model:add({ type = "conv2d", filters = 8, kernel_size = 3,
 model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
 model:add({ type = "avg_pool2d", kernel_size = 2, stride = 2 })
 model:add({ type = "global_avg_pool2d" })
+model:add({ type = "global_max_pool2d" })
+model:add({ type = "activation", activation = "relu" })
 model:add({ type = "batchnorm" })            -- channels inferred from the stack
 model:add({ type = "dropout", rate = 0.2 })  -- train-only; inference is identity
 model:add({ type = "flatten" })       -- optional, no parameters
