@@ -226,6 +226,73 @@ local function string_vector(graph, values, name)
   return targets, gradients, { initializers = initializers }
 end
 
+function Train.adagrad(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local name = options.name or "Adagrad"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("adagrad expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local accum = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/accum_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    local desc = graph:new_operation("ApplyAdagrad", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(lr)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    desc:set_bool("update_slots", true)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
+function Train.momentum(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local momentum_value = options.momentum or 0.9
+  local name = options.name or "Momentum"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("momentum expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local accum = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/accum_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    local desc = graph:new_operation("ApplyMomentum", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(lr)
+    desc:add_input(gradients[i])
+    desc:add_input(mom)
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    desc:set_bool("use_nesterov", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
 return Train.constant(graph, values, name, "string")
 end
 
@@ -328,6 +395,73 @@ function Train.rmsprop(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
+function Train.adagrad(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local name = options.name or "Adagrad"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("adagrad expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local accum = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/accum_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    local desc = graph:new_operation("ApplyAdagrad", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(lr)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    desc:set_bool("update_slots", true)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
+function Train.momentum(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local momentum_value = options.momentum or 0.9
+  local name = options.name or "Momentum"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("momentum expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local accum = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/accum_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    local desc = graph:new_operation("ApplyMomentum", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(lr)
+    desc:add_input(gradients[i])
+    desc:add_input(mom)
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    desc:set_bool("use_nesterov", false)
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers }

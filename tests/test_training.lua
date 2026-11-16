@@ -147,3 +147,55 @@ test("trains linear regression with RMSProp", function()
     tostring(result[2]:totable()))
   session:close()
 end)
+
+local function linear_problem()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", nil, "lx")
+  local target = tf.placeholder(graph, "float32", nil, "ltarget")
+  local w = tf.variable(graph, 0, "lw")
+  local b = tf.variable(graph, 0, "lb")
+  local prediction = tf.add(graph, tf.mul(graph, x, w.read, "lwx"), b.read,
+    "lprediction")
+  local loss = tf.reduce_mean(graph,
+    tf.square(graph, tf.sub(graph, prediction, target, "lerror"), "lsquared"),
+    { 0 }, "lloss")
+  return graph, x, target, w, b, loss
+end
+
+test("trains linear regression with Adagrad", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.adagrad(graph, loss, { w, b },
+    { learning_rate = 0.5 })
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  for _ = 1, 500 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.3,
+    tostring(result[1]:totable()))
+  assert_true(math.abs(result[2]:totable() - 1) < 0.3,
+    tostring(result[2]:totable()))
+  session:close()
+end)
+
+test("trains linear regression with momentum", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.momentum(graph, loss, { w, b },
+    { learning_rate = 0.05, momentum = 0.9 })
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  for _ = 1, 500 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.3,
+    tostring(result[1]:totable()))
+  assert_true(math.abs(result[2]:totable() - 1) < 0.3,
+    tostring(result[2]:totable()))
+  session:close()
+end)

@@ -121,6 +121,18 @@ Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 (default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10), `name`.
 Returns `targets, gradients, state`; initialize `state.initializers`.
 
+### `tf.train.adagrad(graph, loss, variables[, opts])`
+
+Adds `ApplyAdagrad` updates and accumulator variables. Options:
+`learning_rate`/`lr` (default `0.01`), `name`. Initialize
+`state.initializers`.
+
+### `tf.train.momentum(graph, loss, variables[, opts])`
+
+Adds `ApplyMomentum` updates and accumulator variables. Options:
+`learning_rate`/`lr` (default `0.01`), `momentum` (0.9), `name`. Initialize
+`state.initializers`.
+
 ### `tf.save_checkpoint(session, path, variables)`
 
 Writes a portable tensorflow-lua checkpoint. `variables` is a list of
