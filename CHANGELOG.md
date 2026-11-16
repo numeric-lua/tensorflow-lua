@@ -3,7 +3,11 @@
 ## 0.3.0
 
 - experimental eager execution (`tf.eager.Context`);
-- Dense, Sequential, loss, metric, and OneHot helpers;
+- Dense, Sequential, loss, metric, OneHot, cast, concat, and reduction
+  helpers;
+- sparse-label softmax cross-entropy and training, mean absolute error, and
+  binary accuracy;
+- EarlyStopping and ModelCheckpoint callbacks;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
   load, and GraphDef export;
 - string, complex64/128, float16, bfloat16, and quantized tensors;
