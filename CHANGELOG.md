@@ -12,6 +12,7 @@
 - Saver, dataset, callback, and benchmark tooling;
 - leaky ReLU and ELU activations;
 - AdamW decoupled weight decay, Adam clipvalue, and clip_by_value;
+- GC/leak stress coverage across tensors, graphs, sessions, and readers;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
   load, and GraphDef export;
 - string, complex64/128, float16, bfloat16, and quantized tensors;

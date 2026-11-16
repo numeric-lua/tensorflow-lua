@@ -57,6 +57,9 @@ dofile(root .. "/tests/test_ops.lua")
 current = "test_checkpoint_reader.lua"
 dofile(root .. "/tests/test_checkpoint_reader.lua")
 
+current = "test_stress.lua"
+dofile(root .. "/tests/test_stress.lua")
+
 current = "test_data.lua"
 dofile(root .. "/tests/test_data.lua")
 

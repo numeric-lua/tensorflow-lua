@@ -406,7 +406,7 @@ function Tensor:destroy()
     local handle = self._handle
     self._handle = nil
     ffi.gc(handle, nil)
-    capi.load().TF_DeleteTensor(handle)
+    capi.release_tensor(handle)
   end
 end
 
