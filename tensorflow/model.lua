@@ -224,6 +224,28 @@ function Sequential:fit(x, y, options)
     if options.seed == nil then options.seed = seed end
   end
   if self._session == nil then self._graph = nil end
+  if options.validation_split ~= nil and options.validation_data == nil then
+    local fraction = options.validation_split
+    if type(fraction) ~= "number" or fraction <= 0 or fraction >= 1 then
+      error("validation_split must be between 0 and 1", 2)
+    end
+    local cut = math.floor(#x * (1 - fraction))
+    if cut < 1 or cut >= #x then
+      error("validation_split produces an empty partition", 2)
+    end
+    local validation_x, validation_y = {}, {}
+    for i = cut + 1, #x do
+      validation_x[#validation_x + 1] = x[i]
+      validation_y[#validation_y + 1] = y[i]
+    end
+    local train_x, train_y = {}, {}
+    for i = 1, cut do
+      train_x[#train_x + 1] = x[i]
+      train_y[#train_y + 1] = y[i]
+    end
+    x, y = train_x, train_y
+    options.validation_data = { validation_x, validation_y }
+  end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
@@ -342,6 +364,28 @@ function Sequential:evaluate(x, y, options)
     x, y = dataset_x, y or dataset_y
   end
   if self._session == nil then self._graph = nil end
+  if options.validation_split ~= nil and options.validation_data == nil then
+    local fraction = options.validation_split
+    if type(fraction) ~= "number" or fraction <= 0 or fraction >= 1 then
+      error("validation_split must be between 0 and 1", 2)
+    end
+    local cut = math.floor(#x * (1 - fraction))
+    if cut < 1 or cut >= #x then
+      error("validation_split produces an empty partition", 2)
+    end
+    local validation_x, validation_y = {}, {}
+    for i = cut + 1, #x do
+      validation_x[#validation_x + 1] = x[i]
+      validation_y[#validation_y + 1] = y[i]
+    end
+    local train_x, train_y = {}, {}
+    for i = 1, cut do
+      train_x[#train_x + 1] = x[i]
+      train_y[#train_y + 1] = y[i]
+    end
+    x, y = train_x, train_y
+    options.validation_data = { validation_x, validation_y }
+  end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)

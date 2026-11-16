@@ -330,7 +330,9 @@ model:close()
   (or integer indices for sparse losses) and the output has class columns.
 - `metrics = { "binary_accuracy" }` thresholds probability outputs against
   `0`/`1` targets.
-- `fit` accepts `shuffle = true`; it returns `{ loss = { per_epoch, ... } }`; with
+- `fit` accepts `shuffle = true` and `validation_split` (fraction of the tail
+  held out when `validation_data` is absent); it returns
+  `{ loss = { per_epoch, ... } }`; with
   `validation_data = { x, y }` it also returns `val_loss`.
 - `callbacks` may contain tables with `on_train_begin(history, model)`,
   `on_epoch_end(history, epoch, model)`, and `on_train_end(history, model)`

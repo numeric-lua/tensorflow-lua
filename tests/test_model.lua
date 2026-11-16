@@ -234,3 +234,16 @@ test("counts model parameters and renders a summary", function()
   assert_true(summary:find("Total params: 13", 1, true) ~= nil)
   model:close()
 end)
+
+test("supports validation_split in fit", function()
+  math.randomseed(18)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 }, { 3 }, { 4 } },
+    { { 1 }, { 3 }, { 5 }, { 7 }, { 9 } },
+    { epochs = 2, validation_split = 0.4 })
+  assert_eq(#history.loss, 2)
+  assert_eq(#history.val_loss, 2)
+  model:close()
+end)
