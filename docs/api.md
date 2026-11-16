@@ -206,6 +206,11 @@ Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
 
 ## Metrics
 
+### `tf.metrics.binary_accuracy(graph, predictions, labels[, opts])`
+
+Thresholds probability predictions (default `0.5`) and compares them with
+`0`/`1` labels. Options: `threshold`, `dtype`, `labels_dtype`, `axes`, `name`.
+
 ### `tf.metrics.accuracy(graph, predictions, labels[, opts])`
 
 Compares integer class predictions to labels with `Equal`, casts to float32,
