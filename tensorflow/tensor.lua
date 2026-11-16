@@ -2,6 +2,7 @@
 -- Lua tensors backed by TF_Tensor.
 --
 local ffi = require("ffi")
+local bit = require("bit")
 local capi = require("tensorflow.capi")
 
 local Tensor = {}
@@ -52,6 +53,11 @@ local dtypes = {
     complex = true },
   complex128 = { code = 18, ctype = "double", size = 16, name = "complex128",
     complex = true },
+  float16 = { code = 19, ctype = "uint16_t", size = 2, name = "float16",
+    half = true },
+  ["half"] = "float16",
+  bfloat16 = { code = 14, ctype = "uint16_t", size = 2, name = "bfloat16",
+    half = true, bfloat = true },
 }
 
 local function canonical(dtype)
@@ -160,6 +166,83 @@ local function scalar(value, info)
   return value
 end
 
+local float_bits = ffi.new("union { float f; uint32_t u; }")
+
+local function float_to_half(value)
+  float_bits.f = value
+  local u = float_bits.u
+  local sign = bit.band(bit.rshift(u, 16), 0x8000)
+  local exponent = bit.band(bit.rshift(u, 23), 0xff)
+  local mantissa = bit.band(u, 0x7fffff)
+  if exponent == 0xff then
+    return bit.bor(sign, 0x7c00, bit.rshift(mantissa, 13))
+  end
+  local e = exponent - 127 + 15
+  if e >= 31 then return bit.bor(sign, 0x7c00) end
+  if e <= 0 then
+    if e < -10 then return sign end
+    mantissa = bit.bor(mantissa, 0x800000)
+    local shift = 14 - e
+    return bit.bor(sign, bit.rshift(mantissa, shift))
+  end
+  mantissa = mantissa + 0x1000
+  if bit.band(mantissa, 0x800000) ~= 0 then
+    mantissa = 0
+    e = e + 1
+    if e >= 31 then return bit.bor(sign, 0x7c00) end
+  end
+  return bit.bor(sign, bit.lshift(e, 10), bit.rshift(mantissa, 13))
+end
+
+local function half_to_float(value)
+  local sign = bit.band(value, 0x8000)
+  local exponent = bit.band(bit.rshift(value, 10), 0x1f)
+  local mantissa = bit.band(value, 0x3ff)
+  if exponent == 0 then
+    if mantissa == 0 then
+      float_bits.u = bit.lshift(sign, 16)
+      return float_bits.f
+    end
+    local scale = 2 ^ -24
+    local result = mantissa * scale
+    if sign ~= 0 then result = -result end
+    return result
+  elseif exponent == 31 then
+    if mantissa == 0 then
+      return sign ~= 0 and -math.huge or math.huge
+    end
+    return 0 / 0
+  end
+  float_bits.u = bit.lshift(bit.bor(bit.lshift(exponent + 112, 23),
+    bit.lshift(mantissa, 13)), 0)
+  float_bits.u = bit.lshift(sign, 16) + float_bits.u
+  return float_bits.f
+end
+
+local function float_to_bfloat(value)
+  float_bits.f = value
+  local u = float_bits.u
+  if (u & 0x7fffffff) > 0x7f800000 then
+    return bit.rshift(u, 16)
+  end
+  return bit.rshift(u + 0x8000, 16)
+end
+
+local function bfloat_to_float(value)
+  float_bits.u = bit.lshift(value, 16)
+  return float_bits.f
+end
+
+local function encode_half(value, info)
+  if info.bfloat then return float_to_bfloat(value) end
+  return float_to_half(value)
+end
+
+local function decode_half(value, info)
+  if info.bfloat then return bfloat_to_float(value) end
+  return half_to_float(value)
+end
+
 function Tensor.new(value, options)
   options = options or {}
   if type(options) ~= "table" then
@@ -197,6 +280,30 @@ function Tensor.new(value, options)
         local real, imaginary = scalar(values[i], info)
         array[(i - 1) * 2] = real
         array[(i - 1) * 2 + 1] = imaginary
+      end
+    end)
+    if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
+    local handle = ffi.gc(ptr, function(pointer)
+      capi.release_tensor(pointer)
+    end)
+    return setmetatable({ _handle = handle, _shape = shape,
+      _dtype = dtype }, Tensor)
+  end
+  if info.half then
+    local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
+      count * info.size)
+    if ptr == nil then error("TF_AllocateTensor failed", 2) end
+    local ok, err = pcall(function()
+      local data = lib.TF_TensorData(ptr)
+      if count > 0 and data == nil then
+        error("TF_TensorData returned NULL for a non-empty tensor", 2)
+      end
+      local array = ffi.cast("uint16_t*", data)
+      for i = 1, count do
+        if type(values[i]) ~= "number" then
+          error("half tensors require numbers", 2)
+        end
+        array[i - 1] = encode_half(values[i], info)
       end
     end)
     if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
@@ -319,7 +426,10 @@ function Tensor:totable()
   local lib = capi.load()
   local count = self:numel()
   local flat = {}
-  if count > 0 and info.complex then
+  if count > 0 and info.half then
+    local array = ffi.cast("uint16_t*", lib.TF_TensorData(self:handle()))
+    for i = 1, count do flat[i] = decode_half(array[i - 1], info) end
+  elseif count > 0 and info.complex then
     local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
     for i = 1, count do
       flat[i] = Tensor.complex(array[(i - 1) * 2], array[(i - 1) * 2 + 1])

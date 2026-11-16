@@ -24,7 +24,8 @@ TensorFlow's `TF_TString` layout; raw-byte export is intentionally unsupported
 for strings. Quantized `qint8`, `quint8`, `qint16`, `quint16`, and `qint32`
 values are stored as their integer bit patterns. Complex tensors use
 `tf.complex(real, imag)` values and `totable()` returns objects with `real` and
-`imag` fields.
+`imag` fields. `float16` and `bfloat16` tensors convert from and to Lua numbers;
+`half` is an alias for `float16`.
 
 ```lua
 local a = tf.tensor({ { 1, 2 }, { 3, 4 } })

@@ -21,7 +21,7 @@ end)
 
 test("rejects malformed tensors", function()
   assert_error(function() tf.tensor({ { 1 }, { 2, 3 } }) end, "rectangular")
-  assert_error(function() tf.tensor({ 1 }, { dtype = "half" }) end,
+  assert_error(function() tf.tensor({ 1 }, { dtype = "variant" }) end,
     "unsupported")
 end)
 
@@ -104,4 +104,14 @@ test("round-trips complex tensors", function()
   assert_eq(result[2].imag, 0.5)
   assert_eq(values:dtype(), "complex64")
   assert_true(tostring(result[1]):find("1") ~= nil)
+end)
+
+test("round-trips float16 and bfloat16 tensors", function()
+  local half = tf.tensor({ 1.5, -2.25, 0.5 }, { dtype = "float16" }):totable()
+  assert_true(math.abs(half[1] - 1.5) < 0.01)
+  assert_true(math.abs(half[2] + 2.25) < 0.01)
+  assert_true(math.abs(half[3] - 0.5) < 0.01)
+  local bfloat = tf.tensor({ 1.5, -2.25 }, { dtype = "bfloat16" }):totable()
+  assert_true(math.abs(bfloat[1] - 1.5) < 0.02)
+  assert_true(math.abs(bfloat[2] + 2.25) < 0.02)
 end)
