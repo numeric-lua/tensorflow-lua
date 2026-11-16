@@ -4,11 +4,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${TENSORFLOW_VERSION:-2.18.0}"
 DEST="$ROOT/third_party/libtensorflow"
 
-if [[ -z "${TENSORFLOW_SHA256:-}" && "$VERSION" == "2.18.0" &&
-    "$ARCH" == "linux-x86_64" ]]; then
-  TENSORFLOW_SHA256="605bfcb370c7e7ec981eabada880f60784e3de018395be95c95c3e5592c3d9a2"
-fi
-
 if [[ -z "${TENSORFLOW_ARCH:-}" ]]; then
   case "$(uname -s):$(uname -m)" in
     Linux:x86_64|Linux:amd64) TENSORFLOW_ARCH="linux-x86_64" ;;
@@ -19,6 +14,12 @@ if [[ -z "${TENSORFLOW_ARCH:-}" ]]; then
   esac
 fi
 ARCH="$TENSORFLOW_ARCH"
+
+if [[ -z "${TENSORFLOW_SHA256:-}" && "$VERSION" == "2.18.0" &&
+    "$ARCH" == "linux-x86_64" ]]; then
+  TENSORFLOW_SHA256="605bfcb370c7e7ec981eabada880f60784e3de018395be95c95c3e5592c3d9a2"
+fi
+
 
 if [[ -f "$DEST/lib/libtensorflow.so" ]]; then
   echo "libtensorflow already present at $DEST"
