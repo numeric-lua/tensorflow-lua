@@ -19,9 +19,9 @@ contains 113 tests.
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
-- compositional Dense, Conv2D, MaxPool2D, Embedding, Flatten, and Dropout
-  layers, including Conv2D/MaxPool stacks and runtime train/eval dropout
-  switching in Sequential;
+- compositional Dense, Conv2D, MaxPool2D, BatchNormalization, Embedding,
+  Flatten, and Dropout layers, including Conv2D/MaxPool stacks and runtime
+  train/eval normalization/dropout switching in Sequential;
 - loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
   binary/class accuracy, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,

@@ -449,3 +449,22 @@ test("trains a Sequential Conv2D stack", function()
   assert_true(summary:find("Conv2D", 1, true) ~= nil)
   model:close()
 end)
+
+test("trains a Sequential model with BatchNormalization", function()
+  math.randomseed(30)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 4, options = { activation = "relu" } })
+  model:add({ type = "batchnorm" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adam", learning_rate = 0.02 } })
+  assert_eq(model:count_params(), 2 * 4 + 4 + 4 + 4 + 4 * 1 + 1)
+  local history = model:fit({ { 1, 2 }, { 2, 3 }, { 3, 4 } },
+    { { 2 }, { 3 }, { 4 } }, { epochs = 5, batch_size = 3 })
+  assert_eq(#history.loss, 5)
+  local first = model:predict({ { 4, 5 } }):totable()[1][1]
+  local second = model:predict({ { 4, 5 } }):totable()[1][1]
+  assert_eq(first, second)
+  local summary = model:summary()
+  assert_true(summary:find("BatchNormalization", 1, true) ~= nil)
+  model:close()
+end)

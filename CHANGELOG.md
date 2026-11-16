@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Conv2D and MaxPool2D layers;
-- Conv2D/MaxPool stacks in Sequential;
+- Conv2D, MaxPool2D, and BatchNormalization layers;
+- Conv2D/MaxPool/BatchNorm stacks in Sequential;
 - integer-list graph attributes.
 
 ## 0.4.0

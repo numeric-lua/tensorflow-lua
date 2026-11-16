@@ -132,3 +132,26 @@ test("runs a MaxPool2D layer", function()
   assert_eq(table.concat(output:shape(), ","), "1,2,2,2")
   session:close()
 end)
+
+test("runs BatchNormalization in training and inference modes", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 4, 3 }, "bn_input")
+  local training = tf.placeholder(graph, "bool", { }, "bn_training")
+  local layer = tf.layers.batch_normalization(graph, input, 3,
+    { training = training, axes = { 0 }, name = "bn" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local values = { { 1, 2, 3 }, { 2, 3, 4 }, { 3, 4, 5 }, { 4, 5, 6 } }
+  local trained = session:run({ [input] = values, [training] = true },
+    { layer.output })[1]
+  assert_eq(table.concat(trained:shape(), ","), "4,3")
+  local inferred = session:run({ [input] = values, [training] = false },
+    { layer.output })[1]
+  assert_eq(table.concat(inferred:shape(), ","), "4,3")
+  local mean = 0
+  for _, row in ipairs(trained:totable()) do
+    for _, value in ipairs(row) do mean = mean + value end
+  end
+  assert_true(math.abs(mean) < 1e-3)
+  session:close()
+end)

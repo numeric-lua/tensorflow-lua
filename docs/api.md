@@ -321,6 +321,14 @@ Other options: `stride`, `padding` (`SAME`/`VALID`), `dilation`, `use_bias`,
 Builds a `MaxPool` operation. Options: `stride`, `padding` (`VALID` by
 default), `name`. Returns `{ output, variables = {}, initializers = {} }`.
 
+### `tf.layers.batch_normalization(graph, input, channels[, opts])`
+
+Builds gamma/beta variables, moving mean/variance, and runtime-conditional
+normalization. Options: `training` (boolean or boolean graph output), `axes`
+(default `{0}`), `epsilon` (1e-5), `momentum` (0.99), `dtype`, `name`. The
+moving statistics update only while training is true. Returns
+`{ output, gamma, beta, moving_mean, moving_variance, variables, initializers }`.
+
 ### `tf.layers.dense(graph, input, units, opts)`
 
 Builds a Dense layer with a `[input_size, units]` weight variable and optional
@@ -361,6 +369,7 @@ model:add({ units = 4, options = { activation = "relu" } })
 model:add({ type = "conv2d", filters = 8, kernel_size = 3,
   options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
+model:add({ type = "batchnorm" })            -- channels inferred from the stack
 model:add({ type = "dropout", rate = 0.2 })  -- train-only; inference is identity
 model:add({ type = "flatten" })       -- optional, no parameters
 model:add({ units = 1 })

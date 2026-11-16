@@ -65,6 +65,123 @@ function Layers.dense(graph, input, units, options)
   }
 end
 
+function Layers.batch_normalization(graph, input, channels, options)
+  options = options or {}
+  if type(channels) ~= "number" or channels < 1 then
+    error("batch_normalization requires a positive channel count", 3)
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "batch_normalization"
+  local axes = options.axes or { 0 }
+  local epsilon = options.epsilon or 1e-5
+  local momentum = options.momentum or 0.99
+  local tf = require("tensorflow")
+  local ones, zeros = {}, {}
+  for i = 1, channels do ones[i] = 1; zeros[i] = 0 end
+  local gamma = tf.variable(graph, ones, prefix .. "/gamma", { dtype = dtype })
+  local beta = tf.variable(graph, zeros, prefix .. "/beta", { dtype = dtype })
+  local moving_mean = tf.variable(graph, zeros, prefix .. "/moving_mean",
+    { dtype = dtype })
+  local moving_variance = tf.variable(graph, ones,
+    prefix .. "/moving_variance", { dtype = dtype })
+  local initializers = { gamma.initializer, beta.initializer,
+    moving_mean.initializer, moving_variance.initializer }
+
+  local batch_mean = tf.reduce_mean(graph, input, axes,
+    prefix .. "/batch_mean", dtype, true)
+  local centered = tf.sub(graph, input, batch_mean, prefix .. "/centered", dtype)
+  local squared = tf.square(graph, centered, prefix .. "/squared", dtype)
+  local batch_variance = tf.reduce_mean(graph, squared, axes,
+    prefix .. "/batch_variance", dtype, true)
+
+  local training = options.training
+  local gate
+  if type(training) == "table" and training.oper ~= nil then
+    gate = tf.cast(graph, training, "bool", dtype, prefix .. "/training")
+  else
+    gate = tf.constant(graph, training == false and 0 or 1,
+      prefix .. "/training", dtype)
+  end
+  local mean_delta = tf.sub(graph, batch_mean, moving_mean.read,
+    prefix .. "/mean_delta", dtype)
+  local mean = tf.add(graph, moving_mean.read,
+    tf.mul(graph, gate, mean_delta, prefix .. "/mean_gate", dtype),
+    prefix .. "/mean", dtype)
+  local variance_delta = tf.sub(graph, batch_variance,
+    moving_variance.read, prefix .. "/variance_delta", dtype)
+  local variance = tf.add(graph, moving_variance.read,
+    tf.mul(graph, gate, variance_delta, prefix .. "/variance_gate", dtype),
+    prefix .. "/variance", dtype)
+  local epsilon_op = tf.constant(graph, epsilon, prefix .. "/epsilon", dtype)
+  local variance_floor = tf.clip_by_value(graph, variance, epsilon, 1e30,
+    prefix .. "/variance_floor", dtype)
+  local denominator = tf.sqrt(graph, tf.add(graph, variance_floor, epsilon_op,
+    prefix .. "/variance_epsilon", dtype), prefix .. "/denominator", dtype)
+  local normalized = tf.div(graph, tf.sub(graph, input, mean,
+    prefix .. "/normalized_delta", dtype), denominator,
+    prefix .. "/normalized", dtype)
+  local scaled = tf.mul(graph, normalized, gamma.read, prefix .. "/scaled",
+    dtype)
+  local output = tf.add(graph, scaled, beta.read, prefix .. "/shifted", dtype)
+
+  local decay = tf.constant(graph, momentum, prefix .. "/decay", dtype)
+  local one_minus_decay = tf.constant(graph, 1 - momentum,
+    prefix .. "/one_minus_decay", dtype)
+  local mean_flat = tf.reshape(graph, batch_mean, { channels },
+    prefix .. "/mean_flat", dtype)
+  local variance_flat = tf.reshape(graph, batch_variance, { channels },
+    prefix .. "/variance_flat", dtype)
+  local new_mean = tf.add(graph,
+    tf.mul(graph, moving_mean.read, decay, prefix .. "/mean_decay", dtype),
+    tf.mul(graph, mean_flat, one_minus_decay,
+      prefix .. "/mean_update", dtype), prefix .. "/new_mean", dtype)
+  local new_variance = tf.add(graph,
+    tf.mul(graph, moving_variance.read, decay,
+      prefix .. "/variance_decay", dtype),
+    tf.mul(graph, variance_flat, one_minus_decay,
+      prefix .. "/variance_update", dtype), prefix .. "/new_variance", dtype)
+  local gated_mean = tf.add(graph, moving_mean.read,
+    tf.mul(graph, gate, tf.sub(graph, new_mean, moving_mean.read,
+      prefix .. "/new_mean_delta", dtype), prefix .. "/mean_gate_update",
+      dtype), prefix .. "/gated_mean", dtype)
+  local gated_variance = tf.add(graph, moving_variance.read,
+    tf.mul(graph, gate, tf.sub(graph, new_variance, moving_variance.read,
+      prefix .. "/new_variance_delta", dtype),
+      prefix .. "/variance_gate_update", dtype),
+    prefix .. "/gated_variance", dtype)
+  local update_mean = graph:new_operation("Assign", prefix .. "/update_mean")
+  update_mean:add_input(moving_mean.ref)
+  update_mean:add_input(gated_mean)
+  update_mean:set_type("T", dtype)
+  update_mean:set_bool("use_locking", true)
+  local mean_assign = update_mean:finish()
+  local update_variance = graph:new_operation("Assign",
+    prefix .. "/update_variance")
+  update_variance:add_input(moving_variance.ref)
+  update_variance:add_input(gated_variance)
+  update_variance:set_type("T", dtype)
+  update_variance:set_bool("use_locking", true)
+  local variance_assign = update_variance:finish()
+
+  local final = graph:new_operation("Identity", prefix .. "/output")
+  final:add_input(output)
+  final:add_control_input(mean_assign)
+  final:add_control_input(variance_assign)
+  final:set_type("T", dtype)
+  return {
+    output = final:finish(),
+    gamma = gamma,
+    beta = beta,
+    moving_mean = moving_mean,
+    moving_variance = moving_variance,
+    variables = { gamma, beta },
+    initializers = initializers,
+    channels = channels,
+    axes = axes,
+    dtype = dtype,
+  }
+end
+
 function Layers.conv2d(graph, input, filters, kernel_size, options)
   options = options or {}
   if type(filters) ~= "number" or filters < 1 then

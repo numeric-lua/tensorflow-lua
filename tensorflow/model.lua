@@ -62,7 +62,8 @@ function Sequential:add(options)
   end
   if options.type == "flatten" or options.type == "embedding" or
       options.type == "dropout" or options.type == "conv2d" or
-      options.type == "max_pool2d" then
+      options.type == "max_pool2d" or options.type == "batchnorm" or
+      options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
         self._input_dtype == nil then
       self._input_dtype = "int32"
@@ -109,7 +110,31 @@ function Sequential:_build()
   for i, definition in ipairs(self._layers) do
     local options = definition.options or {}
     options.name = options.name or ((definition.type or "dense") .. "_" .. i)
-    if definition.type == "conv2d" then
+    if definition.type == "batchnorm" or
+        definition.type == "batch_normalization" then
+      local axes, channels
+      if #spatial == 3 then
+        axes = { 0, 1, 2 }
+        channels = spatial[3]
+      elseif #spatial == 1 then
+        axes = { 0 }
+        channels = spatial[1]
+      else
+        error("batchnorm requires a 2-D or NHWC input", 3)
+      end
+      local layer = tf.layers.batch_normalization(graph, output, channels, {
+        training = training, axes = axes, name = options.name,
+        epsilon = options.epsilon, momentum = options.momentum,
+        dtype = options.dtype,
+      })
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "batchnorm" }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "conv2d" then
       if #spatial ~= 3 then
         error("conv2d layers require input_shape = { height, width, channels }", 3)
       end
@@ -244,6 +269,7 @@ function Sequential:_build()
       add_initializers(initializers, layer.initializers)
       output = layer.output
       feature_size = definition.units
+      spatial = { definition.units }
     end
   end
   local units = feature_size
@@ -801,6 +827,8 @@ function Sequential:summary()
     elseif layer.kind == "max_pool2d" then
       rows[#rows + 1] = string.format("  %d: MaxPool2D(%dx%d)", i,
         layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "batchnorm" then
+      rows[#rows + 1] = string.format("  %d: BatchNormalization", i)
     elseif layer.kind == "dropout" then
       rows[#rows + 1] = string.format("  %d: Dropout", i)
     elseif layer.kind == "embedding" then
