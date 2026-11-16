@@ -161,6 +161,9 @@ function Sequential:_build()
   if optimizer_type == "adam" then
     local result = { tf.train.adam(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
+  elseif optimizer_type == "adamw" then
+    local result = { tf.train.adamw(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "sgd" or optimizer_type == "gradient_descent" then
     targets = tf.train.gradient_descent(graph, loss, variables,
       optimizer.learning_rate or optimizer.lr or 0.01, optimizer.name)

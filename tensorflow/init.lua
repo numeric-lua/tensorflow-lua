@@ -66,6 +66,9 @@ tf.train = {
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,
+  adamw = function(graph, loss, variables, options)
+    return Train.adamw(graph, loss, variables, options)
+  end,
   rmsprop = function(graph, loss, variables, options)
     return Train.rmsprop(graph, loss, variables, options)
   end,

@@ -266,3 +266,19 @@ test("uses a reusable native Saver", function()
   session2:close()
   os.execute("rm -rf /tmp/tf-lua-saver")
 end)
+
+test("trains with Adam weight decay", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.adamw(graph, loss, { w, b },
+    { learning_rate = 0.05, weight_decay = 0.01 })
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  for _ = 1, 300 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.4)
+  session:close()
+end)

@@ -181,3 +181,15 @@ test("trains directly from a Dataset", function()
   assert_eq(#history.loss, 3)
   model:close()
 end)
+
+test("trains a Sequential model with AdamW", function()
+  math.randomseed(13)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adamw", learning_rate = 0.1,
+    weight_decay = 0.01 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } },
+    { epochs = 50 })
+  assert_eq(#history.loss, 50)
+  model:close()
+end)

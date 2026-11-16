@@ -40,6 +40,7 @@ function Train.variable(graph, initial, name, options)
   if options.container then variable_desc:set_string("container", options.container) end
   if options.shared_name then variable_desc:set_string("shared_name", options.shared_name) end
   local variable = variable_desc:finish()
+  variable.dtype = dtype
 
   local initializer_desc = graph:new_operation("Assign", name .. "/Assign")
   initializer_desc:add_input(variable)
@@ -137,6 +138,7 @@ function Train.adam(graph, loss, variables, options)
   local beta2_power = Train.variable(graph, beta2, name .. "/beta2_power",
     { dtype = dtype })
   local initializers = { beta1_power.initializer, beta2_power.initializer }
+  local weight_decay = options.weight_decay or options.wd or 0
   local targets, apply_ops = {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -148,7 +150,18 @@ function Train.adam(graph, loss, variables, options)
       { dtype = var_dtype })
     initializers[#initializers + 1] = m.initializer
     initializers[#initializers + 1] = v.initializer
+    local decay_assign
+    if weight_decay > 0 then
+      local tensorflow = require("tensorflow")
+      local factor = Train.constant(graph, 1 - learning_rate * weight_decay,
+        name .. "/decay_" .. i, var_dtype)
+      local decayed = tensorflow.mul(graph, variable.read or ref, factor,
+        name .. "/decayed_" .. i, var_dtype)
+      decay_assign = assign(graph, ref, decayed,
+        name .. "/weight_decay_" .. i)
+    end
     local desc = graph:new_operation("ApplyAdam", name .. "/update_" .. i)
+    if decay_assign ~= nil then desc:add_control_input(decay_assign) end
     desc:add_input(ref)
     desc:add_input(m.ref)
     desc:add_input(v.ref)
@@ -182,7 +195,13 @@ function Train.adam(graph, loss, variables, options)
 end
 
 local function string_vector(graph, values, name)
-  return Train.constant(graph, values, name, "string")
+  function Train.adamw(graph, loss, variables, options)
+  options = options or {}
+  options.weight_decay = options.weight_decay or options.wd or 0.01
+  return Train.adam(graph, loss, variables, options)
+end
+
+return Train.constant(graph, values, name, "string")
 end
 
 function Train.save_v2(graph, prefix, variables, name)
@@ -354,6 +373,12 @@ function Train.momentum(graph, loss, variables, options)
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers }
+end
+
+function Train.adamw(graph, loss, variables, options)
+  options = options or {}
+  options.weight_decay = options.weight_decay or options.wd or 0.01
+  return Train.adam(graph, loss, variables, options)
 end
 
 return Train

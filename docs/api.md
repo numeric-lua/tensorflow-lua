@@ -117,8 +117,14 @@ per training step.
 
 Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
 (default `0.001`), `beta1` (0.9), `beta2` (0.999), `epsilon` (1e-8), `name`.
-Returns `targets, gradients, state`. Initialize each variable and every entry in
-`state.initializers` before training.
+Options also include `weight_decay`. Returns `targets, gradients, state`.
+Initialize each variable and every entry in `state.initializers` before
+training.
+
+### `tf.train.adamw(graph, loss, variables[, opts])`
+
+Adam with decoupled weight decay; defaults `weight_decay = 0.01`. Accepts the
+same options and returns the same triple as `tf.train.adam`.
 
 ### `tf.train.rmsprop(graph, loss, variables[, opts])`
 
@@ -290,7 +296,7 @@ model:close()
   `"sparse_softmax_cross_entropy"`/`"sparse_ce"` (integer labels), or a custom
   function
   `function(graph, predictions, targets) ... end`.
-- Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
+- Supported optimizers: `adam`, `adamw`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.
 - `metrics = { "accuracy" }` adds per-epoch class accuracy; targets are one-hot
   (or integer indices for sparse losses) and the output has class columns.
