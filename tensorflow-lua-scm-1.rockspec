@@ -31,5 +31,6 @@ build = {
     ["tensorflow.checkpoint_reader"] = "tensorflow/checkpoint_reader.lua",
     ["tensorflow.ops"] = "tensorflow/ops.lua",
     ["tensorflow.eager"] = "tensorflow/eager.lua",
+    ["tensorflow.layers"] = "tensorflow/layers.lua",
   },
 }

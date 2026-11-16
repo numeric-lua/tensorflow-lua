@@ -172,6 +172,22 @@ local tensor = reader:tensor(name)
 reader:close()
 ```
 
+## Layers
+
+### `tf.layers.dense(graph, input, units, opts)`
+
+Builds a Dense layer with a `[input_size, units]` weight variable and optional
+bias. Required option: `input_size`. Other options: `use_bias` (true),
+`activation` (`"relu"`, `"sigmoid"`, `"tanh"`, a custom function, or nil),
+`dtype`, `name`.
+
+Returns `{ output, weight, bias, variables, initializers, input_size, units }`.
+
+### `tf.layers.sequential(graph, input, definitions, input_size)`
+
+Chains Dense layers. Each definition is `{ units = n, options = {...} }`.
+Returns the layer list. The caller must run every layer initializer.
+
 ## Eager execution (experimental)
 
 ```lua

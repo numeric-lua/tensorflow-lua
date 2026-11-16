@@ -16,6 +16,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
+- compositional Dense layers with graph variables and initializers;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
