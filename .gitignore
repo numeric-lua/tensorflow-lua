@@ -1,0 +1,7 @@
+third_party/libtensorflow/
+third_party/*.tar.gz
+*.so
+*.o
+tests/.tmp/
+.luacheckcache
+third_party/

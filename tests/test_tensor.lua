@@ -1,0 +1,26 @@
+local tf = require("tensorflow")
+
+test("creates and converts numeric tensors", function()
+  local t = tf.tensor({ { 1, 2 }, { 3, 4 } })
+  assert_eq(t:dtype(), "float32")
+  assert_eq(t:dim(), 2)
+  assert_eq(t:numel(), 4)
+  assert_eq(table.concat(t:shape(), ","), "2,2")
+  local values = t:totable()
+  assert_eq(values[2][1], 3)
+end)
+
+test("supports explicit dtypes, scalars, and bools", function()
+  assert_eq(tf.tensor({ 1, 2 }, { dtype = "int64" }):totable()[2], 2)
+  local scalar = tf.tensor(3.5)
+  assert_eq(scalar:dim(), 0)
+  assert_eq(scalar:totable(), 3.5)
+  local flags = tf.tensor({ true, false, true }, { dtype = "bool" })
+  assert_eq(flags:totable()[2], false)
+end)
+
+test("rejects malformed tensors", function()
+  assert_error(function() tf.tensor({ { 1 }, { 2, 3 } }) end, "rectangular")
+  assert_error(function() tf.tensor({ 1 }, { dtype = "complex64" }) end,
+    "unsupported")
+end)

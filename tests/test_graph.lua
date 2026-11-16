@@ -1,0 +1,73 @@
+local tf = require("tensorflow")
+
+local function varint(value)
+  local bytes = {}
+  repeat
+    local byte = value % 128
+    value = math.floor(value / 128)
+    if value > 0 then byte = byte + 128 end
+    bytes[#bytes + 1] = string.char(byte)
+  until value == 0
+  return table.concat(bytes)
+end
+
+local function field(number, payload)
+  return varint(number * 8 + 2) .. varint(#payload) .. payload
+end
+
+local function varint_field(number, value)
+  return varint(number * 8) .. varint(value)
+end
+
+local function attr_type(value)
+  return field(5, field(1, "T") .. field(2, varint_field(6, value)))
+end
+
+local function attr_dtype(value)
+  return field(5, field(1, "dtype") .. field(2, varint_field(6, value)))
+end
+
+local function node(name, op, inputs, attr)
+  local data = field(1, name) .. field(2, op)
+  for _, input in ipairs(inputs or {}) do data = data .. field(3, input) end
+  if attr then data = data .. attr end
+  return field(1, data)
+end
+
+-- GraphDef: z = x + y, all float32 placeholders.
+local graph_def = node("x", "Placeholder", nil, attr_dtype(1)) ..
+  node("y", "Placeholder", nil, attr_dtype(1)) ..
+  node("z", "AddV2", { "x", "y" }, attr_type(1))
+
+test("imports a hand-built GraphDef and runs feeds/fetches", function()
+  local graph = tf.Graph.new():import_graph_def(graph_def)
+  local session = tf.Session.new(graph)
+  local a = tf.tensor({ 1, 2, 3 })
+  local b = tf.tensor({ 10, 20, 30 })
+  local z = session:run({ x = a, y = b }, "z:0")
+  assert_eq(z:dtype(), "float32")
+  assert_eq(table.concat(z:shape(), ","), "3")
+  assert_eq(z:totable()[1], 11)
+  assert_eq(z:totable()[3], 33)
+  session:close()
+end)
+
+test("supports named fetch maps and graph export", function()
+  local graph = tf.Graph.new():import_graph_def(graph_def)
+  local session = tf.Session.new(graph)
+  local results = session:run({ x = { 1, 1 }, y = { 2, 2 } },
+    { sum = "z:0" })
+  assert_eq(results.sum:totable()[2], 3)
+  assert_true(#graph:graph_def() > 0)
+  session:close()
+end)
+
+test("reports missing operations and session errors", function()
+  local graph = tf.Graph.new():import_graph_def(graph_def)
+  assert_error(function() graph:operation("missing") end, "no operation")
+  local session = tf.Session.new(graph)
+  assert_error(function() session:run({ x = { 1, 2 }, y = { 3, 4, 5 } }, "z:0") end)
+  assert_error(function() session:run({ x = { 1 } }, "missing:0") end,
+    "no operation")
+  session:close()
+end)
