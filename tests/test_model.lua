@@ -374,6 +374,10 @@ test("resumes training with optimizer and epoch state", function()
   local first = build()
   first:fit(x, y, { epochs = 20 })
   local snapshot = first:predict({ { 4 } }):totable()[1][1]
+  local slot_bytes = {}
+  for i, variable in ipairs(first._optimizer_state.variables) do
+    slot_bytes[i] = first._session:run({}, { variable.read })[1]:bytes()
+  end
   first:save_training(prefix)
   local epoch = first._epoch
   first:fit(x, y, { epochs = 20 })
@@ -383,7 +387,11 @@ test("resumes training with optimizer and epoch state", function()
   local resumed = build()
   resumed:load_training(prefix)
   assert_eq(resumed._epoch, epoch)
-  assert_true(#resumed._optimizer_state.variables > 0)
+  assert_eq(#resumed._optimizer_state.variables, #slot_bytes)
+  for i, variable in ipairs(resumed._optimizer_state.variables) do
+    local bytes = resumed._session:run({}, { variable.read })[1]:bytes()
+    assert_eq(bytes, slot_bytes[i], "optimizer slot " .. i)
+  end
   local restored = resumed:predict({ { 4 } }):totable()[1][1]
   assert_true(math.abs(snapshot - restored) < 1e-5,
     tostring(snapshot) .. " vs " .. tostring(restored))
