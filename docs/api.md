@@ -338,6 +338,8 @@ model:close()
   (or integer indices for sparse losses) and the output has class columns.
 - `metrics = { "binary_accuracy" }` thresholds probability outputs against
   `0`/`1` targets.
+- `class_weight = { [0] = 1, [1] = 2 }` weights sparse class losses; keys are
+  TensorFlow class indices (0-based).
 - `fit` accepts `shuffle = true` and `validation_split` (fraction of the tail
   held out when `validation_data` is absent); it returns
   `{ loss = { per_epoch, ... } }`; with

@@ -124,8 +124,31 @@ function Sequential:_build()
       { axes = { 0, 1 } })
   elseif sparse then
     local one_hot = tf.one_hot(graph, target, units, { name = "target_one_hot" })
-    loss = tf.losses.softmax_cross_entropy(graph, output, one_hot,
-      { axes = { 0 } })
+    local class_weight = self._compiled.class_weight
+    if class_weight ~= nil then
+      local weights = {}
+      for i = 0, units - 1 do weights[#weights + 1] = class_weight[i] or 1 end
+      local ce = graph:new_operation("SoftmaxCrossEntropyWithLogits",
+        "sparse_loss")
+      ce:add_input(output)
+      ce:add_input(one_hot)
+      ce:set_type("T", "float32")
+      local per_example = ce:finish()
+      local axis = tf.constant(graph, 0, "class_axis", "int32")
+      local gather = graph:new_operation("GatherV2", "class_sample_weights")
+      gather:add_input(tf.constant(graph, weights, "class_weights", "float32"))
+      gather:add_input(target)
+      gather:add_input(axis)
+      gather:set_type("Tparams", "float32")
+      gather:set_type("Tindices", "int32")
+      local sample_weights = gather:finish()
+      local weighted = tf.mul(graph, per_example, sample_weights,
+        "weighted_sparse_loss", "float32")
+      loss = tf.reduce_mean(graph, weighted, { 0 }, "sparse_mean", "float32")
+    else
+      loss = tf.losses.softmax_cross_entropy(graph, output, one_hot,
+        { axes = { 0 } })
+    end
   else
     error("unsupported loss '" .. tostring(loss_spec) .. "'", 3)
   end

@@ -264,3 +264,17 @@ test("predicts class indices", function()
   assert_true(values[1] == 0 or values[1] == 1)
   model:close()
 end)
+
+test("trains sparse labels with class weights", function()
+  math.randomseed(20)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce",
+    optimizer = { type = "adam", learning_rate = 0.05 },
+    class_weight = { [0] = 1, [1] = 2 } })
+  local history = model:fit({ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+    { 0, 1, 1, 0 }, { epochs = 50 })
+  assert_eq(#history.loss, 50)
+  assert_true(history.loss[50] < history.loss[1])
+  model:close()
+end)
