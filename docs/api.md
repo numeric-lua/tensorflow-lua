@@ -1,5 +1,22 @@
 # tensorflow-lua API
 
+## Contents
+
+- [Loading](#loading)
+- [Tensors](#tensors)
+- [Graphs](#graphs)
+- [Losses](#losses)
+- [Data batching](#data-batching)
+- [Callbacks](#callbacks)
+- [Metrics](#metrics)
+- [Layers](#layers)
+- [Sequential model](#sequential-model)
+- [Eager execution (experimental)](#eager-execution-experimental)
+- [Training examples](#training-examples)
+- [Typed ops](#typed-ops)
+- [Sessions](#sessions)
+- [Errors](#errors)
+
 ## Loading
 
 ```lua

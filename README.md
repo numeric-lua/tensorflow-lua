@@ -5,7 +5,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.3.0` alpha. Graph inference, construction, training, checkpoints, eager mode, and layers.
+`0.3.0` alpha. Graph inference, construction, training, checkpoints, eager
+mode, layers, and a small Sequential model. The dependency-free suite currently
+contains 104 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -39,7 +41,7 @@ experimental `tf.eager` surface with basic arithmetic and activations.
 - LuaJIT 2.1
 - Linux x86_64 libtensorflow 2.18 (download it with
   `./scripts/fetch_libtensorflow.sh`)
-- no Lua rocks
+- no mandatory Lua rocks (the rockspec is optional packaging)
 
 ```sh
 ./scripts/fetch_libtensorflow.sh
