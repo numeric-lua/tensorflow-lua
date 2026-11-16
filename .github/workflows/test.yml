@@ -9,7 +9,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: third_party/libtensorflow
-          key: libtensorflow-2.18.0-cpu-linux-x86_64
+          key: libtensorflow-2.18.0-cpu-linux-x86_64-${{ runner.os }}-${{ matrix.os }}
       - name: Fetch libtensorflow
         run: ./scripts/fetch_libtensorflow.sh
       - name: Run tests
