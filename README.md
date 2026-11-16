@@ -196,6 +196,11 @@ from Lua. The XOR example uses Adam.
 
 See [docs/api.md](docs/api.md).
 
+## Design and contributing
+
+See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
+[CONTRIBUTING.md](CONTRIBUTING.md) for checks and constraints.
+
 ## Changelog and lint
 
 See [CHANGELOG.md](CHANGELOG.md) for the milestone history. Run
