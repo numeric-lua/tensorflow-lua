@@ -23,6 +23,7 @@
 - fixed Dense biases to have one element per output unit;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;
 - public API surface test and CI LuaRocks installation job;
+- pinned libtensorflow 2.18 archive checksum;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
   load, and GraphDef export;
 - string, complex64/128, float16, bfloat16, and quantized tensors;
