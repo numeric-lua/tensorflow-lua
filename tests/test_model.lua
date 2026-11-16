@@ -75,3 +75,25 @@ test("exports a Sequential GraphDef", function()
   model:close()
   os.remove(path)
 end)
+
+test("saves and restores native TensorFlow model checkpoints", function()
+  math.randomseed(7)
+  local prefix = "/tmp/tf-lua-model-v2/ckpt"
+  os.execute("rm -rf /tmp/tf-lua-model-v2")
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adam", learning_rate = 0.1 } })
+  model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } }, { epochs = 50 })
+  local before = model:predict({ { 3 } }):totable()[1][1]
+  model:save_native(prefix)
+  model:close()
+
+  local restored = tf.Sequential.new({ input_shape = { 1 } })
+  restored:add({ units = 1 })
+  restored:compile({ optimizer = { type = "adam", learning_rate = 0.1 } })
+  restored:load_native(prefix)
+  local after = restored:predict({ { 3 } }):totable()[1][1]
+  assert_true(math.abs(before - after) < 1e-4)
+  restored:close()
+  os.execute("rm -rf /tmp/tf-lua-model-v2")
+end)

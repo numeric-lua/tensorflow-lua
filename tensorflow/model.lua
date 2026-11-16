@@ -216,6 +216,29 @@ function Sequential:save(path)
   return require("tensorflow").save_checkpoint(self._session, path, entries)
 end
 
+function Sequential:save_native(prefix)
+  if self._session == nil then error("model has no session to save", 2) end
+  local tf = require("tensorflow")
+  local entries = {}
+  for _, variable in ipairs(self._variables) do
+    entries[#entries + 1] = { name = variable.name, variable = variable }
+  end
+  self._session:run({}, {}, { tf.save_v2(self._graph, prefix, entries) })
+  return prefix
+end
+
+function Sequential:load_native(prefix)
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local tf = require("tensorflow")
+  local entries = {}
+  for _, variable in ipairs(self._variables) do
+    entries[#entries + 1] = { name = variable.name, variable = variable }
+  end
+  self._session:run({}, {}, tf.restore_v2(self._graph, prefix, entries))
+  return self
+end
+
 function Sequential:load(path)
   if self._session == nil then self._graph = nil end
   self:_build()

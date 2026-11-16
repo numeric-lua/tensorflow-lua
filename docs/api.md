@@ -235,7 +235,8 @@ model:close()
   `validation_data = { x, y }` it also returns `val_loss`.
 - `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
   function.
-- `save`/`load` use the portable tensorflow-lua checkpoint format.
+- `save`/`load` use the portable tensorflow-lua checkpoint format;
+  `save_native`/`load_native` use TensorFlow V2 checkpoints.
 - `export(path)` writes the graph as a GraphDef protobuf.
 
 ## Eager execution (experimental)
