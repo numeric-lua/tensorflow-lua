@@ -184,6 +184,14 @@ Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
 Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
 `axes = {0}`). Options: `axes`, `keep_dims`, `dtype`, `name`.
 
+## Metrics
+
+### `tf.metrics.accuracy(graph, predictions, labels[, opts])`
+
+Compares integer class predictions to labels with `Equal`, casts to float32,
+and reduces the mean over the batch. Options: `dtype` (default `int32`), `axes`,
+`name`.
+
 ## Layers
 
 ### `tf.layers.dense(graph, input, units, opts)`

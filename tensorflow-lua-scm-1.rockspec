@@ -33,5 +33,6 @@ build = {
     ["tensorflow.eager"] = "tensorflow/eager.lua",
     ["tensorflow.layers"] = "tensorflow/layers.lua",
     ["tensorflow.losses"] = "tensorflow/losses.lua",
+    ["tensorflow.metrics"] = "tensorflow/metrics.lua",
   },
 }

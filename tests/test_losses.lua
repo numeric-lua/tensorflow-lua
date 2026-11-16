@@ -24,3 +24,17 @@ test("computes softmax cross-entropy", function()
   assert_true(math.abs(value - math.log(2)) < 1e-6)
   session:close()
 end)
+
+test("computes classification accuracy", function()
+  local graph = tf.Graph.new()
+  local predictions = tf.placeholder(graph, "int32", { 3 }, "acc_pred")
+  local labels = tf.placeholder(graph, "int32", { 3 }, "acc_true")
+  local accuracy = tf.metrics.accuracy(graph, predictions, labels)
+  local session = tf.Session.new(graph)
+  local value = session:run({
+    [predictions] = tf.tensor({ 1, 0, 1 }, { dtype = "int32" }),
+    [labels] = tf.tensor({ 1, 1, 1 }, { dtype = "int32" }),
+  }, { accuracy })[1]:totable()
+  assert_true(math.abs(value - 2 / 3) < 1e-6)
+  session:close()
+end)
