@@ -141,8 +141,11 @@ function Sequential:fit(x, y, options)
   if #x ~= #y then error("x and y must have the same batch size", 2) end
   local epochs = options.epochs or 1
   local batch_size = options.batch_size or #x
+  local callbacks = options.callbacks or {}
+  local validation = options.validation_data
   local history = { loss = {} }
-  for _ = 1, epochs do
+  if validation ~= nil then history.val_loss = {} end
+  for epoch = 1, epochs do
     local epoch_loss, batches = 0, 0
     for first = 1, #x, batch_size do
       local last = math.min(first + batch_size - 1, #x)
@@ -154,6 +157,15 @@ function Sequential:fit(x, y, options)
       batches = batches + 1
     end
     history.loss[#history.loss + 1] = epoch_loss / batches
+    if validation ~= nil then
+      history.val_loss[#history.val_loss + 1] = self:evaluate(validation[1],
+        validation[2], { batch_size = batch_size })
+    end
+    for _, callback in ipairs(callbacks) do
+      if type(callback.on_epoch_end) == "function" then
+        callback.on_epoch_end(history, epoch)
+      end
+    end
   end
   return history
 end

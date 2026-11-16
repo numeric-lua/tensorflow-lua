@@ -18,7 +18,8 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - experimental eager execution (`tf.eager.Context`);
 - compositional Dense layers with graph variables and initializers;
 - loss helpers (MSE, softmax cross-entropy), accuracy, and OneHot;
-- a minimal `tf.Sequential` model with fit/evaluate/predict/save/load;
+- a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
+  validation loss, and epoch callbacks;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;

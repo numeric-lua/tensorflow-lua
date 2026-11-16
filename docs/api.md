@@ -231,7 +231,10 @@ model:close()
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.
-- `fit` returns `{ loss = { per_epoch, ... } }`.
+- `fit` returns `{ loss = { per_epoch, ... } }`; with
+  `validation_data = { x, y }` it also returns `val_loss`.
+- `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
+  function.
 - `save`/`load` use the portable tensorflow-lua checkpoint format.
 
 ## Eager execution (experimental)

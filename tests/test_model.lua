@@ -47,3 +47,18 @@ test("saves and restores Sequential weights", function()
   restored:close()
   os.remove(path)
 end)
+
+test("reports validation loss and runs epoch callbacks", function()
+  math.randomseed(5)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.05 } })
+  local epochs = 0
+  local history = model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } },
+    { epochs = 5, callbacks = { { on_epoch_end = function()
+      epochs = epochs + 1
+    end } }, validation_data = { { { 3 } }, { { 7 } } } })
+  assert_eq(epochs, 5)
+  assert_eq(#history.val_loss, 5)
+  model:close()
+end)
