@@ -9,11 +9,6 @@ local Eager = {}
 local Context = {}
 Context.__index = Context
 
-local function dtype_code(dtype)
-  local _, info = Tensor.dtype_info(dtype)
-  return info.code
-end
-
 local function context_handle(context)
   if context._handle == nil then error("eager context is closed", 3) end
   return context._handle
@@ -183,7 +178,7 @@ function Context:execute(op_type, inputs, options)
   return err
 end
 
-local function unary(context, op_type, input, name)
+local function unary(context, op_type, input)
   return context:execute(op_type, { input }, { attrs = { T = input:dtype() } })[1]
 end
 
