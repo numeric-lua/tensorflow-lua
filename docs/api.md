@@ -139,6 +139,12 @@ Reusable native V2 checkpoint saver. `variables` is a list of
 `{ name = ..., variable = ... }` entries. Methods: `save(session, prefix)`,
 `restore(session, prefix)`, and `names()`.
 
+### `tf.train.centered_rmsprop(graph, loss, variables[, opts])`
+
+Adds `ApplyCenteredRMSProp` updates with mean-gradient, variance, and momentum
+slots. Options: `learning_rate`/`lr` (default `0.001`), `rho` (0.9),
+`momentum` (0), `epsilon` (1e-10), `name`. Initialize `state.initializers`.
+
 ### `tf.train.adagrad(graph, loss, variables[, opts])`
 
 Adds `ApplyAdagrad` updates and accumulator variables. Options:
@@ -333,7 +339,8 @@ model:close()
   function
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `adamw`, `sgd`/`gradient_descent`, `rmsprop`,
-  `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and `momentum`.
+  `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, `centered_rmsprop`, and
+  `momentum`.
 - `metrics = { "accuracy" }` adds per-epoch class accuracy; targets are one-hot
   (or integer indices for sparse losses) and the output has class columns.
 - `metrics = { "binary_accuracy" }` thresholds probability outputs against

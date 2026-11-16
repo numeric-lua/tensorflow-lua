@@ -198,6 +198,10 @@ function Sequential:_build()
   elseif optimizer_type == "rmsprop" then
     local result = { tf.train.rmsprop(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
+  elseif optimizer_type == "centered_rmsprop" then
+    local result = { tf.train.centered_rmsprop(graph, loss, variables,
+      optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "adagrad" then
     local result = { tf.train.adagrad(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]

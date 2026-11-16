@@ -14,7 +14,8 @@ test("exposes the public API surface", function()
     assert_true(tf[name] ~= nil, "missing tf." .. name)
   end
   local train_functions = {
-    "gradient_descent", "adam", "adamw", "rmsprop", "adagrad", "adadelta",
+    "gradient_descent", "adam", "adamw", "rmsprop", "centered_rmsprop",
+    "adagrad", "adadelta",
     "ftrl", "proximal_adagrad", "momentum", "Saver",
   }
   for _, name in ipairs(train_functions) do
