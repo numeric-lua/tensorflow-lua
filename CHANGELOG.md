@@ -13,7 +13,7 @@
 - leaky ReLU and ELU activations;
 - AdamW decoupled weight decay, Adam clipvalue, clip_by_value, Adadelta, and
   Ftrl;
-- Embedding layers;
+- Embedding and Flatten layers;
 - Sequential parameter counts, summaries, `predict_classes`, and
   `validation_split`;
 - Dataset `repeat_times` and `take`;
