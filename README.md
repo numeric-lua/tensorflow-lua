@@ -5,9 +5,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.3.0` alpha. Graph inference, construction, training, checkpoints, eager
+`0.4.0` alpha. Graph inference, construction, training, checkpoints, eager
 mode, layers, and a small Sequential model. The dependency-free suite currently
-contains 104 tests.
+contains 111 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -24,8 +24,9 @@ contains 104 tests.
   binary/class accuracy, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
   validation loss, EarlyStopping/ModelCheckpoint callbacks, accuracy metrics,
-  GraphDef export, and
-  portable/native checkpoints;
+  class-weighted sparse losses, `predict_proba`/`predict_classes`, weight
+  snapshots, Embedding/Flatten stacks, GraphDef export, and portable/native
+  checkpoints;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;

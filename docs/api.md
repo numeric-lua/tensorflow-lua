@@ -27,8 +27,8 @@ print(tf.version())          -- "2.18.0"
 The module loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version; `tf.version()` returns libtensorflow's
-version.
+`tf.VERSION` is the binding version (`0.4.0`); `tf.version()` returns
+libtensorflow's version.
 
 ## Tensors
 

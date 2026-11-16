@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+- stabilized public API with an explicit surface regression test;
+- CI LuaRocks installation and load check;
+- pinned libtensorflow 2.18 archive checksum;
+- `predict_proba`, class-weighted sparse losses, Flatten/Embedding stacks,
+  weight snapshots, and parameter summaries;
+- Dataset `map`, `filter`, `drop_last`, `repeat_times`, and `take`;
+- CenteredRMSProp, Adadelta, Ftrl, ProximalAdagrad, and Adam clipping/weight
+  decay;
+- in-memory EarlyStopping restoration and broader leak/GC stress coverage;
+- README and API navigation refresh.
+
 ## 0.3.0
 
 - experimental eager execution (`tf.eager.Context`);
