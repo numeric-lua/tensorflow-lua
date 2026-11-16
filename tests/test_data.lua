@@ -51,3 +51,12 @@ test("validates repeat and take counts", function()
   assert_error(function() dataset:repeat_times(0) end, "positive")
   assert_error(function() dataset:take(-1) end, "non-negative")
 end)
+
+test("drops partial batches when requested", function()
+  local dataset = tf.data.Dataset.new({ 1, 2, 3, 4, 5 }):batch(2,
+    { drop_last = true })
+  local batches = {}
+  for batch in dataset:each() do batches[#batches + 1] = batch end
+  assert_eq(#batches, 2)
+  assert_eq(#batches[2].x, 2)
+end)

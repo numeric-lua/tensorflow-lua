@@ -60,11 +60,13 @@ function Dataset:take(count)
   return self
 end
 
-function Dataset:batch(size)
+function Dataset:batch(size, options)
   if type(size) ~= "number" or size < 1 then
     error("batch size must be positive", 2)
   end
+  options = options or {}
   self._batch_size = size
+  self._drop_last = options.drop_last or false
   return self
 end
 
@@ -106,6 +108,7 @@ function Dataset:each()
       if self._y ~= nil then batch_y[#batch_y + 1] = self._y[index] end
     end
     position = last + 1
+    if self._drop_last and #batch_x < size then return nil end
     return { x = batch_x, y = self._y ~= nil and batch_y or nil }
   end
 end

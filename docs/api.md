@@ -267,9 +267,10 @@ for batch in dataset:each() do
 end
 ```
 
-`Dataset.new(x[, y])`, `size()`, `batch(size)`, `shuffle([seed])`,
+`Dataset.new(x[, y])`, `size()`, `batch(size[, opts])`, `shuffle([seed])`,
 `split(fraction)`, `repeat_times(count)`, `take(count)`, and `each()` return
-batches as `{ x = ..., y = ... }`. (`repeat` is a Lua keyword, so the method is
+batches as `{ x = ..., y = ... }`. `opts.drop_last` discards a partial final
+batch. (`repeat` is a Lua keyword, so the method is
 `repeat_times`.)
 
 `model:fit(dataset, opts)` trains directly from labeled dataset batches;
