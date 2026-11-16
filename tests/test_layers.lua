@@ -83,3 +83,19 @@ test("dropout in inference mode returns input", function()
   local layer = tf.layers.dropout(graph, input, 0.5, { training = false })
   assert_true(layer.output == input)
 end)
+
+test("dropout masks or scales values", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 4 }, "drop_mask_input")
+  local layer = tf.layers.dropout(graph, input, 0.5, { training = true,
+    seed = 3 })
+  local session = tf.Session.new(graph)
+  local values = { 1, 2, 3, 4 }
+  local output = session:run({ [input] = values }, { layer.output })[1]:totable()
+  assert_eq(#output, 4)
+  for i = 1, 4 do
+    assert_true(output[i] == 0 or math.abs(output[i] - values[i] * 2) < 1e-5,
+      tostring(output[i]))
+  end
+  session:close()
+end)
