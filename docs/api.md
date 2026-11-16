@@ -406,6 +406,8 @@ model:close()
   `0`/`1` targets.
 - `class_weight = { [0] = 1, [1] = 2 }` weights sparse class losses; keys are
   TensorFlow class indices (0-based).
+- `label_smoothing = 0.1` smooths sparse targets before softmax
+  cross-entropy.
 - `fit` accepts `shuffle = true` and `validation_split` (fraction of the tail
   held out when `validation_data` is absent); it returns
   `{ loss = { per_epoch, ... } }`; with

@@ -495,3 +495,16 @@ test("restores BatchNorm moving statistics", function()
   second:close()
   os.execute("rm -rf /tmp/tf-lua-bn-resume")
 end)
+
+test("trains sparse labels with label smoothing", function()
+  math.randomseed(32)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce", label_smoothing = 0.1,
+    optimizer = { type = "adam", learning_rate = 0.05 } })
+  local history = model:fit({ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+    { 0, 1, 1, 0 }, { epochs = 20 })
+  assert_eq(#history.loss, 20)
+  assert_true(history.loss[20] >= 0)
+  model:close()
+end)

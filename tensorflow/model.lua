@@ -301,6 +301,19 @@ function Sequential:_build()
       { axes = { 0, 1 } })
   elseif sparse then
     local one_hot = tf.one_hot(graph, target, units, { name = "target_one_hot" })
+    local smoothing = self._compiled.label_smoothing or 0
+    if smoothing > 0 then
+      if smoothing >= 1 then
+        error("label_smoothing must be in [0, 1)", 3)
+      end
+      local smooth = tf.constant(graph, smoothing / units,
+        "label_smoothing_value", "float32")
+      local kept = tf.constant(graph, 1 - smoothing,
+        "label_smoothing_keep", "float32")
+      one_hot = tf.add(graph, tf.mul(graph, one_hot, kept,
+        "label_smoothing_scale", "float32"), smooth,
+        "label_smoothing_labels", "float32")
+    end
     local class_weight = self._compiled.class_weight
     if class_weight ~= nil then
       local weights = {}
