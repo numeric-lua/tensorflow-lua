@@ -522,6 +522,39 @@ function Sequential:close()
   self._graph = nil
 end
 
+function Sequential:get_weights()
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local fetch = {}
+  for i, variable in ipairs(self._variables) do fetch[i] = variable.read end
+  return self._session:run({}, fetch)
+end
+
+function Sequential:set_weights(weights)
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  if type(weights) ~= "table" or #weights ~= #self._variables then
+    error("set_weights expects one tensor per variable", 2)
+  end
+  local tf = require("tensorflow")
+  self._set_counter = (self._set_counter or 0) + 1
+  local targets = {}
+  for i, variable in ipairs(self._variables) do
+    local constant = tf.constant(self._graph, weights[i],
+      "set_weight_value_" .. self._set_counter .. "_" .. i, variable.dtype)
+    local desc = self._graph:new_operation("Assign",
+      "set_weight_" .. self._set_counter .. "_" .. i)
+    desc:add_input(variable.ref)
+    desc:add_input(constant)
+    desc:set_type("T", variable.dtype)
+    desc:set_bool("use_locking", true)
+    desc:set_bool("validate_shape", true)
+    targets[#targets + 1] = desc:finish()
+  end
+  self._session:run({}, {}, targets)
+  return self
+end
+
 function Sequential:count_params()
   if self._session == nil then self._graph = nil end
   self:_build()

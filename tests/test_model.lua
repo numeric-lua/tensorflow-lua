@@ -278,3 +278,18 @@ test("trains sparse labels with class weights", function()
   assert_true(history.loss[50] < history.loss[1])
   model:close()
 end)
+
+test("gets and sets model weights", function()
+  math.randomseed(21)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } }, { epochs = 5 })
+  local weights = model:get_weights()
+  assert_eq(#weights, 2)
+  local before = model:predict({ { 3 } }):totable()[1][1]
+  model:set_weights(weights)
+  local after = model:predict({ { 3 } }):totable()[1][1]
+  assert_true(math.abs(before - after) < 1e-6)
+  model:close()
+end)

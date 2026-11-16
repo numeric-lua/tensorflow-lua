@@ -362,6 +362,7 @@ model:close()
   functions. Set `history.stop_training = true` to end training early.
 - `count_params()` returns the total number of weights and biases;
   `summary()` renders the layer stack and total;
+- `get_weights()` returns variable tensors and `set_weights(list)` assigns them;
 - `save`/`load` use the portable tensorflow-lua checkpoint format;
   `save_native`/`load_native` use TensorFlow V2 checkpoints.
 - `export(path)` writes the graph as a GraphDef protobuf.
