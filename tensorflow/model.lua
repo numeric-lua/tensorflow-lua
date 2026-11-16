@@ -286,6 +286,7 @@ function Sequential:_build()
     output
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
+  self._optimizer_state = type(state) == "table" and state or nil
   self._layers_built = layers
   self._units = units
   self._sparse = sparse
@@ -370,6 +371,7 @@ function Sequential:fit(x, y, options)
     end
   end
   for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
+  self._epoch = self._epoch or 0
   for _, callback in ipairs(callbacks) do
     if type(callback.on_train_begin) == "function" then
       callback.on_train_begin(history, self)
@@ -418,6 +420,7 @@ function Sequential:fit(x, y, options)
         callback.on_epoch_end(history, epoch, self)
       end
     end
+    self._epoch = self._epoch + 1
     if history.stop_training then break end
   end
   for _, callback in ipairs(callbacks) do
@@ -540,6 +543,54 @@ function Sequential:export(path)
   file:close()
   if not ok then error(write_err, 2) end
   return path
+end
+
+local function checkpoint_entries(variables)
+  local entries = {}
+  for _, variable in ipairs(variables) do
+    entries[#entries + 1] = { name = variable.name, variable = variable }
+  end
+  return entries
+end
+
+function Sequential:_training_entries()
+  local entries = checkpoint_entries(self._variables)
+  local state = self._optimizer_state
+  if state ~= nil and type(state.variables) == "table" then
+    local optimizer_entries = checkpoint_entries(state.variables)
+    for _, entry in ipairs(optimizer_entries) do
+      entries[#entries + 1] = entry
+    end
+  end
+  return entries
+end
+
+function Sequential:save_training(prefix)
+  if self._session == nil then error("model has no session to save", 2) end
+  local tf = require("tensorflow")
+  self._session:run({}, {}, { tf.save_v2(self._graph, prefix,
+    self:_training_entries()) })
+  local meta, err = io.open(prefix .. ".state", "wb")
+  if meta == nil then error("cannot write training state: " .. tostring(err), 2) end
+  meta:write(string.format("epoch=%d\n", self._epoch or 0))
+  meta:close()
+  return prefix
+end
+
+function Sequential:load_training(prefix)
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local tf = require("tensorflow")
+  self._session:run({}, {}, tf.restore_v2(self._graph, prefix,
+    self:_training_entries()))
+  local meta = io.open(prefix .. ".state", "rb")
+  if meta ~= nil then
+    local contents = meta:read("*a")
+    meta:close()
+    local epoch = contents:match("epoch=(%d+)")
+    if epoch ~= nil then self._epoch = tonumber(epoch) end
+  end
+  return self
 end
 
 function Sequential:save(path)

@@ -145,6 +145,7 @@ function Train.adam(graph, loss, variables, options)
   local beta2_power = Train.variable(graph, beta2, name .. "/beta2_power",
     { dtype = dtype })
   local initializers = { beta1_power.initializer, beta2_power.initializer }
+  local state_variables = { beta1_power, beta2_power }
   local weight_decay = options.weight_decay or options.wd or 0
   local targets, apply_ops = {}, {}
   for i, variable in ipairs(variables) do
@@ -157,6 +158,8 @@ function Train.adam(graph, loss, variables, options)
       { dtype = var_dtype })
     initializers[#initializers + 1] = m.initializer
     initializers[#initializers + 1] = v.initializer
+    state_variables[#state_variables + 1] = m
+    state_variables[#state_variables + 1] = v
     local decay_assign
     if weight_decay > 0 then
       local tensorflow = require("tensorflow")
@@ -197,8 +200,9 @@ function Train.adam(graph, loss, variables, options)
     targets[#targets + 1] = assign(graph, beta2_power.ref, next_b2,
       name .. "/assign_beta2", apply)
   end
-  return targets, gradients, { initializers = initializers, beta1_power =
-    beta1_power, beta2_power = beta2_power }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables, beta1_power = beta1_power,
+    beta2_power = beta2_power }
 end
 
 function Train.adamw(graph, loss, variables, options)
@@ -288,7 +292,7 @@ function Train.rmsprop(graph, loss, variables, options)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
@@ -299,6 +303,8 @@ function Train.rmsprop(graph, loss, variables, options)
       { dtype = var_dtype })
     initializers[#initializers + 1] = ms.initializer
     initializers[#initializers + 1] = mom.initializer
+    state_variables[#state_variables + 1] = ms
+    state_variables[#state_variables + 1] = mom
     local desc = graph:new_operation("ApplyRMSProp", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(ms.ref)
@@ -312,7 +318,8 @@ function Train.rmsprop(graph, loss, variables, options)
     desc:set_bool("use_locking", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.centered_rmsprop(graph, loss, variables, options)
@@ -333,7 +340,7 @@ function Train.centered_rmsprop(graph, loss, variables, options)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
@@ -347,6 +354,9 @@ function Train.centered_rmsprop(graph, loss, variables, options)
     initializers[#initializers + 1] = mg.initializer
     initializers[#initializers + 1] = ms.initializer
     initializers[#initializers + 1] = mom.initializer
+    state_variables[#state_variables + 1] = mg
+    state_variables[#state_variables + 1] = ms
+    state_variables[#state_variables + 1] = mom
     local desc = graph:new_operation("ApplyCenteredRMSProp",
       name .. "/update_" .. i)
     desc:add_input(ref)
@@ -362,7 +372,8 @@ function Train.centered_rmsprop(graph, loss, variables, options)
     desc:set_bool("use_locking", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.adagrad(graph, loss, variables, options)
@@ -377,13 +388,14 @@ function Train.adagrad(graph, loss, variables, options)
   local gradients = require("tensorflow").gradients(graph, { loss }, refs)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
     local accum = Train.variable(graph, zeros(variable.shape or { }),
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
+    state_variables[#state_variables + 1] = accum
     local desc = graph:new_operation("ApplyAdagrad", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -394,7 +406,8 @@ function Train.adagrad(graph, loss, variables, options)
     desc:set_bool("update_slots", true)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.adadelta(graph, loss, variables, options)
@@ -413,7 +426,7 @@ function Train.adadelta(graph, loss, variables, options)
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
@@ -424,6 +437,8 @@ function Train.adadelta(graph, loss, variables, options)
       name .. "/update_slot_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
     initializers[#initializers + 1] = update.initializer
+    state_variables[#state_variables + 1] = accum
+    state_variables[#state_variables + 1] = update
     local desc = graph:new_operation("ApplyAdadelta", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -436,7 +451,8 @@ function Train.adadelta(graph, loss, variables, options)
     desc:set_bool("use_locking", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.proximal_adagrad(graph, loss, variables, options)
@@ -456,13 +472,14 @@ function Train.proximal_adagrad(graph, loss, variables, options)
     dtype)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
   local l2_op = Train.constant(graph, l2, name .. "/l2", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
     local accum = Train.variable(graph, zeros(variable.shape or { }),
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
+    state_variables[#state_variables + 1] = accum
     local desc = graph:new_operation("ApplyProximalAdagrad",
       name .. "/update_" .. i)
     desc:add_input(ref)
@@ -475,7 +492,8 @@ function Train.proximal_adagrad(graph, loss, variables, options)
     desc:set_bool("use_locking", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.ftrl(graph, loss, variables, options)
@@ -496,7 +514,7 @@ function Train.ftrl(graph, loss, variables, options)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
   local l2_op = Train.constant(graph, l2, name .. "/l2", dtype)
   local power = Train.constant(graph, lr_power, name .. "/lr_power", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
@@ -507,6 +525,8 @@ function Train.ftrl(graph, loss, variables, options)
       { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
     initializers[#initializers + 1] = linear.initializer
+    state_variables[#state_variables + 1] = accum
+    state_variables[#state_variables + 1] = linear
     local desc = graph:new_operation("ApplyFtrl", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -520,7 +540,8 @@ function Train.ftrl(graph, loss, variables, options)
     desc:set_bool("use_locking", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 function Train.momentum(graph, loss, variables, options)
@@ -537,13 +558,14 @@ function Train.momentum(graph, loss, variables, options)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
-  local targets, initializers = {}, {}
+  local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local var_dtype = variable.dtype or dtype
     local accum = Train.variable(graph, zeros(variable.shape or { }),
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
+    state_variables[#state_variables + 1] = accum
     local desc = graph:new_operation("ApplyMomentum", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -555,13 +577,8 @@ function Train.momentum(graph, loss, variables, options)
     desc:set_bool("use_nesterov", false)
     targets[#targets + 1] = desc:finish()
   end
-  return targets, gradients, { initializers = initializers }
-end
-
-function Train.adamw(graph, loss, variables, options)
-  options = options or {}
-  options.weight_decay = options.weight_decay or options.wd or 0.01
-  return Train.adam(graph, loss, variables, options)
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
 end
 
 return Train

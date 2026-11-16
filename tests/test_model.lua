@@ -355,3 +355,42 @@ test("infers int32 input dtype for embedding-first models", function()
   assert_eq(table.concat(output:shape(), ","), "2,2")
   model:close()
 end)
+
+test("resumes training with optimizer and epoch state", function()
+  math.randomseed(26)
+  local prefix = "/tmp/tf-lua-resume/ckpt"
+  os.execute("rm -rf /tmp/tf-lua-resume")
+  local x = { { 0 }, { 1 }, { 2 }, { 3 } }
+  local y = { { 1 }, { 3 }, { 5 }, { 7 } }
+
+  local function build()
+    local model = tf.Sequential.new({ input_shape = { 1 } })
+    model:add({ units = 1 })
+    model:compile({ optimizer = { type = "adamw", learning_rate = 0.05,
+      weight_decay = 0.01 } })
+    return model
+  end
+
+  local first = build()
+  first:fit(x, y, { epochs = 20 })
+  local snapshot = first:predict({ { 4 } }):totable()[1][1]
+  first:save_training(prefix)
+  local epoch = first._epoch
+  first:fit(x, y, { epochs = 20 })
+  local continued = first:predict({ { 4 } }):totable()[1][1]
+  first:close()
+
+  local resumed = build()
+  resumed:load_training(prefix)
+  assert_eq(resumed._epoch, epoch)
+  assert_true(#resumed._optimizer_state.variables > 0)
+  local restored = resumed:predict({ { 4 } }):totable()[1][1]
+  assert_true(math.abs(snapshot - restored) < 1e-5,
+    tostring(snapshot) .. " vs " .. tostring(restored))
+  resumed:fit(x, y, { epochs = 20 })
+  local resumed_continued = resumed:predict({ { 4 } }):totable()[1][1]
+  assert_true(math.abs(continued - resumed_continued) < 1e-2,
+    tostring(continued) .. " vs " .. tostring(resumed_continued))
+  resumed:close()
+  os.execute("rm -rf /tmp/tf-lua-resume")
+end)

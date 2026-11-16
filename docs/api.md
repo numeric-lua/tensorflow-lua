@@ -388,7 +388,9 @@ model:close()
   `summary()` renders the layer stack and total;
 - `get_weights()` returns variable tensors and `set_weights(list)` assigns them;
 - `save`/`load` use the portable tensorflow-lua checkpoint format;
-  `save_native`/`load_native` use TensorFlow V2 checkpoints.
+  `save_native`/`load_native` use TensorFlow V2 checkpoints for model weights;
+  `save_training`/`load_training` also persist optimizer slots and epoch
+  metadata so training can resume (small floating-point drift is possible).
 - `export(path)` writes the graph as a GraphDef protobuf.
 
 ## Eager execution (experimental)
