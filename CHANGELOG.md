@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 - Conv2D, MaxPool2D, and BatchNormalization layers;
 - Conv2D/MaxPool/BatchNorm stacks in Sequential;
+- resumable BatchNorm moving statistics;
 - integer-list graph attributes.
 
 ## 0.4.0

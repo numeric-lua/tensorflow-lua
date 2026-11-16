@@ -468,3 +468,30 @@ test("trains a Sequential model with BatchNormalization", function()
   assert_true(summary:find("BatchNormalization", 1, true) ~= nil)
   model:close()
 end)
+
+test("restores BatchNorm moving statistics", function()
+  math.randomseed(31)
+  local prefix = "/tmp/tf-lua-bn-resume/ckpt"
+  os.execute("rm -rf /tmp/tf-lua-bn-resume")
+  local function build()
+    local model = tf.Sequential.new({ input_shape = { 2 } })
+    model:add({ units = 4 })
+    model:add({ type = "batchnorm" })
+    model:add({ units = 1 })
+    model:compile({ optimizer = { type = "adam", learning_rate = 0.02 } })
+    return model
+  end
+  local first = build()
+  first:fit({ { 1, 2 }, { 2, 3 }, { 3, 4 } }, { { 2 }, { 3 }, { 4 } },
+    { epochs = 5, batch_size = 3 })
+  local before = first:predict({ { 4, 5 } }):totable()[1][1]
+  first:save_training(prefix)
+  first:close()
+  local second = build()
+  second:load_training(prefix)
+  local after = second:predict({ { 4, 5 } }):totable()[1][1]
+  assert_true(math.abs(before - after) < 1e-5,
+    tostring(before) .. " vs " .. tostring(after))
+  second:close()
+  os.execute("rm -rf /tmp/tf-lua-bn-resume")
+end)
