@@ -194,14 +194,14 @@ function Train.adam(graph, loss, variables, options)
     beta1_power, beta2_power = beta2_power }
 end
 
-local function string_vector(graph, values, name)
-  function Train.adamw(graph, loss, variables, options)
+function Train.adamw(graph, loss, variables, options)
   options = options or {}
   options.weight_decay = options.weight_decay or options.wd or 0.01
   return Train.adam(graph, loss, variables, options)
 end
 
-return Train.constant(graph, values, name, "string")
+local function string_vector(graph, values, name)
+  return Train.constant(graph, values, name, "string")
 end
 
 function Train.save_v2(graph, prefix, variables, name)
