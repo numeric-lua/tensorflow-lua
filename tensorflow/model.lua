@@ -61,7 +61,8 @@ function Sequential:add(options)
     error("add expects a layer definition table", 2)
   end
   if options.type == "flatten" or options.type == "embedding" or
-      options.type == "dropout" then
+      options.type == "dropout" or options.type == "conv2d" or
+      options.type == "max_pool2d" then
     if options.type == "embedding" and #self._layers == 0 and
         self._input_dtype == nil then
       self._input_dtype = "int32"
@@ -104,10 +105,86 @@ function Sequential:_build()
   local output = input
   local variables, initializers, layers = {}, {}, {}
   local feature_size = self._input_shape[#self._input_shape]
+  local spatial = copy_shape(self._input_shape)
   for i, definition in ipairs(self._layers) do
     local options = definition.options or {}
     options.name = options.name or ((definition.type or "dense") .. "_" .. i)
-    if definition.type == "dropout" then
+    if definition.type == "conv2d" then
+      if #spatial ~= 3 then
+        error("conv2d layers require input_shape = { height, width, channels }", 3)
+      end
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1], definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or 1, definition.stride or 1
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local dilation_h, dilation_w = 1, 1
+      if type(definition.dilation) == "table" then
+        dilation_h, dilation_w = definition.dilation[1], definition.dilation[2]
+      elseif definition.dilation ~= nil then
+        dilation_h, dilation_w = definition.dilation, definition.dilation
+      end
+      local padding = string.upper(options.padding or definition.padding or "SAME")
+      local conv_options = {
+        in_channels = spatial[3], stride = { stride_h, stride_w },
+        padding = padding, dilation = { dilation_h, dilation_w },
+        use_bias = options.use_bias, activation = options.activation,
+        dtype = options.dtype, name = options.name,
+      }
+      local layer = tf.layers.conv2d(graph, output, definition.filters,
+        { kernel_h, kernel_w }, conv_options)
+      local function output_dim(input, kernel, stride, dilation)
+        local effective = (kernel - 1) * dilation + 1
+        if padding == "SAME" then return math.ceil(input / stride) end
+        return math.floor((input - effective) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_h, stride_h, dilation_h),
+        output_dim(spatial[2], kernel_w, stride_w, dilation_w),
+        definition.filters }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = definition.filters, kind = "conv2d",
+        filters = definition.filters, kernel_size = { kernel_h, kernel_w } }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "max_pool2d" then
+      if #spatial ~= 3 then
+        error("max_pool2d layers require an NHWC input", 3)
+      end
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1], definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or kernel_h,
+        definition.stride or kernel_w
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "VALID")
+      local layer = tf.layers.max_pool2d(graph, output,
+        { kernel_h, kernel_w }, { stride = { stride_h, stride_w },
+          padding = padding, name = options.name })
+      local function output_dim(input, kernel, stride)
+        if padding == "SAME" then return math.ceil(input / stride) end
+        return math.floor((input - kernel) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_h, stride_h),
+        output_dim(spatial[2], kernel_w, stride_w), spatial[3] }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[3], kind = "max_pool2d",
+        kernel_size = { kernel_h, kernel_w } }
+      output = layer.output
+    elseif definition.type == "dropout" then
       local layer = tf.layers.dropout(graph, output,
         definition.rate or options.rate or 0.5, {
           training = training, seed = options.seed, seed2 = options.seed2,
@@ -141,6 +218,7 @@ function Sequential:_build()
       add_initializers(initializers, layer.initializers)
       output = layer.output
       feature_size = total * output_dim
+      spatial = { feature_size }
     elseif definition.type == "flatten" then
       local total = feature_size
       if i == 1 then
@@ -154,6 +232,7 @@ function Sequential:_build()
         units = total, kind = "flatten" }
       output = layer.output
       feature_size = total
+      spatial = { total }
     else
       options.input_size = options.input_size or feature_size
       local layer = tf.layers.dense(graph, output, definition.units, options)
@@ -716,6 +795,12 @@ function Sequential:summary()
     if layer.kind == "flatten" then
       rows[#rows + 1] = string.format("  %d: Flatten(%d)", i,
         layer.input_size)
+    elseif layer.kind == "conv2d" then
+      rows[#rows + 1] = string.format("  %d: Conv2D(%d filters, %dx%d)", i,
+        layer.filters, layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "max_pool2d" then
+      rows[#rows + 1] = string.format("  %d: MaxPool2D(%dx%d)", i,
+        layer.kernel_size[1], layer.kernel_size[2])
     elseif layer.kind == "dropout" then
       rows[#rows + 1] = string.format("  %d: Dropout", i)
     elseif layer.kind == "embedding" then

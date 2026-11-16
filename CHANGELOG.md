@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Conv2D and MaxPool2D layers;
+- Conv2D/MaxPool stacks in Sequential;
 - integer-list graph attributes.
 
 ## 0.4.0

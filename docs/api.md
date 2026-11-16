@@ -358,6 +358,9 @@ Returns the layer list. The caller must run every layer initializer.
 ```lua
 local model = tf.Sequential.new({ input_shape = { 2 } })
 model:add({ units = 4, options = { activation = "relu" } })
+model:add({ type = "conv2d", filters = 8, kernel_size = 3,
+  options = { padding = "SAME", activation = "relu" } })
+model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
 model:add({ type = "dropout", rate = 0.2 })  -- train-only; inference is identity
 model:add({ type = "flatten" })       -- optional, no parameters
 model:add({ units = 1 })
@@ -373,7 +376,8 @@ model:close()
 ```
 
 - Inputs are batched Lua tables: `input_shape = { features }` expects
-  `{{f1, f2}, ...}`.
+  `{{f1, f2}, ...}`. Convolutional models use NHWC-shaped input:
+  `input_shape = { height, width, channels }`; add Flatten before Dense.
 - `{ type = "embedding", input_dim = n, output_dim = d }` builds text/index
   embeddings; an embedding-first model defaults its input dtype to `int32`.
   Set `input_dtype` explicitly when mixing integer inputs with other layers;

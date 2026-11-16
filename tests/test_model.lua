@@ -420,3 +420,32 @@ test("uses conditional dropout in Sequential", function()
   assert_true(summary:find("Dropout", 1, true) ~= nil)
   model:close()
 end)
+
+test("trains a Sequential Conv2D stack", function()
+  math.randomseed(29)
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 1 } })
+  model:add({ type = "conv2d", filters = 2, kernel_size = 3,
+    options = { padding = "SAME", activation = "relu" } })
+  model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
+  model:add({ type = "flatten" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adam", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 3 * 3 * 1 * 2 + 2 + 8 * 1 + 1)
+  local x = {}
+  local y = {}
+  for sample = 1, 2 do
+    x[sample] = {}
+    for r = 1, 4 do
+      x[sample][r] = {}
+      for c = 1, 4 do x[sample][r][c] = { sample + r * c / 10 } end
+    end
+    y[sample] = { sample }
+  end
+  local history = model:fit(x, y, { epochs = 3, batch_size = 2 })
+  assert_eq(#history.loss, 3)
+  local prediction = model:predict(x)
+  assert_eq(table.concat(prediction:shape(), ","), "2,1")
+  local summary = model:summary()
+  assert_true(summary:find("Conv2D", 1, true) ~= nil)
+  model:close()
+end)
