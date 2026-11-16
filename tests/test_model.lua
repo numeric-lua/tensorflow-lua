@@ -97,3 +97,22 @@ test("saves and restores native TensorFlow model checkpoints", function()
   restored:close()
   os.execute("rm -rf /tmp/tf-lua-model-v2")
 end)
+
+test("reports accuracy during classification training", function()
+  math.randomseed(8)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 8, options = { activation = "relu" } })
+  model:add({ units = 2 })
+  model:compile({ loss = "softmax_cross_entropy",
+    optimizer = { type = "adam", learning_rate = 0.05 },
+    metrics = { "accuracy" } })
+  local x = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } }
+  local y = { { 1, 0 }, { 0, 1 }, { 0, 1 }, { 1, 0 } }
+  local history = model:fit(x, y, { epochs = 150, batch_size = 4 })
+  assert_eq(#history.accuracy, 150)
+  assert_true(history.accuracy[150] >= 0.5)
+  local loss, metrics = model:evaluate(x, y)
+  assert_true(loss >= 0)
+  assert_true(metrics.accuracy >= 0 and metrics.accuracy <= 1)
+  model:close()
+end)

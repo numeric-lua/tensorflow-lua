@@ -218,7 +218,7 @@ model:add({ units = 1 })
 model:compile({ loss = "mse", optimizer = { type = "adam", learning_rate = 0.01 } })
 local history = model:fit(x, y, { epochs = 10, batch_size = 32 })
 local prediction = model:predict(x)
-local loss = model:evaluate(x, y)
+local loss, metrics = model:evaluate(x, y)
 model:save("model.ckpt")
 model:load("model.ckpt")
 model:close()
@@ -231,6 +231,8 @@ model:close()
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.
+- `metrics = { "accuracy" }` adds per-epoch classification accuracy; the target
+  must be one-hot and the output must have class columns.
 - `fit` returns `{ loss = { per_epoch, ... } }`; with
   `validation_data = { x, y }` it also returns `val_loss`.
 - `callbacks` may contain tables with an `on_epoch_end(history, epoch)`

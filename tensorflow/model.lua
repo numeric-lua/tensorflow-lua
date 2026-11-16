@@ -97,6 +97,21 @@ function Sequential:_build()
     error("unsupported loss '" .. tostring(loss_spec) .. "'", 3)
   end
 
+  local metric_outputs, metric_names = {}, {}
+  for i, name in ipairs(self._compiled.metrics or {}) do
+    if name == "accuracy" then
+      local predictions = tf.argmax(graph, output, 1, "metric/prediction",
+        "float32", "int64")
+      local labels = tf.argmax(graph, target, 1, "metric/label", "float32",
+        "int64")
+      metric_outputs[i] = tf.metrics.accuracy(graph, predictions, labels,
+        { dtype = "int64", name = "metric/accuracy" })
+      metric_names[i] = "accuracy"
+    else
+      error("unsupported metric '" .. tostring(name) .. "'", 3)
+    end
+  end
+
   local optimizer = self._compiled.optimizer
   if type(optimizer) == "string" then optimizer = { type = optimizer } end
   local optimizer_type = optimizer.type or "adam"
@@ -130,6 +145,7 @@ function Sequential:_build()
     initializers
   self._layers_built = layers
   self._units = units
+  self._metric_names, self._metric_outputs = metric_names, metric_outputs
 end
 
 function Sequential:fit(x, y, options)
@@ -145,18 +161,30 @@ function Sequential:fit(x, y, options)
   local validation = options.validation_data
   local history = { loss = {} }
   if validation ~= nil then history.val_loss = {} end
+  for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
   for epoch = 1, epochs do
     local epoch_loss, batches = 0, 0
+    local metric_sums = {}
     for first = 1, #x, batch_size do
       local last = math.min(first + batch_size - 1, #x)
       local batch_x = batch_slice(x, first, last)
       local batch_y = batch_slice(y, first, last)
-      local loss = self._session:run({ [self._input] = batch_x,
-        [self._target] = batch_y }, { self._loss }, self._updates)[1]:totable()
-      epoch_loss = epoch_loss + loss
+      local fetch = { self._loss }
+      for _, output in ipairs(self._metric_outputs or {}) do
+        fetch[#fetch + 1] = output
+      end
+      local values = self._session:run({ [self._input] = batch_x,
+        [self._target] = batch_y }, fetch, self._updates)
+      epoch_loss = epoch_loss + values[1]:totable()
+      for i = 1, #(self._metric_outputs or {}) do
+        metric_sums[i] = (metric_sums[i] or 0) + values[i + 1]:totable()
+      end
       batches = batches + 1
     end
     history.loss[#history.loss + 1] = epoch_loss / batches
+    for i, name in ipairs(self._metric_names or {}) do
+      history[name][#history[name] + 1] = metric_sums[i] / batches
+    end
     if validation ~= nil then
       history.val_loss[#history.val_loss + 1] = self:evaluate(validation[1],
         validation[2], { batch_size = batch_size })
@@ -185,13 +213,26 @@ function Sequential:evaluate(x, y, options)
   y = normalize_rows(y, self._units)
   local batch_size = options.batch_size or #x
   local total, batches = 0, 0
+  local metric_sums = {}
   for first = 1, #x, batch_size do
     local last = math.min(first + batch_size - 1, #x)
-    total = total + self._session:run({ [self._input] = batch_slice(x, first, last),
-      [self._target] = batch_slice(y, first, last) }, { self._loss })[1]:totable()
+    local fetch = { self._loss }
+    for _, output in ipairs(self._metric_outputs or {}) do
+      fetch[#fetch + 1] = output
+    end
+    local values = self._session:run({ [self._input] = batch_slice(x, first, last),
+      [self._target] = batch_slice(y, first, last) }, fetch)
+    total = total + values[1]:totable()
+    for i = 1, #(self._metric_outputs or {}) do
+      metric_sums[i] = (metric_sums[i] or 0) + values[i + 1]:totable()
+    end
     batches = batches + 1
   end
-  return total / batches
+  local metrics = {}
+  for i, name in ipairs(self._metric_names or {}) do
+    metrics[name] = metric_sums[i] / batches
+  end
+  return total / batches, metrics
 end
 
 function Sequential:export(path)
