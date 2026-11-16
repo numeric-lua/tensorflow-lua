@@ -130,8 +130,8 @@ function GraphBuilder.new_operation(graph, op_type, name)
   if type(op_type) ~= "string" or type(name) ~= "string" then
     error("new_operation expects op type and name strings", 3)
   end
-  local desc = lib.TF_NewOperation(graph:handle(), op_type, name)
-  if desc == nil then error("TF_NewOperation failed", 3) end
+  local desc = capi.require(lib.TF_NewOperation(graph:handle(), op_type,
+    name), "TF_NewOperation")
   return setmetatable({ _desc = desc, _graph = graph, _name = name }, Description)
 end
 

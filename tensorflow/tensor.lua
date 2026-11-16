@@ -438,23 +438,27 @@ function Tensor:totable()
   local lib = capi.load()
   local count = self:numel()
   local flat = {}
+  local tensor_data = lib.TF_TensorData(self:handle())
+  if count > 0 and tensor_data == nil then
+    error("TF_TensorData returned NULL", 2)
+  end
   if count > 0 and info.half then
-    local array = ffi.cast("uint16_t*", lib.TF_TensorData(self:handle()))
+    local array = ffi.cast("uint16_t*", tensor_data)
     for i = 1, count do flat[i] = decode_half(array[i - 1], info) end
   elseif count > 0 and info.complex then
-    local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
+    local array = ffi.cast(info.ctype .. "*", tensor_data)
     for i = 1, count do
       flat[i] = Tensor.complex(array[(i - 1) * 2], array[(i - 1) * 2 + 1])
     end
   elseif count > 0 and info.name == "string" then
-    local array = ffi.cast("TF_TString*", lib.TF_TensorData(self:handle()))
+    local array = ffi.cast("TF_TString*", tensor_data)
     for i = 1, count do
       local pointer = lib.TF_StringGetDataPointer(array + (i - 1))
       local size = tonumber(lib.TF_StringGetSize(array + (i - 1)))
       flat[i] = pointer ~= nil and ffi.string(pointer, size) or ""
     end
   elseif count > 0 then
-    local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
+    local array = ffi.cast(info.ctype .. "*", tensor_data)
     for i = 1, count do
       local value = array[i - 1]
       if info.name == "bool" then value = value ~= 0
