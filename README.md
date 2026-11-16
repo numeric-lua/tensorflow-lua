@@ -198,6 +198,15 @@ from Lua. The XOR example uses Adam.
 
 See [docs/api.md](docs/api.md).
 
+## Benchmark
+
+```sh
+./scripts/bench.sh
+```
+
+The harness measures tensor conversion and graph session execution; it is not a
+CI gate.
+
 ## Design and contributing
 
 See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
