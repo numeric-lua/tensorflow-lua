@@ -2,7 +2,8 @@
 
 ## 0.6.0
 
-- AveragePool2D and GlobalAveragePool2D layers;
+- Conv1D, AveragePool2D, and GlobalAveragePool2D layers;
+- rank-3 BatchNormalization;
 - average-pooling stacks in Sequential.
 
 ## 0.5.0

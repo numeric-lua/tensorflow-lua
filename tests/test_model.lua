@@ -572,3 +572,24 @@ test("trains a GlobalAvgPool2D Sequential stack", function()
   assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
   model:close()
 end)
+
+test("trains a Sequential Conv1D stack", function()
+  math.randomseed(37)
+  local model = tf.Sequential.new({ input_shape = { 5, 1 } })
+  model:add({ type = "conv1d", filters = 2, kernel_size = 3,
+    options = { padding = "SAME" } })
+  model:add({ type = "flatten" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adam", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 1 * 3 * 1 * 2 + 2 + 10 * 1 + 1)
+  local x, y = {}, {}
+  for sample = 1, 2 do
+    x[sample] = {}
+    for s = 1, 5 do x[sample][s] = { sample + s / 10 } end
+    y[sample] = { sample }
+  end
+  local history = model:fit(x, y, { epochs = 2, batch_size = 2 })
+  assert_eq(#history.loss, 2)
+  assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
+  model:close()
+end)

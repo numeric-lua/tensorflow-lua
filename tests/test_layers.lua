@@ -175,3 +175,18 @@ test("runs average and global average pooling", function()
   assert_eq(table.concat(global_values:shape(), ","), "1,2")
   session:close()
 end)
+
+test("runs a Conv1D layer", function()
+  math.randomseed(36)
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 5, 2 }, "conv1_input")
+  local layer = tf.layers.conv1d(graph, input, 3, 3,
+    { in_channels = 2, padding = "SAME", stride = 2 })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local values = {}
+  for s = 1, 5 do values[s] = { s, s + 1 } end
+  local output = session:run({ [input] = { values } }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,3,3")
+  session:close()
+end)

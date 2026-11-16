@@ -62,7 +62,8 @@ function Sequential:add(options)
   end
   if options.type == "flatten" or options.type == "embedding" or
       options.type == "dropout" or options.type == "conv2d" or
-      options.type == "max_pool2d" or options.type == "avg_pool2d" or
+      options.type == "conv1d" or options.type == "max_pool2d" or
+      options.type == "avg_pool2d" or
       options.type == "global_avg_pool2d" or options.type == "batchnorm" or
       options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
@@ -118,6 +119,9 @@ function Sequential:_build()
       if #spatial == 3 then
         axes = { 0, 1, 2 }
         channels = spatial[3]
+      elseif #spatial == 2 then
+        axes = { 0, 1 }
+        channels = spatial[2]
       elseif #spatial == 1 then
         axes = { 0 }
         channels = spatial[1]
@@ -140,6 +144,38 @@ function Sequential:_build()
       end
       batchnorm_state[#batchnorm_state + 1] = layer.moving_mean
       batchnorm_state[#batchnorm_state + 1] = layer.moving_variance
+      output = layer.output
+    elseif definition.type == "conv1d" then
+      if #spatial ~= 2 then
+        error("conv1d layers require input_shape = { steps, channels }", 3)
+      end
+      local kernel = definition.kernel_size
+      local stride = definition.stride or 1
+      local dilation = definition.dilation or 1
+      local padding = string.upper(options.padding or definition.padding or "SAME")
+      local layer = tf.layers.conv1d(graph, output, definition.filters,
+        kernel, {
+          in_channels = spatial[2], stride = stride, padding = padding,
+          dilation = dilation, use_bias = options.use_bias,
+          activation = options.activation, dtype = options.dtype,
+          name = options.name,
+        })
+      local effective = (kernel - 1) * dilation + 1
+      local steps
+      if padding == "SAME" then
+        steps = math.ceil(spatial[1] / stride)
+      else
+        steps = math.floor((spatial[1] - effective) / stride) + 1
+      end
+      spatial = { steps, definition.filters }
+      feature_size = steps * definition.filters
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = definition.filters, kind = "conv1d",
+        filters = definition.filters, kernel_size = kernel }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
       output = layer.output
     elseif definition.type == "conv2d" then
       if #spatial ~= 3 then
@@ -906,6 +942,9 @@ function Sequential:summary()
     if layer.kind == "flatten" then
       rows[#rows + 1] = string.format("  %d: Flatten(%d)", i,
         layer.input_size)
+    elseif layer.kind == "conv1d" then
+      rows[#rows + 1] = string.format("  %d: Conv1D(%d filters, %d)", i,
+        layer.filters, layer.kernel_size)
     elseif layer.kind == "conv2d" then
       rows[#rows + 1] = string.format("  %d: Conv2D(%d filters, %dx%d)", i,
         layer.filters, layer.kernel_size[1], layer.kernel_size[2])

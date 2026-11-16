@@ -316,6 +316,14 @@ Other options: `stride`, `padding` (`SAME`/`VALID`), `dilation`, `use_bias`,
 `activation`, `dtype`, `name`. Returns
 `{ output, weight, bias, variables, initializers, filters, kernel_size }`.
 
+### `tf.layers.conv1d(graph, input, filters, kernel_size[, opts])`
+
+Builds a 1-D convolution over `[batch, steps, channels]` input using an
+internal 2-D convolution lift. Required option: `in_channels`. Other options:
+`stride`, `padding`, `dilation`, `use_bias`, `activation`, `dtype`, `name`.
+Returns `{ output, weight, bias, variables, initializers, filters,
+kernel_size }`.
+
 ### `tf.layers.max_pool2d(graph, input, kernel_size[, opts])`
 
 Builds a `MaxPool` operation. Options: `stride`, `padding` (`VALID` by
@@ -376,6 +384,8 @@ Returns the layer list. The caller must run every layer initializer.
 ```lua
 local model = tf.Sequential.new({ input_shape = { 2 } })
 model:add({ units = 4, options = { activation = "relu" } })
+model:add({ type = "conv1d", filters = 8, kernel_size = 3,
+  options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "conv2d", filters = 8, kernel_size = 3,
   options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
@@ -398,7 +408,8 @@ model:close()
 
 - Inputs are batched Lua tables: `input_shape = { features }` expects
   `{{f1, f2}, ...}`. Convolutional models use NHWC-shaped input:
-  `input_shape = { height, width, channels }`; add Flatten before Dense.
+  `input_shape = { height, width, channels }`; Conv1D uses
+  `input_shape = { steps, channels }`; add Flatten before Dense.
 - `{ type = "embedding", input_dim = n, output_dim = d }` builds text/index
   embeddings; an embedding-first model defaults its input dtype to `int32`.
   Set `input_dtype` explicitly when mixing integer inputs with other layers;

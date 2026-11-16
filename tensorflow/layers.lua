@@ -263,6 +263,86 @@ function Layers.conv2d(graph, input, filters, kernel_size, options)
   }
 end
 
+function Layers.conv1d(graph, input, filters, kernel_size, options)
+  options = options or {}
+  if type(filters) ~= "number" or filters < 1 then
+    error("conv1d requires positive filters", 3)
+  end
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("conv1d requires options.in_channels", 3)
+  end
+  local kernel = kernel_size
+  local stride = options.stride or 1
+  local dilation = options.dilation or 1
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "conv1d"
+  local tf = require("tensorflow")
+  local bound = math.sqrt(6 / (kernel * in_channels + filters))
+  local values = { {} }
+  for k = 1, kernel do
+    values[1][k] = {}
+    for c = 1, in_channels do
+      values[1][k][c] = {}
+      for f = 1, filters do
+        values[1][k][c][f] = (math.random() * 2 - 1) * bound
+      end
+    end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
+    { dtype = dtype })
+  local second_axis = tf.constant(graph, 1, prefix .. "/axis", "int32")
+  local expand = graph:new_operation("ExpandDims", prefix .. "/expand")
+  expand:add_input(input)
+  expand:add_input(second_axis)
+  expand:set_type("T", dtype)
+  expand:set_type("Tdim", "int32")
+  local lifted = expand:finish()
+  local conv = graph:new_operation("Conv2D", prefix .. "/conv")
+  conv:add_input(lifted)
+  conv:add_input(weight.read)
+  conv:set_type("T", dtype)
+  conv:set_int_list("strides", { 1, 1, stride, 1 })
+  conv:set_string("padding", options.padding or "SAME")
+  conv:set_string("data_format", "NHWC")
+  conv:set_int_list("dilations", { 1, 1, dilation, 1 })
+  conv:set_bool("use_cudnn_on_gpu", false)
+  local convolved = conv:finish()
+  local squeeze = graph:new_operation("Squeeze", prefix .. "/squeeze")
+  squeeze:add_input(convolved)
+  squeeze:set_type("T", dtype)
+  squeeze:set_int_list("squeeze_dims", { 1 })
+  local output = squeeze:finish()
+  local variables, initializers = { weight }, { weight.initializer }
+  local bias = nil
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, filters do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  local activation = options.activation
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. activation, dtype)
+  elseif type(activation) == "function" then
+    output = activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output,
+    weight = weight,
+    bias = bias,
+    variables = variables,
+    initializers = initializers,
+    filters = filters,
+    kernel_size = kernel,
+    dtype = dtype,
+  }
+end
+
 function Layers.max_pool2d(graph, input, kernel_size, options)
   options = options or {}
   local kernel_h, kernel_w = kernel_size, kernel_size
