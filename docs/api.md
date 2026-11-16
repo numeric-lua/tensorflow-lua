@@ -180,6 +180,12 @@ reader:close()
 Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
 `dtype`, `name`.
 
+### `tf.losses.sparse_softmax_cross_entropy(graph, logits, labels[, opts])`
+
+Builds sparse-label softmax cross-entropy. `labels` is an integer tensor of
+class indices; options: `labels_dtype` (default `int32`), `axes` (default
+`{0}`), `keep_dims`, `dtype`, `name`.
+
 ### `tf.losses.mean_absolute_error(graph, predictions, targets[, opts])`
 
 Builds an absolute-error mean. Options: `axes` (default `{0}`), `keep_dims`,

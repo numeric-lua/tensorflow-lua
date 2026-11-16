@@ -62,6 +62,22 @@ function Losses.binary_cross_entropy(graph, logits, labels, options)
     prefix .. "/mean", dtype, options.keep_dims)
 end
 
+function Losses.sparse_softmax_cross_entropy(graph, logits, labels, options)
+  options = options or {}
+  local dtype = options.dtype or "float32"
+  local labels_dtype = options.labels_dtype or "int32"
+  local prefix = options.name or "sparse_softmax_cross_entropy"
+  local desc = graph:new_operation("SparseSoftmaxCrossEntropyWithLogits",
+    prefix .. "/loss")
+  desc:add_input(logits)
+  desc:add_input(labels)
+  desc:set_type("T", dtype)
+  desc:set_type("Tlabels", labels_dtype)
+  local loss = desc:finish()
+  return tf().reduce_mean(graph, loss, options.axes or { 0 },
+    prefix .. "/mean", dtype, options.keep_dims)
+end
+
 function Losses.softmax_cross_entropy_with_logits(graph, logits, labels,
     options)
   return Losses.softmax_cross_entropy(graph, logits, labels, options)

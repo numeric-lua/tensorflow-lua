@@ -17,8 +17,8 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
 - compositional Dense layers with graph variables and initializers;
-- loss helpers (MSE, MAE, binary/softmax cross-entropy), accuracy, cast,
-  concat, and OneHot;
+- loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
+  accuracy, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
   validation loss, epoch callbacks, accuracy metrics, GraphDef export, and
   portable/native checkpoints;
