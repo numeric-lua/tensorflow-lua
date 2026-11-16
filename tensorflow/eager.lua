@@ -155,11 +155,24 @@ function Context:execute(op_type, inputs, options)
         local _, info = Tensor.dtype_info(value)
         lib.TFE_OpSetAttrType(op, name, info.code)
       elseif type(value) == "table" then
-        local dims = ffi.new("int64_t[?]", #value)
-        for i, dimension in ipairs(value) do dims[i - 1] = dimension end
-        local shape_status = capi.status()
-        lib.TFE_OpSetAttrShape(op, name, dims, #value, shape_status)
-        capi.check(shape_status, "eager shape attribute")
+        if value.int ~= nil then
+          lib.TFE_OpSetAttrInt(op, name, value.int)
+        elseif value.float ~= nil then
+          lib.TFE_OpSetAttrFloat(op, name, value.float)
+        elseif value.bool ~= nil then
+          lib.TFE_OpSetAttrBool(op, name, value.bool and 1 or 0)
+        elseif value.type ~= nil then
+          local _, info = Tensor.dtype_info(value.type)
+          lib.TFE_OpSetAttrType(op, name, info.code)
+        elseif value.shape ~= nil then
+          local dims = ffi.new("int64_t[?]", #value.shape)
+          for i, dimension in ipairs(value.shape) do dims[i - 1] = dimension end
+          local shape_status = capi.status()
+          lib.TFE_OpSetAttrShape(op, name, dims, #value.shape, shape_status)
+          capi.check(shape_status, "eager shape attribute")
+        else
+          error("unsupported eager attribute table " .. name, 2)
+        end
       else
         error("unsupported eager attribute " .. name, 2)
       end
@@ -209,6 +222,13 @@ end
 
 function Context:square(a)
   return unary(self, "Square", a)
+end
+
+function Context:reshape(a, shape)
+  if type(shape) ~= "table" then error("eager reshape expects a shape table", 2) end
+  local shape_tensor = self:constant(shape, "int32")
+  return self:execute("Reshape", { a, shape_tensor },
+    { attrs = { T = a:dtype(), Tshape = "int32" } })[1]
 end
 
 function Context:close()

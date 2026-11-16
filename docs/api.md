@@ -221,8 +221,11 @@ context:close()            -- deferred until live tensors are released
 
 `Context:execute(op_type, inputs, { attrs = ... })` runs an arbitrary eager
 op. Type-string attributes (`T`, `dtype`, ...), booleans, numbers, and shape
-tables are supported. Convenience methods: `add`, `sub`, `mul`, `matmul`,
-`relu`, `sigmoid`, and `square`.
+tables are supported. Attribute values may be booleans, numbers (float), dtype strings, shape arrays,
+or typed tables such as `{ int = 0 }`, `{ float = 0.5 }`,
+`{ bool = true }`, `{ type = "float32" }`, and `{ shape = { 2, 3 } }`.
+Convenience methods: `add`, `sub`, `mul`, `matmul`, `relu`, `sigmoid`,
+`square`, and `reshape`.
 
 ## Training examples
 
