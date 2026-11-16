@@ -15,6 +15,7 @@ local Layers = require("tensorflow.layers")
 local Losses = require("tensorflow.losses")
 local Metrics = require("tensorflow.metrics")
 local Sequential = require("tensorflow.model")
+local Saver = require("tensorflow.saver")
 local Callbacks = require("tensorflow.callbacks")
 
 local tf = {
@@ -57,6 +58,7 @@ function tf.load_checkpoint(graph, path, variables)
 end
 
 tf.train = {
+  Saver = Saver,
   gradient_descent = function(graph, loss, variables, lr, name)
     return Train.gradient_descent(graph, loss, variables, lr, name)
   end,

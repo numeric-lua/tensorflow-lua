@@ -242,3 +242,27 @@ test("writes and reads multiple native checkpoint dtypes", function()
   reader:close()
   os.execute("rm -rf /tmp/tf-lua-multi-v2")
 end)
+
+test("uses a reusable native Saver", function()
+  local prefix = "/tmp/tf-lua-saver/ckpt"
+  os.execute("rm -rf /tmp/tf-lua-saver")
+  local graph = tf.Graph.new()
+  local w = tf.variable(graph, 2.5, "saved_w")
+  local saver = tf.train.Saver.new(graph, { { name = "saved_w",
+    variable = w } })
+  assert_eq(saver:names()[1], "saved_w")
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { w.initializer })
+  saver:save(session, prefix)
+  session:close()
+
+  local graph2 = tf.Graph.new()
+  local w2 = tf.variable(graph2, 0, "saved_w")
+  local saver2 = tf.train.Saver.new(graph2, { { name = "saved_w",
+    variable = w2 } })
+  local session2 = tf.Session.new(graph2)
+  saver2:restore(session2, prefix)
+  assert_eq(session2:run({}, { w2.read })[1]:totable(), 2.5)
+  session2:close()
+  os.execute("rm -rf /tmp/tf-lua-saver")
+end)

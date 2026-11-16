@@ -126,6 +126,12 @@ Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 (default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10), `name`.
 Returns `targets, gradients, state`; initialize `state.initializers`.
 
+### `tf.train.Saver.new(graph, variables)`
+
+Reusable native V2 checkpoint saver. `variables` is a list of
+`{ name = ..., variable = ... }` entries. Methods: `save(session, prefix)`,
+`restore(session, prefix)`, and `names()`.
+
 ### `tf.train.adagrad(graph, loss, variables[, opts])`
 
 Adds `ApplyAdagrad` updates and accumulator variables. Options:

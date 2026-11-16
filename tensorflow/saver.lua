@@ -1,0 +1,50 @@
+--
+-- Reusable native V2 checkpoint saver.
+--
+local Saver = {}
+Saver.__index = Saver
+
+local function normalize(variables)
+  local entries = {}
+  for i, entry in ipairs(variables) do
+    local variable = entry.variable or entry
+    entries[i] = {
+      name = entry.name or variable.name,
+      variable = variable,
+    }
+    if entries[i].name == nil then
+      error("Saver variable " .. i .. " is missing a name", 3)
+    end
+  end
+  return entries
+end
+
+function Saver.new(graph, variables)
+  if type(variables) ~= "table" or #variables == 0 then
+    error("Saver.new expects a non-empty variable list", 2)
+  end
+  return setmetatable({ graph = graph, entries = normalize(variables) },
+    Saver)
+end
+
+function Saver:names()
+  local result = {}
+  for i, entry in ipairs(self.entries) do result[i] = entry.name end
+  return result
+end
+
+function Saver:save(session, prefix, name)
+  local tf = require("tensorflow")
+  local target = tf.save_v2(self.graph, prefix, self.entries, name)
+  session:run({}, {}, { target })
+  return prefix
+end
+
+function Saver:restore(session, prefix, name)
+  local tf = require("tensorflow")
+  local targets = tf.restore_v2(self.graph, prefix, self.entries, name)
+  session:run({}, {}, targets)
+  return self
+end
+
+return Saver
