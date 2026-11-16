@@ -53,8 +53,7 @@ function Sequential.new(options)
     error("Sequential.new requires input_shape", 2)
   end
   return setmetatable({ _input_shape = copy_shape(options.input_shape),
-    _input_dtype = options.input_dtype or "float32", _layers = {},
-    _compiled = nil }, Sequential)
+    _input_dtype = options.input_dtype, _layers = {}, _compiled = nil }, Sequential)
 end
 
 function Sequential:add(options)
@@ -62,6 +61,9 @@ function Sequential:add(options)
     error("add expects a layer definition table", 2)
   end
   if options.type == "flatten" or options.type == "embedding" then
+    if options.type == "embedding" and self._input_dtype == nil then
+      self._input_dtype = "int32"
+    end
     self._layers[#self._layers + 1] = options
     return self
   end
@@ -94,7 +96,8 @@ function Sequential:_build()
   local graph = tf.Graph.new()
   local input_shape = { -1 }
   for _, dimension in ipairs(self._input_shape) do input_shape[#input_shape + 1] = dimension end
-  local input = tf.placeholder(graph, self._input_dtype, input_shape, "input")
+  local input = tf.placeholder(graph, self._input_dtype or "float32",
+    input_shape, "input")
   local output = input
   local variables, initializers, layers = {}, {}, {}
   local feature_size = self._input_shape[#self._input_shape]
@@ -108,7 +111,7 @@ function Sequential:_build()
       if type(input_dim) ~= "number" or type(output_dim) ~= "number" then
         error("embedding layers require input_dim and output_dim", 3)
       end
-      options.indices_dtype = self._input_dtype
+      options.indices_dtype = self._input_dtype or "int32"
       local layer = tf.layers.embedding(graph, output, input_dim, output_dim,
         options)
       local total = feature_size
