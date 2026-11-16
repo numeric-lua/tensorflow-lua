@@ -180,4 +180,67 @@ function Train.adam(graph, loss, variables, options)
     beta1_power, beta2_power = beta2_power }
 end
 
+local function string_vector(graph, values, name)
+  return Train.constant(graph, values, name, "string")
+end
+
+function Train.save_v2(graph, prefix, variables, name)
+  if type(variables) ~= "table" or #variables == 0 then
+    error("save_v2 expects a non-empty variable list", 3)
+  end
+  local names, slices, dtypes, refs = {}, {}, {}, {}
+  for i, entry in ipairs(variables) do
+    local variable = entry.variable or entry
+    names[i] = entry.name or variable.name
+    if names[i] == nil then error("save_v2 variable is missing a name", 3) end
+    slices[i] = ""
+    dtypes[i] = variable.dtype or "float32"
+    refs[i] = variable.ref or variable
+  end
+  local desc = graph:new_operation("SaveV2", name or "save")
+  desc:add_input(Train.constant(graph, prefix, (name or "save") .. "/prefix",
+    "string"))
+  desc:add_input(string_vector(graph, names, (name or "save") .. "/names"))
+  desc:add_input(string_vector(graph, slices, (name or "save") .. "/slices"))
+  desc:add_inputs(refs)
+  desc:set_type_list("dtypes", dtypes)
+  return desc:finish()
+end
+
+function Train.restore_v2(graph, prefix, variables, name)
+  if type(variables) ~= "table" or #variables == 0 then
+    error("restore_v2 expects a non-empty variable list", 3)
+  end
+  local names, slices, dtypes = {}, {}, {}
+  for i, entry in ipairs(variables) do
+    local variable = entry.variable or entry
+    names[i] = entry.name or variable.name
+    if names[i] == nil then error("restore_v2 variable is missing a name", 3) end
+    slices[i] = ""
+    dtypes[i] = variable.dtype or "float32"
+  end
+  local prefix_op = Train.constant(graph, prefix, (name or "restore") .. "/prefix",
+    "string")
+  local desc = graph:new_operation("RestoreV2", (name or "restore") .. "/read")
+  desc:add_input(prefix_op)
+  desc:add_input(string_vector(graph, names, (name or "restore") .. "/names"))
+  desc:add_input(string_vector(graph, slices, (name or "restore") .. "/slices"))
+  desc:set_type_list("dtypes", dtypes)
+  local restore = desc:finish()
+  local targets = {}
+  for i, entry in ipairs(variables) do
+    local variable = entry.variable or entry
+    local value = { oper = restore.oper, index = i - 1,
+      name = (name or "restore") .. "/read:" .. (i - 1) }
+    local assign_desc = graph:new_operation("Assign",
+      (name or "restore") .. "/assign_" .. i)
+    assign_desc:add_input(variable.ref or variable)
+    assign_desc:add_input(value)
+    assign_desc:set_type("T", variable.dtype or "float32")
+    assign_desc:set_bool("use_locking", true)
+    targets[#targets + 1] = assign_desc:finish()
+  end
+  return targets
+end
+
 return Train

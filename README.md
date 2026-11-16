@@ -10,6 +10,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
 - add symbolic gradients, variables, gradient-descent updates, and Adam;
+- write native TensorFlow V2 checkpoints (`SaveV2`/`RestoreV2`);
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
@@ -119,6 +120,15 @@ Tensor checkpoints can be saved and restored:
 ```lua
 tf.save_checkpoint(session, "model.ckpt", { { name = "v", variable = v } })
 local restore = tf.load_checkpoint(graph2, "model.ckpt", { { name = "v", variable = v2 } })
+```
+
+Native TensorFlow V2 checkpoints are written directly from a graph:
+
+```lua
+local save = tf.save_v2(graph, "/tmp/model/ckpt", { { name = "v", variable = v } })
+session:run({}, {}, { save })
+local restore = tf.restore_v2(graph2, "/tmp/model/ckpt",
+  { { name = "v", variable = v2 } })
 ```
 
 `tf.CheckpointReader` reads official TensorFlow checkpoint files.

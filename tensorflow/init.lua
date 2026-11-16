@@ -37,6 +37,14 @@ function tf.save_checkpoint(session, path, variables)
   return Checkpoint.save(session, path, variables)
 end
 
+function tf.save_v2(graph, prefix, variables, name)
+  return Train.save_v2(graph, prefix, variables, name)
+end
+
+function tf.restore_v2(graph, prefix, variables, name)
+  return Train.restore_v2(graph, prefix, variables, name)
+end
+
 function tf.load_checkpoint(graph, path, variables)
   return Checkpoint.load(graph, path, variables)
 end

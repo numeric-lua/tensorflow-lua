@@ -121,6 +121,18 @@ Writes a portable tensorflow-lua checkpoint. `variables` is a list of
 `{ name = ..., variable = ... }` entries. The format stores dtype, shape, and
 raw tensor bytes; it is not TensorFlow's native checkpoint format.
 
+### `tf.save_v2(graph, prefix, variables[, name])`
+
+Builds a native TensorFlow `SaveV2` target. `variables` is a list of
+`{ name = ..., variable = ... }` entries; values are written to the V2
+checkpoint prefix (for example `model.ckpt`). Returns a graph output usable as a
+session target.
+
+### `tf.restore_v2(graph, prefix, variables[, name])`
+
+Builds `RestoreV2` reads and `Assign` targets for a native TensorFlow V2
+checkpoint. Run the returned target list after creating the session.
+
 ### `tf.load_checkpoint(graph, path, variables)`
 
 Builds `Assign` targets from a portable checkpoint saved by

@@ -68,6 +68,13 @@ function Description:set_type(name, dtype)
   return self
 end
 
+function Description:set_type_list(name, values)
+  local array = ffi.new("TF_DataType[?]", #values)
+  for i, value in ipairs(values) do array[i - 1] = dtype_code(value) end
+  capi.load().TF_SetAttrTypeList(self._desc, name, array, #values)
+  return self
+end
+
 function Description:set_int(name, value)
   capi.load().TF_SetAttrInt(self._desc, name, value)
   return self

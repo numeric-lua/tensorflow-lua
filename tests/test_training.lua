@@ -85,3 +85,37 @@ test("saves and restores variable values", function()
   session2:close()
   os.remove(path)
 end)
+
+test("writes and restores a native TensorFlow V2 checkpoint", function()
+  local prefix = "/tmp/tf-lua-save-v2/ckpt"
+  os.execute("rm -rf /tmp/tf-lua-save-v2")
+  local graph = tf.Graph.new()
+  local v = tf.variable(graph, 4.25, "native_v")
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { v.initializer })
+  local save = tf.save_v2(graph, prefix, { { name = "native_v",
+    variable = v } })
+  session:run({}, {}, { save })
+  session:close()
+  local reader = tf.CheckpointReader.new(prefix)
+  local names = reader:variables()
+  local name
+  for _, candidate in ipairs(names) do
+    if candidate:find("native_v", 1, true) then name = candidate end
+  end
+  assert_true(name ~= nil, "native checkpoint variable missing")
+  local saved = reader:tensor(name):totable()
+  if type(saved) == "table" then saved = saved[1] end
+  assert_eq(saved, 4.25)
+  reader:close()
+
+  local graph2 = tf.Graph.new()
+  local v2 = tf.variable(graph2, 0, "native_v")
+  local restore = tf.restore_v2(graph2, prefix,
+    { { name = "native_v", variable = v2 } })
+  local session2 = tf.Session.new(graph2)
+  session2:run({}, {}, restore)
+  assert_eq(session2:run({}, { v2.read })[1]:totable(), 4.25)
+  session2:close()
+  os.execute("rm -rf /tmp/tf-lua-save-v2")
+end)
