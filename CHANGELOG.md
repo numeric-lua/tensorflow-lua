@@ -3,7 +3,7 @@
 ## 0.6.0
 
 - Conv1D, AveragePool2D, and GlobalAveragePool2D layers;
-- rank-3 BatchNormalization;
+- rank-3 BatchNormalization and Conv1D+BatchNorm stack coverage;
 - average-pooling stacks in Sequential;
 - top-k accuracy metrics;
 - per-sample weights for dense losses.
