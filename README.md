@@ -5,7 +5,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.2.0` alpha. Graph inference, graph construction, training, and checkpoints.
+`0.3.0` alpha. Graph inference, construction, training, checkpoints, eager mode, and layers.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -24,8 +24,8 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - clear TensorFlow status errors, `ffi.gc`-backed ownership, and explicit
   `Tensor:destroy` / `Graph:delete` / `Session:close` paths.
 
-Not yet implemented: complex/half-precision tensors, official SavedModel
-export, and a full layer/model API. Eager execution is available as an
+Not yet implemented: official SavedModel export, GPU placement, and a full
+Keras-style model/training loop. Eager execution is available as an
 experimental `tf.eager` surface with basic arithmetic and activations.
 
 ## Requirements

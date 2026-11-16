@@ -16,7 +16,7 @@ local Losses = require("tensorflow.losses")
 local Metrics = require("tensorflow.metrics")
 
 local tf = {
-  VERSION = "0.2.0",
+  VERSION = "0.3.0",
   Tensor = Tensor,
   Graph = Graph,
   Session = Session,
