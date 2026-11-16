@@ -1,27 +1,25 @@
-# tensorflow-lua 0.5.0
+# tensorflow-lua 0.6.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- Conv2D, MaxPool2D, and BatchNormalization layers, including
-  Conv2D/MaxPool/BatchNorm stacks in Sequential;
-- runtime train/eval BatchNorm and Dropout switching;
-- per-sample weights and label smoothing for sparse classification losses;
+- Conv1D and rank-3 BatchNormalization;
+- average, global-average, and global-max pooling;
+- Activation layer;
+- top-k accuracy metrics;
+- per-sample weights for dense MSE/MAE/BCE/CCE losses;
+- streaming native tensor construction without an intermediate flat table;
+- documented 0.6 performance baseline.
+
+The 0.5 feature set remains:
+
+- Conv2D/MaxPool2D/BatchNorm stacks and runtime train/eval BatchNorm/Dropout;
+- sample weights and label smoothing for sparse losses;
 - resumable optimizer and BatchNorm moving-statistics checkpoints;
-- tested against libtensorflow 2.16.2 and 2.18.0;
-- CI matrix across Ubuntu 22.04/24.04 and both TensorFlow versions.
-
-Existing 0.4 features remain:
-
-- GraphDef/SavedModel execution and graph construction;
-- Adam/AdamW, RMSProp, CenteredRMSProp, Adagrad, Adadelta, Ftrl,
-  ProximalAdagrad, momentum, and gradient descent;
-- TensorFlow V2 checkpoint save/restore;
-- Dense, Embedding, Flatten, and Dropout layers;
-- Sequential fit/evaluate/predict, callbacks, metrics, validation, and
-  weight snapshots;
-- dense, string, complex, half, bfloat16, and quantized tensors.
+- libtensorflow 2.16.2/2.18.0 compatibility and Ubuntu 22.04/24.04 CI;
+- GraphDef/SavedModel execution, optimizers, checkpoint save/restore, dense,
+  string, complex, half, bfloat16, and quantized tensors.
 
 ## Requirements
 
@@ -39,10 +37,10 @@ luarocks --lua-version=5.1 install tensorflow-lua
 The package is published at
 <https://luarocks.org/modules/mateus-m-reis/tensorflow-lua>. It can also be
 installed from the release source rock or built with
-`luarocks make tensorflow-lua-0.5.0-1.rockspec` from a checkout.
+`luarocks make tensorflow-lua-0.6.0-1.rockspec` from a checkout.
 
 ## Verification
 
-- 122 dependency-free tests
+- 131 dependency-free tests
 - luacheck clean
 - CI: Ubuntu 22.04/24.04, libtensorflow 2.16.2/2.18.0, LuaRocks load
