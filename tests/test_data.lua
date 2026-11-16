@@ -36,3 +36,18 @@ test("splits datasets into train and validation partitions", function()
   local batch = train:each()()
   assert_eq(batch.y[3], 30)
 end)
+
+test("repeats and truncates dataset iteration", function()
+  local dataset = tf.data.Dataset.new({ 1, 2, 3 }):repeat_times(2):take(4):batch(2)
+  local batches = {}
+  for batch in dataset:each() do batches[#batches + 1] = batch end
+  assert_eq(#batches, 2)
+  assert_eq(#batches[2].x, 2)
+  assert_eq(batches[2].x[2], 1)
+end)
+
+test("validates repeat and take counts", function()
+  local dataset = tf.data.Dataset.new({ 1 })
+  assert_error(function() dataset:repeat_times(0) end, "positive")
+  assert_error(function() dataset:take(-1) end, "non-negative")
+end)

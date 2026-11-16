@@ -16,6 +16,7 @@
 - Embedding layers;
 - Sequential parameter counts, summaries, `predict_classes`, and
   `validation_split`;
+- Dataset `repeat_times` and `take`;
 - fixed Dense biases to have one element per output unit;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;
 - public API surface test and CI LuaRocks installation job;

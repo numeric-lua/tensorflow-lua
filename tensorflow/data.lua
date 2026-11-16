@@ -44,6 +44,22 @@ function Dataset:size()
   return #self._x
 end
 
+function Dataset:repeat_times(count)
+  if count ~= nil and (type(count) ~= "number" or count < 1) then
+    error("repeat count must be positive or nil", 2)
+  end
+  self._repeats = count
+  return self
+end
+
+function Dataset:take(count)
+  if type(count) ~= "number" or count < 0 then
+    error("take count must be non-negative", 2)
+  end
+  self._take = count
+  return self
+end
+
 function Dataset:batch(size)
   if type(size) ~= "number" or size < 1 then
     error("batch size must be positive", 2)
@@ -60,14 +76,24 @@ end
 
 function Dataset:each()
   local size = self._batch_size or #self._x
+  local repeats = self._repeats or 1
   local order = {}
-  for i = 1, #self._x do order[i] = i end
-  if self._shuffle then
-    if self._seed ~= nil then math.randomseed(self._seed) end
-    for i = #order, 2, -1 do
-      local j = math.random(i)
-      order[i], order[j] = order[j], order[i]
+  for _ = 1, repeats do
+    if self._shuffle then
+      if self._seed ~= nil then math.randomseed(self._seed) end
+      local pass = {}
+      for i = 1, #self._x do pass[i] = i end
+      for i = #pass, 2, -1 do
+        local j = math.random(i)
+        pass[i], pass[j] = pass[j], pass[i]
+      end
+      for _, index in ipairs(pass) do order[#order + 1] = index end
+    else
+      for i = 1, #self._x do order[#order + 1] = i end
     end
+  end
+  if self._take ~= nil and #order > self._take then
+    for i = #order, self._take + 1, -1 do order[i] = nil end
   end
   local position = 1
   return function()
