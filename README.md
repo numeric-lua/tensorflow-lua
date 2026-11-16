@@ -3,6 +3,8 @@
 Native LuaJIT bindings for the **TensorFlow C API**. It runs TensorFlow graphs
 in-process; it is not a Python wrapper and does not use a second tensor engine.
 
+[![❤ Sponsor on GitHub](https://img.shields.io/badge/%E2%9D%A4%20Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Mateus-M-Reis)
+
 ## Status
 
 `0.7.0` alpha. Graph inference, construction, training, checkpoints, eager
@@ -247,6 +249,16 @@ notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 See [CHANGELOG.md](CHANGELOG.md) for the milestone history. Run
 `./scripts/lint.sh` for luacheck.
+
+## Support
+
+tensorflow-lua is free software under BSD-3-Clause. Donations are optional and
+never unlock features or hold back builds.
+
+<a href="https://github.com/sponsors/Mateus-M-Reis"><img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-ea4aaa?logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
+
+You can also star the repository, report issues, or read the organization
+[support page](https://github.com/numeric-lua/.github/blob/main/SUPPORT.md).
 
 ## License
 
