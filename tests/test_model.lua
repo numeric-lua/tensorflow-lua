@@ -524,3 +524,28 @@ test("trains sparse labels with sample weights", function()
   assert_true(metrics ~= nil)
   model:close()
 end)
+
+test("trains a Conv2D + BatchNorm + Dense stack", function()
+  math.randomseed(34)
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 1 } })
+  model:add({ type = "conv2d", filters = 2, kernel_size = 3,
+    options = { padding = "SAME" } })
+  model:add({ type = "batchnorm" })
+  model:add({ type = "flatten" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "adam", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 3 * 3 * 1 * 2 + 2 + 4 + 32 * 1 + 1)
+  local x, y = {}, {}
+  for sample = 1, 2 do
+    x[sample] = {}
+    for r = 1, 4 do
+      x[sample][r] = {}
+      for c = 1, 4 do x[sample][r][c] = { sample + r * c / 10 } end
+    end
+    y[sample] = { sample }
+  end
+  local history = model:fit(x, y, { epochs = 2, batch_size = 2 })
+  assert_eq(#history.loss, 2)
+  assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
+  model:close()
+end)

@@ -7,6 +7,7 @@
 - label smoothing and per-sample weights for sparse classification losses;
 - resumable BatchNorm moving statistics;
 - CI coverage for libtensorflow 2.16.2/2.18.0 on Ubuntu 22.04/24.04;
+- Conv2D + BatchNorm + Dense stack coverage;
 - integer-list graph attributes.
 
 ## 0.4.0

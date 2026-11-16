@@ -7,7 +7,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 `0.5.0` alpha. Graph inference, construction, training, checkpoints, eager
 mode, Conv2D/BatchNorm layers, and a small Sequential model. The dependency-free
-suite currently contains 121 tests.
+suite currently contains 122 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
