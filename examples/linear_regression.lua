@@ -33,7 +33,7 @@ session:run({}, {}, { w.initializer, b.initializer })
 
 local xs = { 0, 1, 2, 3 }
 local ys = { 1, 3, 5, 7 }
-for epoch = 1, 300 do
+for _ = 1, 300 do
   session:run({ [x] = xs, [target] = ys }, {}, updates)
 end
 local result = session:run({}, { w.read, b.read })

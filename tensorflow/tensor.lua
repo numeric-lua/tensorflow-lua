@@ -163,12 +163,12 @@ function Tensor.new(value, options)
       end
       local array = ffi.cast("TF_TString*", data)
       for i = 1, count do
-        local value = values[i]
-        if type(value) ~= "string" then
-          error("string tensors require strings, got " .. type(value), 2)
+        local element = values[i]
+        if type(element) ~= "string" then
+          error("string tensors require strings, got " .. type(element), 2)
         end
         lib.TF_StringInit(array + (i - 1))
-        lib.TF_StringCopy(array + (i - 1), value, #value)
+        lib.TF_StringCopy(array + (i - 1), element, #element)
       end
     end)
     if not ok then lib.TF_DeleteTensor(ptr); error(err, 2) end
@@ -210,7 +210,7 @@ function Tensor.wrap(ptr)
   for i = 0, ndim - 1 do shape[#shape + 1] = tonumber(lib.TF_Dim(ptr, i)) end
   local code = lib.TF_TensorType(ptr)
   local name
-  for candidate, info in pairs(dtypes) do
+  for _, info in pairs(dtypes) do
     if type(info) == "table" and info.code == code then name = info.name end
   end
   if name == nil then

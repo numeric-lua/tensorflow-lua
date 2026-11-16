@@ -19,27 +19,11 @@ local function u32(value)
   return table.concat(bytes)
 end
 
-local function int64(value)
-  local bytes = {}
-  for _ = 1, 8 do
-    bytes[#bytes + 1] = string.char(value % 256)
-    value = math.floor(value / 256)
-  end
-  return table.concat(bytes)
-end
-
 local function read_u32(data, position)
   if position + 3 > #data then error("truncated checkpoint", 3) end
   local value = 0
   for i = 3, 0, -1 do value = value * 256 + data:byte(position + i) end
   return value, position + 4
-end
-
-local function read_u64(data, position)
-  if position + 7 > #data then error("truncated checkpoint", 3) end
-  local value = 0
-  for i = 7, 0, -1 do value = value * 256 + data:byte(position + i) end
-  return value, position + 8
 end
 
 local function read_bytes(data, position, length)

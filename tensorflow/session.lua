@@ -19,7 +19,6 @@ local function parse_output(graph, spec)
 end
 
 local function output_array(graph, specs)
-  local lib = capi.load()
   local outputs = ffi.new("TF_Output[?]", #specs)
   for i, spec in ipairs(specs) do
     local resolved = parse_output(graph, spec)
@@ -211,8 +210,8 @@ function Session:run(feeds, fetches, targets)
       end
       error('session returned a NULL "' .. fetch_names[i] .. '" tensor', 2)
     end
-    local ok, value = pcall(Tensor.wrap, output_tensors[i - 1])
-    if not ok then
+    local wrap_ok, value = pcall(Tensor.wrap, output_tensors[i - 1])
+    if not wrap_ok then
       for j = i, #fetch_names do
         if output_tensors[j - 1] ~= nil then
           lib.TF_DeleteTensor(output_tensors[j - 1])

@@ -1,8 +1,6 @@
 --
 -- Graph-mode variables and basic training helpers.
 --
-local ffi = require("ffi")
-local capi = require("tensorflow.capi")
 local Tensor = require("tensorflow.tensor")
 
 local Train = {}
@@ -169,131 +167,19 @@ function Train.adam(graph, loss, variables, options)
     name .. "/next_beta1")
   local next_b2 = require("tensorflow").mul(graph, beta2_power.read, b2,
     name .. "/next_beta2")
-  for _, apply in ipairs(apply_ops) do
+  local apply = apply_ops[1]
+  if apply ~= nil then
     targets[#targets + 1] = assign(graph, beta1_power.ref, next_b1,
       name .. "/assign_beta1", apply)
     targets[#targets + 1] = assign(graph, beta2_power.ref, next_b2,
       name .. "/assign_beta2", apply)
-    break
   end
   return targets, gradients, { initializers = initializers, beta1_power =
     beta1_power, beta2_power = beta2_power }
 end
 
 local function string_vector(graph, values, name)
-  function Train.rmsprop(graph, loss, variables, options)
-  options = options or {}
-  local learning_rate = options.learning_rate or options.lr or 0.001
-  local rho = options.rho or 0.9
-  local momentum = options.momentum or 0
-  local epsilon = options.epsilon or 1e-10
-  local name = options.name or "RMSProp"
-  if type(variables) ~= "table" or #variables == 0 then
-    error("rmsprop expects a non-empty variable list", 3)
-  end
-  local refs = {}
-  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
-  local dtype = variables[1].dtype or "float32"
-  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
-  local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
-  local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
-  local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
-  local targets, initializers = {}, {}
-  for i, variable in ipairs(variables) do
-    local ref = variable.ref or variable
-    local var_dtype = variable.dtype or dtype
-    local shape = variable.shape or { }
-    local ms = Train.variable(graph, zeros(shape), name .. "/ms_" .. i,
-      { dtype = var_dtype })
-    local mom = Train.variable(graph, zeros(shape), name .. "/mom_" .. i,
-      { dtype = var_dtype })
-    initializers[#initializers + 1] = ms.initializer
-    initializers[#initializers + 1] = mom.initializer
-    local desc = graph:new_operation("ApplyRMSProp", name .. "/update_" .. i)
-    desc:add_input(ref)
-    desc:add_input(ms.ref)
-    desc:add_input(mom.ref)
-    desc:add_input(lr)
-    desc:add_input(rho_op)
-    desc:add_input(momentum_op)
-    desc:add_input(epsilon_op)
-    desc:add_input(gradients[i])
-    desc:set_type("T", var_dtype)
-    desc:set_bool("use_locking", false)
-    targets[#targets + 1] = desc:finish()
-  end
-  return targets, gradients, { initializers = initializers }
-end
-
-function Train.adagrad(graph, loss, variables, options)
-  options = options or {}
-  local learning_rate = options.learning_rate or options.lr or 0.01
-  local name = options.name or "Adagrad"
-  if type(variables) ~= "table" or #variables == 0 then
-    error("adagrad expects a non-empty variable list", 3)
-  end
-  local refs = {}
-  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
-  local dtype = variables[1].dtype or "float32"
-  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
-  local targets, initializers = {}, {}
-  for i, variable in ipairs(variables) do
-    local ref = variable.ref or variable
-    local var_dtype = variable.dtype or dtype
-    local accum = Train.variable(graph, zeros(variable.shape or { }),
-      name .. "/accum_" .. i, { dtype = var_dtype })
-    initializers[#initializers + 1] = accum.initializer
-    local desc = graph:new_operation("ApplyAdagrad", name .. "/update_" .. i)
-    desc:add_input(ref)
-    desc:add_input(accum.ref)
-    desc:add_input(lr)
-    desc:add_input(gradients[i])
-    desc:set_type("T", var_dtype)
-    desc:set_bool("use_locking", false)
-    desc:set_bool("update_slots", true)
-    targets[#targets + 1] = desc:finish()
-  end
-  return targets, gradients, { initializers = initializers }
-end
-
-function Train.momentum(graph, loss, variables, options)
-  options = options or {}
-  local learning_rate = options.learning_rate or options.lr or 0.01
-  local momentum_value = options.momentum or 0.9
-  local name = options.name or "Momentum"
-  if type(variables) ~= "table" or #variables == 0 then
-    error("momentum expects a non-empty variable list", 3)
-  end
-  local refs = {}
-  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
-  local dtype = variables[1].dtype or "float32"
-  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
-  local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
-  local targets, initializers = {}, {}
-  for i, variable in ipairs(variables) do
-    local ref = variable.ref or variable
-    local var_dtype = variable.dtype or dtype
-    local accum = Train.variable(graph, zeros(variable.shape or { }),
-      name .. "/accum_" .. i, { dtype = var_dtype })
-    initializers[#initializers + 1] = accum.initializer
-    local desc = graph:new_operation("ApplyMomentum", name .. "/update_" .. i)
-    desc:add_input(ref)
-    desc:add_input(accum.ref)
-    desc:add_input(lr)
-    desc:add_input(gradients[i])
-    desc:add_input(mom)
-    desc:set_type("T", var_dtype)
-    desc:set_bool("use_locking", false)
-    desc:set_bool("use_nesterov", false)
-    targets[#targets + 1] = desc:finish()
-  end
-  return targets, gradients, { initializers = initializers }
-end
-
-return Train.constant(graph, values, name, "string")
+  return Train.constant(graph, values, name, "string")
 end
 
 function Train.save_v2(graph, prefix, variables, name)

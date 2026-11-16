@@ -74,7 +74,7 @@ end)
 
 
 test("loads a SavedModel, decodes signatures, and runs them", function()
-  local session, graph, signatures = tf.load_saved_model(
+  local session, _, signatures = tf.load_saved_model(
     TEST_ROOT .. "/tests/fixtures/add_savedmodel")
   assert_true(signatures.serving_default ~= nil)
   assert_eq(signatures.serving_default.inputs.x.name,
@@ -185,8 +185,7 @@ test("ffi.gc releases graphs and sessions", function()
   do
     local graph = tf.Graph.new()
     local session = tf.Session.new(graph)
-    graph = nil
-    session = nil
+    assert_true(graph ~= nil and session ~= nil)
   end
   for _ = 1, 5 do collectgarbage("collect") end
   assert_true(capi.released.graphs > graphs)

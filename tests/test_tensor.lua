@@ -53,7 +53,7 @@ test("ffi.gc releases tensor handles", function()
   local before = capi.released.tensors
   do
     local value = tf.tensor({ 1, 2, 3 })
-    value = nil
+    assert_eq(value:numel(), 3)
   end
   for _ = 1, 5 do collectgarbage("collect") end
   assert_true(capi.released.tensors > before)
