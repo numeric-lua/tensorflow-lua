@@ -47,7 +47,6 @@ test("releases many eager handles", function()
   for i = 1, 50 do
     local value = context:constant({ i, i + 1 })
     assert_eq(value:totable()[1], i)
-    value = nil
   end
   for _ = 1, 3 do collectgarbage("collect") end
   context:close()

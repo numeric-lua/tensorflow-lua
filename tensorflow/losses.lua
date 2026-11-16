@@ -36,15 +36,17 @@ function Losses.binary_cross_entropy(graph, logits, labels, options)
   options = options or {}
   local dtype = options.dtype or "float32"
   local prefix = options.name or "binary_cross_entropy"
-  local tf = require("tensorflow")
-  local negative = tf.mul(graph, logits, tf.constant(graph, -1,
+  local tensorflow = require("tensorflow")
+  local negative = tensorflow.mul(graph, logits, tensorflow.constant(graph, -1,
     prefix .. "/negative", dtype), prefix .. "/negate", dtype)
-  local relu = tf.nn.relu(graph, logits, prefix .. "/relu", dtype)
-  local product = tf.mul(graph, logits, labels, prefix .. "/product", dtype)
-  local softplus = tf.nn.softplus(graph, negative, prefix .. "/softplus", dtype)
-  local loss = tf.add(graph, tf.sub(graph, relu, product, prefix .. "/sub",
-    dtype), softplus, prefix .. "/loss", dtype)
-  return tf.reduce_mean(graph, loss, options.axes or { 0 },
+  local relu = tensorflow.nn.relu(graph, logits, prefix .. "/relu", dtype)
+  local product = tensorflow.mul(graph, logits, labels, prefix .. "/product",
+    dtype)
+  local softplus = tensorflow.nn.softplus(graph, negative,
+    prefix .. "/softplus", dtype)
+  local loss = tensorflow.add(graph, tensorflow.sub(graph, relu, product,
+    prefix .. "/sub", dtype), softplus, prefix .. "/loss", dtype)
+  return tensorflow.reduce_mean(graph, loss, options.axes or { 0 },
     prefix .. "/mean", dtype, options.keep_dims)
 end
 
