@@ -152,6 +152,6 @@ test("runs BatchNormalization in training and inference modes", function()
   for _, row in ipairs(trained:totable()) do
     for _, value in ipairs(row) do mean = mean + value end
   end
-  assert_true(math.abs(mean) < 1e-3)
+  assert_true(math.abs(mean) < 1e-3, "mean=" .. tostring(mean))
   session:close()
 end)

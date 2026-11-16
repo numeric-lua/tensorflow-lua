@@ -105,6 +105,7 @@ function Sequential:_build()
   local training = tf.placeholder(graph, "bool", { }, "training")
   local output = input
   local variables, initializers, layers = {}, {}, {}
+  local batchnorm_updates, batchnorm_state = {}, {}
   local feature_size = self._input_shape[#self._input_shape]
   local spatial = copy_shape(self._input_shape)
   for i, definition in ipairs(self._layers) do
@@ -133,6 +134,11 @@ function Sequential:_build()
         variables[#variables + 1] = variable
       end
       add_initializers(initializers, layer.initializers)
+      for _, update in ipairs(layer.updates or {}) do
+        batchnorm_updates[#batchnorm_updates + 1] = update
+      end
+      batchnorm_state[#batchnorm_state + 1] = layer.moving_mean
+      batchnorm_state[#batchnorm_state + 1] = layer.moving_variance
       output = layer.output
     elseif definition.type == "conv2d" then
       if #spatial ~= 3 then
@@ -416,6 +422,8 @@ function Sequential:_build()
     self._proba_output = nil
   end
   self._metric_names, self._metric_outputs = metric_names, metric_outputs
+  self._batchnorm_updates = batchnorm_updates
+  self._batchnorm_state = batchnorm_state
 end
 
 function Sequential:fit(x, y, options)
@@ -506,6 +514,9 @@ function Sequential:fit(x, y, options)
       end
       local feeds = { [self._input] = batch_x, [self._target] = batch_y }
       if self._training ~= nil then feeds[self._training] = true end
+      if #(self._batchnorm_updates or {}) > 0 then
+        self._session:run(feeds, {}, self._batchnorm_updates)
+      end
       local values = self._session:run(feeds, fetch, self._updates)
       epoch_loss = epoch_loss + values[1]:totable()
       for i = 1, #(self._metric_outputs or {}) do
@@ -686,6 +697,10 @@ function Sequential:_training_entries()
     for _, entry in ipairs(optimizer_entries) do
       entries[#entries + 1] = entry
     end
+  end
+  local batchnorm_entries = checkpoint_entries(self._batchnorm_state or {})
+  for _, entry in ipairs(batchnorm_entries) do
+    entries[#entries + 1] = entry
   end
   return entries
 end

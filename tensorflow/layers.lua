@@ -165,11 +165,10 @@ function Layers.batch_normalization(graph, input, channels, options)
 
   local final = graph:new_operation("Identity", prefix .. "/output")
   final:add_input(output)
-  final:add_control_input(mean_assign)
-  final:add_control_input(variance_assign)
   final:set_type("T", dtype)
   return {
     output = final:finish(),
+    updates = { mean_assign, variance_assign },
     gamma = gamma,
     beta = beta,
     moving_mean = moving_mean,
