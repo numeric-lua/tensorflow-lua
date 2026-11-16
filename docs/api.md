@@ -336,6 +336,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | function | operation |
 | --- | --- |
 | `tf.nn.relu(graph, x, name[, dtype])` | Relu |
+| `tf.nn.leaky_relu(graph, x, name[, dtype[, alpha]])` | LeakyRelu |
+| `tf.nn.elu(graph, x, name[, dtype])` | Elu |
 | `tf.nn.sigmoid(graph, x, name[, dtype])` | Sigmoid |
 | `tf.nn.tanh(graph, x, name[, dtype])` | Tanh |
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |

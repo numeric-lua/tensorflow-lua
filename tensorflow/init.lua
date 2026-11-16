@@ -103,6 +103,8 @@ end
 
 tf.nn = {
   relu = Ops.relu,
+  leaky_relu = Ops.leaky_relu,
+  elu = Ops.elu,
   sigmoid = Ops.sigmoid,
   tanh = Ops.tanh,
   softmax = Ops.softmax,

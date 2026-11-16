@@ -35,6 +35,18 @@ function Ops.sigmoid(graph, input, name, dtype)
   return unary(graph, "Sigmoid", input, name, dtype)
 end
 
+function Ops.elu(graph, input, name, dtype)
+  return unary(graph, "Elu", input, name, dtype)
+end
+
+function Ops.leaky_relu(graph, input, name, dtype, alpha)
+  local desc = graph:new_operation("LeakyRelu", name)
+  desc:add_input(input)
+  desc:set_type("T", dtype_name(dtype))
+  desc:set_float("alpha", alpha or 0.2)
+  return desc:finish()
+end
+
 function Ops.tanh(graph, input, name, dtype)
   return unary(graph, "Tanh", input, name, dtype)
 end
