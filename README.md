@@ -225,6 +225,9 @@ See [docs/api.md](docs/api.md).
 ./scripts/bench.sh
 ```
 
+See [docs/performance.md](docs/performance.md) for the recorded baseline and
+caveats.
+
 The harness measures tensor conversion, graph session execution, Sequential
 inference, and training epochs; it is not a CI gate.
 
