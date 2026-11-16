@@ -206,6 +206,12 @@ function Sequential:_build()
   self._layers_built = layers
   self._units = units
   self._sparse = sparse
+  if units > 1 then
+    self._class_output = tf.argmax(graph, output, 1, "prediction/class",
+      "float32", "int64")
+  else
+    self._class_output = nil
+  end
   self._metric_names, self._metric_outputs = metric_names, metric_outputs
 end
 
@@ -338,6 +344,18 @@ end
 
 function Sequential:fit_dataset(dataset, options)
   return self:fit(dataset, nil, options)
+end
+
+function Sequential:predict_classes(x)
+  if self._units ~= nil and self._units <= 1 then
+    error("predict_classes requires more than one output unit", 2)
+  end
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  if is_dataset(x) then x = x:data() end
+  x = normalize_rows(x, self._input_shape[#self._input_shape])
+  if #x == 0 then error("predict_classes requires non-empty input", 2) end
+  return self._session:run({ [self._input] = x }, { self._class_output })[1]
 end
 
 function Sequential:evaluate_dataset(dataset, options)

@@ -247,3 +247,20 @@ test("supports validation_split in fit", function()
   assert_eq(#history.val_loss, 2)
   model:close()
 end)
+
+test("predicts class indices", function()
+  math.randomseed(19)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce",
+    optimizer = { type = "adam", learning_rate = 0.05 } })
+  local x = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } }
+  local y = { 0, 1, 1, 0 }
+  model:fit(x, y, { epochs = 100, batch_size = 4 })
+  local classes = model:predict_classes(x)
+  assert_eq(table.concat(classes:shape(), ","), "4")
+  assert_eq(classes:dtype(), "int64")
+  local values = classes:totable()
+  assert_true(values[1] == 0 or values[1] == 1)
+  model:close()
+end)
