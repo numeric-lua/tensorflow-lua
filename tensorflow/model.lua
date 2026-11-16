@@ -4,6 +4,12 @@
 local Sequential = {}
 Sequential.__index = Sequential
 
+local function copy_table(value)
+  local copy = {}
+  for key, item in pairs(value) do copy[key] = item end
+  return copy
+end
+
 local function copy_shape(shape)
   local result = {}
   for i, value in ipairs(shape) do result[i] = value end
@@ -530,7 +536,20 @@ function Sequential:_build()
 
   local optimizer = self._compiled.optimizer
   if type(optimizer) == "string" then optimizer = { type = optimizer } end
+  optimizer = copy_table(optimizer)
   local optimizer_type = optimizer.type or "adam"
+  local learning_rate_defaults = {
+    adam = 0.001, adamw = 0.001, rmsprop = 0.001,
+    centered_rmsprop = 0.001, adagrad = 0.01, adadelta = 1.0,
+    ftrl = 0.001, proximal_adagrad = 0.001, momentum = 0.001,
+    sgd = 0.01, gradient_descent = 0.01,
+  }
+  local learning_rate = optimizer.learning_rate or optimizer.lr or
+    learning_rate_defaults[optimizer_type] or 0.001
+  local learning_rate_input = tf.placeholder(graph, "float32", { },
+    "learning_rate")
+  optimizer.learning_rate = learning_rate_input
+  optimizer.lr = learning_rate_input
   local targets, state
   if optimizer_type == "adam" then
     local result = { tf.train.adam(graph, loss, variables, optimizer) }
@@ -576,6 +595,9 @@ function Sequential:_build()
     output
   self._training = training
   self._sample_weight = sample_weight
+  self._learning_rate = learning_rate_input
+  self._initial_lr = learning_rate
+  self._current_lr = learning_rate
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
   self._optimizer_state = type(state) == "table" and state or nil
@@ -703,6 +725,7 @@ function Sequential:fit(x, y, options)
       local feeds = { [self._input] = batch_x, [self._target] = batch_y,
         [self._sample_weight] = batch_weights }
       if self._training ~= nil then feeds[self._training] = true end
+      feeds[self._learning_rate] = self._current_lr or self._initial_lr
       if #(self._batchnorm_updates or {}) > 0 then
         self._session:run(feeds, {}, self._batchnorm_updates)
       end
@@ -892,7 +915,8 @@ function Sequential:save_training(prefix)
     self:_training_entries()) })
   local meta, err = io.open(prefix .. ".state", "wb")
   if meta == nil then error("cannot write training state: " .. tostring(err), 2) end
-  meta:write(string.format("epoch=%d\n", self._epoch or 0))
+  meta:write(string.format("epoch=%d\nlearning_rate=%.17g\n",
+    self._epoch or 0, self._current_lr or self._initial_lr or 0))
   meta:close()
   return prefix
 end
@@ -909,6 +933,8 @@ function Sequential:load_training(prefix)
     meta:close()
     local epoch = contents:match("epoch=(%d+)")
     if epoch ~= nil then self._epoch = tonumber(epoch) end
+    local learning_rate = contents:match("learning_rate=([%d.eE+%-]+)")
+    if learning_rate ~= nil then self._current_lr = tonumber(learning_rate) end
   end
   return self
 end

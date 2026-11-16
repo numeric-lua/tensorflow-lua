@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.6.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.7.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -288,10 +288,18 @@ Stops when a monitored history entry stops improving. Options: `monitor`
 `restore_best_weights`. Records `stopped_epoch`; restoration uses in-memory
 weight snapshots.
 
+### `tf.callbacks.ReduceLROnPlateau(opts)`
+
+Multiplies `model._current_lr` when a monitored entry stops improving. Options:
+`monitor` (default `val_loss`), `mode`, `factor` (default `0.1`), `patience`
+(default `10`), `min_delta`, `min_lr`, and `cooldown`. Learning-rate changes are
+fed into the optimizer on the next epoch.
+
 ### `tf.callbacks.ModelCheckpoint(path, opts)`
 
 Saves the model after epochs. `path` may contain `{epoch}`. Options: `monitor`,
-`mode`, `save_best_only`, `min_delta`.
+`mode`, `save_best_only`, `min_delta`, and `save_training` (persist optimizer
+slots, BatchNorm state, epoch, and learning rate via `save_training`).
 
 ## Metrics
 

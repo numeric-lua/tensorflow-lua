@@ -666,3 +666,24 @@ test("trains an activation and global max-pool stack", function()
   assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
   model:close()
 end)
+
+test("feeds a scheduled learning rate", function()
+  math.randomseed(42)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.1 } })
+  local seen = {}
+  local callback = {
+    on_epoch_end = function(_, _, current)
+      seen[#seen + 1] = current._current_lr
+      current._current_lr = current._current_lr * 0.5
+    end,
+  }
+  local history = model:fit({ { 0 }, { 1 } }, { { 1 }, { 3 } },
+    { epochs = 3, callbacks = { callback } })
+  assert_eq(#history.loss, 3)
+  assert_eq(seen[1], 0.1)
+  assert_eq(seen[2], 0.05)
+  assert_true(math.abs(seen[3] - 0.025) < 1e-12)
+  model:close()
+end)

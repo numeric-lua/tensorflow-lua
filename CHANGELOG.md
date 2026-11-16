@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- feedable learning rates and `ReduceLROnPlateau`;
+- training-state `ModelCheckpoint` support.
+
 ## 0.6.0
 
 - Conv1D, AveragePool2D, GlobalAveragePool2D, GlobalMaxPool2D, and Activation

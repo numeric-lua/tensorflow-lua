@@ -11,6 +11,7 @@ local function dtype_name(value)
 end
 
 function Train.constant(graph, value, name, dtype)
+  if type(value) == "table" and value.oper ~= nil then return value end
   dtype = dtype_name(dtype)
   local tensor = getmetatable(value) == Tensor and value or
     Tensor.new(value, { dtype = dtype })
@@ -147,6 +148,21 @@ function Train.adam(graph, loss, variables, options)
   local initializers = { beta1_power.initializer, beta2_power.initializer }
   local state_variables = { beta1_power, beta2_power }
   local weight_decay = options.weight_decay or options.wd or 0
+  local decay_factor
+  if weight_decay > 0 then
+    if type(learning_rate) == "table" and learning_rate.oper ~= nil then
+      local tensorflow = require("tensorflow")
+      local one = Train.constant(graph, 1, name .. "/decay_one", dtype)
+      local decay = Train.constant(graph, weight_decay,
+        name .. "/decay_weight", dtype)
+      decay_factor = tensorflow.sub(graph, one,
+        tensorflow.mul(graph, lr, decay, name .. "/decay_scale", dtype),
+        name .. "/decay_factor", dtype)
+    else
+      decay_factor = Train.constant(graph, 1 - learning_rate * weight_decay,
+        name .. "/decay_factor", dtype)
+    end
+  end
   local targets, apply_ops = {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -163,10 +179,8 @@ function Train.adam(graph, loss, variables, options)
     local decay_assign
     if weight_decay > 0 then
       local tensorflow = require("tensorflow")
-      local factor = Train.constant(graph, 1 - learning_rate * weight_decay,
-        name .. "/decay_" .. i, var_dtype)
-      local decayed = tensorflow.mul(graph, variable.read or ref, factor,
-        name .. "/decayed_" .. i, var_dtype)
+      local decayed = tensorflow.mul(graph, variable.read or ref,
+        decay_factor, name .. "/decayed_" .. i, var_dtype)
       decay_assign = assign(graph, ref, decayed,
         name .. "/weight_decay_" .. i)
     end
