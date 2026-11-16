@@ -102,6 +102,7 @@ tf.nn = {
   sigmoid = Ops.sigmoid,
   tanh = Ops.tanh,
   softmax = Ops.softmax,
+  softplus = Ops.softplus,
 }
 
 tf.eager = Eager
@@ -110,6 +111,8 @@ tf.losses = Losses
 tf.metrics = Metrics
 tf.Sequential = Sequential
 tf.reshape = Ops.reshape
+tf.cast = Ops.cast
+tf.concat = Ops.concat
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax
 tf.one_hot = Ops.one_hot

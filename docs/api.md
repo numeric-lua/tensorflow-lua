@@ -180,6 +180,12 @@ reader:close()
 Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
 `dtype`, `name`.
 
+### `tf.losses.binary_cross_entropy(graph, logits, labels[, opts])`
+
+Builds a numerically stable sigmoid binary cross-entropy mean using
+`relu(x) - x*y + softplus(-x)`. Options: `axes` (default `{0}`), `keep_dims`,
+`dtype`, `name`.
+
 ### `tf.losses.softmax_cross_entropy(graph, logits, labels[, opts])`
 
 Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
@@ -280,6 +286,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
+| `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
+| `tf.concat(graph, {a, b}, axis[, name[, dtype]])` | ConcatV2 |
+| `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 
 ### `tf.gradients(graph, outputs, inputs)`
 

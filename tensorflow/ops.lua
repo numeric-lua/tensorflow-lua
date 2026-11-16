@@ -47,12 +47,37 @@ function Ops.log(graph, input, name, dtype)
   return unary(graph, "Log", input, name, dtype)
 end
 
+function Ops.softplus(graph, input, name, dtype)
+  return unary(graph, "Softplus", input, name, dtype)
+end
+
 function Ops.sqrt(graph, input, name, dtype)
   return unary(graph, "Sqrt", input, name, dtype)
 end
 
 function Ops.softmax(graph, input, name, dtype)
   return unary(graph, "Softmax", input, name, dtype)
+end
+
+function Ops.cast(graph, input, src_dtype, dst_dtype, name)
+  local desc = graph:new_operation("Cast", name)
+  desc:add_input(input)
+  desc:set_type("SrcT", dtype_name(src_dtype))
+  desc:set_type("DstT", dtype_name(dst_dtype))
+  return desc:finish()
+end
+
+function Ops.concat(graph, inputs, axis, name, dtype)
+  if type(inputs) ~= "table" or #inputs < 2 then
+    error("concat expects at least two inputs", 3)
+  end
+  local desc = graph:new_operation("ConcatV2", name)
+  desc:add_inputs(inputs)
+  desc:add_input(constant(graph, axis or 0, name .. "/axis", "int32"))
+  desc:set_type("T", dtype_name(dtype))
+  desc:set_type("Tidx", "int32")
+  desc:set_int("N", #inputs)
+  return desc:finish()
 end
 
 function Ops.reshape(graph, input, shape, name, dtype)
