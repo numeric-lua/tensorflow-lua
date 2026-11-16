@@ -1,0 +1,28 @@
+# Changelog
+
+## 0.3.0
+
+- experimental eager execution (`tf.eager.Context`);
+- Dense, Sequential, loss, metric, and OneHot helpers;
+- Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
+  load, and GraphDef export;
+- string, complex64/128, float16, bfloat16, and quantized tensors;
+- TensorFlow V2 checkpoint save/restore via `SaveV2`/`RestoreV2`;
+- finalizer, malformed-input, multi-output SavedModel, and dtype coverage.
+
+## 0.2.0
+
+- generic graph builder with typed attributes and control inputs;
+- symbolic gradients, variables, initializers, and constants;
+- gradient descent, Adam, RMSProp, Adagrad, and momentum optimizers;
+- portable checkpoints and official `CheckpointReader`;
+- native TensorFlow checkpoints;
+- typed ops and `tf.nn` activations;
+- LuaRocks packaging and architecture-aware libtensorflow bootstrap.
+
+## 0.1.0
+
+- LuaJIT FFI binding to the TensorFlow C API;
+- dense tensors, GraphDef import/export, sessions, feeds/fetches/targets;
+- SavedModel loading and signature decoding;
+- multi-output SavedModel support.

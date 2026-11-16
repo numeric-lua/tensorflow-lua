@@ -195,6 +195,11 @@ from Lua. The XOR example uses Adam.
 
 See [docs/api.md](docs/api.md).
 
+## Changelog and lint
+
+See [CHANGELOG.md](CHANGELOG.md) for the milestone history. Run
+`./scripts/lint.sh` for luacheck.
+
 ## License
 
 BSD-3-Clause. libtensorflow is downloaded separately under the Apache 2.0
