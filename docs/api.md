@@ -431,6 +431,8 @@ model:close()
   TensorFlow class indices (0-based).
 - `label_smoothing = 0.1` smooths sparse targets before softmax
   cross-entropy.
+- `metrics = { "accuracy", "top_3_accuracy" }` adds top-k accuracy for both
+  sparse and one-hot labels.
 - `sample_weight = { 1, 2, ... }` scales sparse per-example losses; pass the
   same option to `evaluate` for weighted validation.
 - `fit` accepts `shuffle = true` and `validation_split` (fraction of the tail

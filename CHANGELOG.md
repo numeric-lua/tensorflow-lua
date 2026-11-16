@@ -4,7 +4,8 @@
 
 - Conv1D, AveragePool2D, and GlobalAveragePool2D layers;
 - rank-3 BatchNormalization;
-- average-pooling stacks in Sequential.
+- average-pooling stacks in Sequential;
+- top-k accuracy metrics.
 
 ## 0.5.0
 

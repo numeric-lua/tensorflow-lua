@@ -593,3 +593,17 @@ test("trains a Sequential Conv1D stack", function()
   assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
   model:close()
 end)
+
+test("reports top-k accuracy", function()
+  math.randomseed(38)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 3 })
+  model:compile({ loss = "sparse_ce", metrics = { "top_2_accuracy" },
+    optimizer = { type = "adam", learning_rate = 0.05 } })
+  local history = model:fit({ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+    { 0, 1, 2, 1 }, { epochs = 5 })
+  assert_eq(#history["top_2_accuracy"], 5)
+  assert_true(history["top_2_accuracy"][5] >= 0)
+  assert_true(history["top_2_accuracy"][5] <= 1)
+  model:close()
+end)

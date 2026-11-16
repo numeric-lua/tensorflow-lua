@@ -443,6 +443,51 @@ function Sequential:_build()
       metric_outputs[i] = tf.metrics.accuracy(graph, predictions, labels,
         { dtype = dtype, name = "metric/accuracy" })
       metric_names[i] = "accuracy"
+    elseif name:match("^top_(%d+)_accuracy$") then
+      local k = tonumber(name:match("^top_(%d+)_accuracy$"))
+      if k < 1 or k > units then
+        error("top-k metric k must be between 1 and the number of units", 3)
+      end
+      local top = graph:new_operation("TopKV2", "metric/topk")
+      top:add_input(output)
+      top:add_input(tf.constant(graph, k, "metric/topk_k", "int32"))
+      top:set_type("T", "float32")
+      top:set_bool("sorted", true)
+      local top_output = top:finish()
+      local indices = { oper = top_output.oper, index = 1,
+        name = "metric/topk_indices" }
+      local labels
+      if sparse then
+        labels = target
+      else
+        labels = tf.cast(graph, tf.argmax(graph, target, 1,
+          "metric/topk_label", "float32", "int64"), "int64", "int32",
+          "metric/topk_label_i32")
+      end
+      local expanded = graph:new_operation("ExpandDims",
+        "metric/topk_label_axis")
+      expanded:add_input(labels)
+      expanded:add_input(tf.constant(graph, 1, "metric/topk_axis", "int32"))
+      expanded:set_type("T", "int32")
+      expanded:set_type("Tdim", "int32")
+      local label_matrix = expanded:finish()
+      local equal = graph:new_operation("Equal", "metric/topk_equal")
+      equal:add_input(label_matrix)
+      equal:add_input(indices)
+      equal:set_type("T", "int32")
+      local matches = equal:finish()
+      local any = graph:new_operation("Any", "metric/topk_any")
+      any:add_input(matches)
+      any:add_input(tf.constant(graph, 1, "metric/topk_reduce_axis",
+        "int32"))
+      any:set_type("Tidx", "int32")
+      any:set_bool("keep_dims", false)
+      local hit = any:finish()
+      local numeric = tf.cast(graph, hit, "bool", "float32",
+        "metric/topk_float")
+      metric_outputs[i] = tf.reduce_mean(graph, numeric, { 0 },
+        "metric/topk_accuracy", "float32")
+      metric_names[i] = name
     elseif name == "binary_accuracy" then
       local probabilities = tf.nn.sigmoid(graph, output,
         "metric/binary_sigmoid")
