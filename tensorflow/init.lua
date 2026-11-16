@@ -14,6 +14,7 @@ local Eager = require("tensorflow.eager")
 local Layers = require("tensorflow.layers")
 local Losses = require("tensorflow.losses")
 local Metrics = require("tensorflow.metrics")
+local Sequential = require("tensorflow.model")
 
 local tf = {
   VERSION = "0.3.0",
@@ -107,6 +108,7 @@ tf.eager = Eager
 tf.layers = Layers
 tf.losses = Losses
 tf.metrics = Metrics
+tf.Sequential = Sequential
 tf.reshape = Ops.reshape
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax

@@ -18,6 +18,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - experimental eager execution (`tf.eager.Context`);
 - compositional Dense layers with graph variables and initializers;
 - loss helpers (MSE, softmax cross-entropy), accuracy, and OneHot;
+- a minimal `tf.Sequential` model with fit/evaluate/predict/save/load;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
@@ -160,6 +161,20 @@ representation. Complex values are built with `tf.complex(real, imag)`.
 
 `tf.VERSION` is the binding version; `tf.version()` returns the loaded
 libtensorflow version.
+
+## Sequential model
+
+```lua
+local model = tf.Sequential.new({ input_shape = { 1 } })
+model:add({ units = 1 })
+model:compile({ optimizer = { type = "adam", learning_rate = 0.1 },
+                loss = "mse" })
+model:fit({ { 0 }, { 1 }, { 2 }, { 3 } }, { { 1 }, { 3 }, { 5 }, { 7 } },
+  { epochs = 200, batch_size = 4 })
+print(model:predict({ { 4 } }):totable()[1][1])
+model:save("linear.ckpt")
+model:close()
+```
 
 ## Examples
 

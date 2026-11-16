@@ -208,6 +208,31 @@ Returns `{ output, weight, bias, variables, initializers, input_size, units }`.
 Chains Dense layers. Each definition is `{ units = n, options = {...} }`.
 Returns the layer list. The caller must run every layer initializer.
 
+## Sequential model
+
+```lua
+local model = tf.Sequential.new({ input_shape = { 2 } })
+model:add({ units = 4, options = { activation = "relu" } })
+model:add({ units = 1 })
+model:compile({ loss = "mse", optimizer = { type = "adam", learning_rate = 0.01 } })
+local history = model:fit(x, y, { epochs = 10, batch_size = 32 })
+local prediction = model:predict(x)
+local loss = model:evaluate(x, y)
+model:save("model.ckpt")
+model:load("model.ckpt")
+model:close()
+```
+
+- Inputs are batched Lua tables: `input_shape = { features }` expects
+  `{{f1, f2}, ...}`.
+- Supported losses: `"mse"`/`"mean_squared_error"` and
+  `"softmax_cross_entropy"`/`"cce"`, or a custom function
+  `function(graph, predictions, targets) ... end`.
+- Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
+  `adagrad`, and `momentum`.
+- `fit` returns `{ loss = { per_epoch, ... } }`.
+- `save`/`load` use the portable tensorflow-lua checkpoint format.
+
 ## Eager execution (experimental)
 
 ```lua
