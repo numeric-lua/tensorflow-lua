@@ -92,7 +92,6 @@ function Layers.conv2d(graph, input, filters, kernel_size, options)
   local prefix = options.name or "conv2d"
   local tf = require("tensorflow")
   local bound = math.sqrt(6 / (kernel_h * kernel_w * in_channels + filters))
-  local shape = { kernel_h, kernel_w, in_channels, filters }
   local values = {}
   for i = 1, kernel_h do
     values[i] = {}
