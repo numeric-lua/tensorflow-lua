@@ -178,3 +178,22 @@ test("loads a multi-output SavedModel", function()
   assert_eq(outputs.product:totable()[1], 3)
   session:close()
 end)
+
+test("ffi.gc releases graphs and sessions", function()
+  local capi = require("tensorflow.capi")
+  local graphs, sessions = capi.released.graphs, capi.released.sessions
+  do
+    local graph = tf.Graph.new()
+    local session = tf.Session.new(graph)
+    graph = nil
+    session = nil
+  end
+  for _ = 1, 5 do collectgarbage("collect") end
+  assert_true(capi.released.graphs > graphs)
+  assert_true(capi.released.sessions > sessions)
+end)
+
+test("rejects malformed GraphDefs and missing SavedModels", function()
+  assert_error(function() tf.Graph.new():import_graph_def("\255") end)
+  assert_error(function() tf.load_saved_model("/definitely/missing/model") end)
+end)
