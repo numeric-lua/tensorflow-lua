@@ -46,6 +46,18 @@ function tf.matmul(graph, a, b, name, dtype)
   return GraphBuilder.matmul(graph, a, b, name, dtype)
 end
 
+function tf.sub(graph, a, b, name, dtype)
+  return GraphBuilder.sub(graph, a, b, name, dtype)
+end
+
+function tf.mul(graph, a, b, name, dtype)
+  return GraphBuilder.mul(graph, a, b, name, dtype)
+end
+
+function tf.square(graph, a, name, dtype)
+  return GraphBuilder.square(graph, a, name, dtype)
+end
+
 function tf.version()
   capi.load()
   return capi.version

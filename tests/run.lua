@@ -45,6 +45,9 @@ dofile(root .. "/tests/test_tensor.lua")
 current = "test_graph.lua"
 dofile(root .. "/tests/test_graph.lua")
 
+current = "test_training.lua"
+dofile(root .. "/tests/test_training.lua")
+
 io.write("\n")
 for _, failure in ipairs(failures) do io.stderr:write(failure .. "\n\n") end
 print(string.format("%d passed, %d failed", passed, failed))

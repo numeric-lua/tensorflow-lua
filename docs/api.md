@@ -81,7 +81,9 @@ array; `-1` denotes an unknown dimension.
 
 ### `tf.matmul(graph, a, b, name[, dtype])`
 
-Create `AddV2` and `MatMul` operations with the given input outputs. `dtype`
+### `tf.sub`, `tf.mul`, `tf.square`
+
+Create `AddV2`, `MatMul`, `Sub`, `Mul`, and `Square` operations. `dtype`
 defaults to `float32`.
 
 ### `tf.constant(graph, value, name[, dtype])`

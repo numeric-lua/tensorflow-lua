@@ -118,6 +118,15 @@ Supported dtypes are `float32`, `float64`, `int32`, `int64`, `int16`, `int8`,
 `tf.VERSION` is the binding version; `tf.version()` returns the loaded
 libtensorflow version.
 
+## Examples
+
+```sh
+TENSORFLOW_ROOT=$PWD/third_party/libtensorflow \
+  luajit examples/linear_regression.lua
+```
+
+The example builds and trains `y = 2x + 1` entirely from Lua.
+
 ## API
 
 See [docs/api.md](docs/api.md).

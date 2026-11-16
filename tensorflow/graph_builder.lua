@@ -177,4 +177,19 @@ function GraphBuilder.matmul(graph, a, b, name, dtype)
   return binary(graph, "MatMul", a, b, name, dtype)
 end
 
+function GraphBuilder.sub(graph, a, b, name, dtype)
+  return binary(graph, "Sub", a, b, name, dtype)
+end
+
+function GraphBuilder.mul(graph, a, b, name, dtype)
+  return binary(graph, "Mul", a, b, name, dtype)
+end
+
+function GraphBuilder.square(graph, a, name, dtype)
+  local desc = GraphBuilder.new_operation(graph, "Square", name)
+  desc:add_input(a)
+  desc:set_type("T", dtype_name(dtype))
+  return desc:finish()
+end
+
 return GraphBuilder
