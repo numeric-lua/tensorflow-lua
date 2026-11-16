@@ -10,6 +10,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
 - add symbolic gradients, variables, gradient-descent updates, and Adam;
+- train with gradient descent, Adam, or RMSProp;
 - write native TensorFlow V2 checkpoints (`SaveV2`/`RestoreV2`);
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;

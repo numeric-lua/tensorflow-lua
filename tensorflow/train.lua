@@ -181,7 +181,52 @@ function Train.adam(graph, loss, variables, options)
 end
 
 local function string_vector(graph, values, name)
-  return Train.constant(graph, values, name, "string")
+  function Train.rmsprop(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.001
+  local rho = options.rho or 0.9
+  local momentum = options.momentum or 0
+  local epsilon = options.epsilon or 1e-10
+  local name = options.name or "RMSProp"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("rmsprop expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
+  local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
+  local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local shape = variable.shape or { }
+    local ms = Train.variable(graph, zeros(shape), name .. "/ms_" .. i,
+      { dtype = var_dtype })
+    local mom = Train.variable(graph, zeros(shape), name .. "/mom_" .. i,
+      { dtype = var_dtype })
+    initializers[#initializers + 1] = ms.initializer
+    initializers[#initializers + 1] = mom.initializer
+    local desc = graph:new_operation("ApplyRMSProp", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(ms.ref)
+    desc:add_input(mom.ref)
+    desc:add_input(lr)
+    desc:add_input(rho_op)
+    desc:add_input(momentum_op)
+    desc:add_input(epsilon_op)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
+return Train.constant(graph, values, name, "string")
 end
 
 function Train.save_v2(graph, prefix, variables, name)
@@ -241,6 +286,51 @@ function Train.restore_v2(graph, prefix, variables, name)
     targets[#targets + 1] = assign_desc:finish()
   end
   return targets
+end
+
+function Train.rmsprop(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.001
+  local rho = options.rho or 0.9
+  local momentum = options.momentum or 0
+  local epsilon = options.epsilon or 1e-10
+  local name = options.name or "RMSProp"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("rmsprop expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
+  local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
+  local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local shape = variable.shape or { }
+    local ms = Train.variable(graph, zeros(shape), name .. "/ms_" .. i,
+      { dtype = var_dtype })
+    local mom = Train.variable(graph, zeros(shape), name .. "/mom_" .. i,
+      { dtype = var_dtype })
+    initializers[#initializers + 1] = ms.initializer
+    initializers[#initializers + 1] = mom.initializer
+    local desc = graph:new_operation("ApplyRMSProp", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(ms.ref)
+    desc:add_input(mom.ref)
+    desc:add_input(lr)
+    desc:add_input(rho_op)
+    desc:add_input(momentum_op)
+    desc:add_input(epsilon_op)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
 end
 
 return Train

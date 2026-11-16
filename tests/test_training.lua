@@ -119,3 +119,31 @@ test("writes and restores a native TensorFlow V2 checkpoint", function()
   session2:close()
   os.execute("rm -rf /tmp/tf-lua-save-v2")
 end)
+
+test("trains linear regression with RMSProp", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", nil, "rx")
+  local target = tf.placeholder(graph, "float32", nil, "rtarget")
+  local w = tf.variable(graph, 0, "rw")
+  local b = tf.variable(graph, 0, "rb")
+  local prediction = tf.add(graph, tf.mul(graph, x, w.read, "rwx"), b.read,
+    "rprediction")
+  local loss = tf.reduce_mean(graph,
+    tf.square(graph, tf.sub(graph, prediction, target, "rerror"), "rsquared"),
+    { 0 }, "rloss")
+  local updates, _, state = tf.train.rmsprop(graph, loss, { w, b },
+    { learning_rate = 0.05 })
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  local xs = { 0, 1, 2, 3 }
+  local ys = { 1, 3, 5, 7 }
+  for _ = 1, 500 do session:run({ [x] = xs, [target] = ys }, {}, updates) end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.25,
+    tostring(result[1]:totable()))
+  assert_true(math.abs(result[2]:totable() - 1) < 0.3,
+    tostring(result[2]:totable()))
+  session:close()
+end)

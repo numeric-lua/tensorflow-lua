@@ -115,6 +115,12 @@ Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
 Returns `targets, gradients, state`. Initialize each variable and every entry in
 `state.initializers` before training.
 
+### `tf.train.rmsprop(graph, loss, variables[, opts])`
+
+Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
+(default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10), `name`.
+Returns `targets, gradients, state`; initialize `state.initializers`.
+
 ### `tf.save_checkpoint(session, path, variables)`
 
 Writes a portable tensorflow-lua checkpoint. `variables` is a list of

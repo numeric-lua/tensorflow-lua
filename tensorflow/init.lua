@@ -56,6 +56,9 @@ tf.train = {
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,
+  rmsprop = function(graph, loss, variables, options)
+    return Train.rmsprop(graph, loss, variables, options)
+  end,
 }
 
 function tf.gradients(graph, outputs, inputs)
