@@ -335,6 +335,8 @@ model:close()
 - `callbacks` may contain tables with `on_train_begin(history, model)`,
   `on_epoch_end(history, epoch, model)`, and `on_train_end(history, model)`
   functions. Set `history.stop_training = true` to end training early.
+- `count_params()` returns the total number of weights and biases;
+  `summary()` renders the layer stack and total;
 - `save`/`load` use the portable tensorflow-lua checkpoint format;
   `save_native`/`load_native` use TensorFlow V2 checkpoints.
 - `export(path)` writes the graph as a GraphDef protobuf.

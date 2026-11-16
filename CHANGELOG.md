@@ -14,6 +14,8 @@
 - AdamW decoupled weight decay, Adam clipvalue, clip_by_value, Adadelta, and
   Ftrl;
 - Embedding layers;
+- Sequential parameter counts and summaries;
+- fixed Dense biases to have one element per output unit;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;
 - public API surface test and CI LuaRocks installation job;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,

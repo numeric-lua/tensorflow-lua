@@ -36,7 +36,9 @@ function Layers.dense(graph, input, units, options)
   local output = tf.matmul(graph, input, weight.read, prefix .. "/matmul",
     dtype)
   if options.use_bias ~= false then
-    bias = tf.variable(graph, { 0 }, prefix .. "/bias", { dtype = dtype })
+    local zeros = {}
+    for i = 1, units do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
     variables[#variables + 1] = bias
     initializers[#initializers + 1] = bias.initializer
     output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)

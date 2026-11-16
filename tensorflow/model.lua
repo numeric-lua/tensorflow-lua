@@ -433,6 +433,18 @@ function Sequential:close()
   self._graph = nil
 end
 
+function Sequential:count_params()
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local total = 0
+  for _, variable in ipairs(self._variables) do
+    local count = 1
+    for _, dimension in ipairs(variable.shape) do count = count * dimension end
+    total = total + count
+  end
+  return total
+end
+
 function Sequential:summary()
   self:_build()
   local rows = { "Sequential" }
@@ -440,6 +452,7 @@ function Sequential:summary()
     rows[#rows + 1] = string.format("  %d: Dense(%d -> %d)", i,
       layer.input_size, layer.units)
   end
+  rows[#rows + 1] = string.format("Total params: %d", self:count_params())
   return table.concat(rows, "\n")
 end
 
