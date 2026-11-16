@@ -143,6 +143,10 @@ function Sequential:_build()
       metric_outputs[i] = tf.metrics.accuracy(graph, predictions, labels,
         { dtype = dtype, name = "metric/accuracy" })
       metric_names[i] = "accuracy"
+    elseif name == "binary_accuracy" then
+      metric_outputs[i] = tf.metrics.binary_accuracy(graph, output, target,
+        { axes = { 0, 1 }, name = "metric/binary_accuracy" })
+      metric_names[i] = "binary_accuracy"
     else
       error("unsupported metric '" .. tostring(name) .. "'", 3)
     end

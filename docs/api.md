@@ -258,8 +258,10 @@ model:close()
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.
-- `metrics = { "accuracy" }` adds per-epoch classification accuracy; the target
-  must be one-hot and the output must have class columns.
+- `metrics = { "accuracy" }` adds per-epoch class accuracy; targets are one-hot
+  (or integer indices for sparse losses) and the output has class columns.
+- `metrics = { "binary_accuracy" }` thresholds probability outputs against
+  `0`/`1` targets.
 - `fit` accepts `shuffle = true`; it returns `{ loss = { per_epoch, ... } }`; with
   `validation_data = { x, y }` it also returns `val_loss`.
 - `callbacks` may contain tables with an `on_epoch_end(history, epoch)`
