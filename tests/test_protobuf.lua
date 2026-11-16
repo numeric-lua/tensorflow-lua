@@ -1,0 +1,11 @@
+local Proto = require("tensorflow.protobuf")
+
+test("protobuf decoder rejects malformed input", function()
+  assert_error(function() Proto.saved_model_signatures("\255") end)
+  assert_error(function()
+    Proto.saved_model_signatures(string.char(0x0a, 0x05, 0x01))
+  end, "truncated")
+  assert_error(function()
+    Proto.saved_model_signatures(string.char(0x00))
+  end, "field number 0")
+end)

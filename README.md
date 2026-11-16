@@ -13,7 +13,8 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
-- clear TensorFlow status errors and LuaJIT `__gc` cleanup.
+- clear TensorFlow status errors, `ffi.gc`-backed ownership, and explicit
+  `Tensor:destroy` / `Graph:delete` / `Session:close` paths.
 
 Not yet implemented: a Lua graph builder, TensorFlow eager execution, string/
 variant tensors, checkpoints, and training optimizer helpers.

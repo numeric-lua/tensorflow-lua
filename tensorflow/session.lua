@@ -34,28 +34,56 @@ local function output_array(graph, specs)
   return outputs
 end
 
+local function install_finalizer(pointer, graph_handle)
+  local function finalize(value)
+    local keepalive = graph_handle
+    if keepalive == nil then return end
+    local lib = capi.load()
+    local status = lib.TF_NewStatus()
+    lib.TF_CloseSession(value, status)
+    lib.TF_DeleteStatus(status)
+    status = lib.TF_NewStatus()
+    lib.TF_DeleteSession(value, status)
+    lib.TF_DeleteStatus(status)
+  end
+  return ffi.gc(pointer, finalize)
+end
+
 function Session.new(graph, options)
   local lib = capi.load()
-  local opts = lib.TF_NewSessionOptions()
+  local opts = capi.require(lib.TF_NewSessionOptions(),
+    "TF_NewSessionOptions")
   if options and options.target then lib.TF_SetTarget(opts, options.target) end
   local status = capi.status()
-  local ptr = lib.TF_NewSession(graph:handle(), opts, status)
+  local graph_handle = graph:handle()
+  local ptr = lib.TF_NewSession(graph_handle, opts, status)
   local ok, err = pcall(capi.check, status, "session creation")
   lib.TF_DeleteSessionOptions(opts)
   if not ok or ptr == nil then error(err or "TF_NewSession failed", 2) end
-  return setmetatable({ _ptr = ptr, _graph = graph, _closed = false }, Session)
+  local handle = install_finalizer(ptr, graph_handle)
+  return setmetatable({ _handle = handle, _graph = graph,
+    _graph_handle = graph_handle }, Session)
 end
 
 function Session.load_saved_model(path, tags, options)
   local lib = capi.load()
   local Graph = require("tensorflow.graph")
   local graph = Graph.new()
-  local opts = lib.TF_NewSessionOptions()
+  local opts = capi.require(lib.TF_NewSessionOptions(),
+    "TF_NewSessionOptions")
   if options and options.target then lib.TF_SetTarget(opts, options.target) end
   tags = tags or { "serve" }
+  if type(tags) ~= "table" or #tags == 0 then
+    error("SavedModel tags must be a non-empty table of strings", 3)
+  end
+  for _, tag in ipairs(tags) do
+    if type(tag) ~= "string" then
+      error("SavedModel tags must be strings", 3)
+    end
+  end
   local tag_array = ffi.new("const char*[?]", #tags)
   for i = 1, #tags do tag_array[i - 1] = ffi.cast("const char*", tags[i]) end
-  local meta = lib.TF_NewBuffer()
+  local meta = capi.require(lib.TF_NewBuffer(), "TF_NewBuffer")
   local status = capi.status()
   local ptr = lib.TF_LoadSessionFromSavedModel(opts, nil, path, tag_array,
     #tags, graph:handle(), meta, status)
@@ -66,21 +94,43 @@ function Session.load_saved_model(path, tags, options)
     error(err or "TF_LoadSessionFromSavedModel failed", 2)
   end
   local struct = lib.TF_GetBuffer(meta)
-  local signatures = Proto.saved_model_signatures(
-    struct.data ~= nil and ffi.string(struct.data, struct.length) or "")
+  local bytes = struct.length > 0 and struct.data ~= nil and
+    ffi.string(struct.data, struct.length) or ""
+  local decode_ok, signatures = pcall(Proto.saved_model_signatures, bytes)
   lib.TF_DeleteBuffer(meta)
-  local session = setmetatable({ _ptr = ptr, _graph = graph, _closed = false,
-    signatures = signatures }, Session)
+  local graph_handle = graph:handle()
+  local handle = install_finalizer(ptr, graph_handle)
+  if not decode_ok then
+    ffi.gc(handle, nil)
+    local close_status = capi.status()
+    lib.TF_CloseSession(ptr, close_status)
+    capi.check(close_status, "SavedModel cleanup close")
+    local delete_status = capi.status()
+    lib.TF_DeleteSession(ptr, delete_status)
+    capi.check(delete_status, "SavedModel cleanup delete")
+    graph:delete()
+    error(signatures, 2)
+  end
+  local session = setmetatable({ _handle = handle, _graph = graph,
+    _graph_handle = graph_handle, signatures = signatures }, Session)
   return session, graph, signatures
 end
 
 function Session:run(feeds, fetches, targets)
   local lib = capi.load()
-  if self._closed then error("session is closed", 2) end
+  if self._handle == nil then error("session is closed", 2) end
   if type(fetches) ~= "table" and type(fetches) ~= "string" then
     error("run expects a fetch name or a list of fetch names", 2)
   end
-  local named_fetches = type(fetches) == "table" and not fetches[1]
+  local named_fetches = false
+  if type(fetches) == "table" then
+    local has_targets = type(targets) == "string" or
+      (type(targets) == "table" and #targets > 0)
+    if next(fetches) == nil and not has_targets then
+      error("run expects a non-empty fetch list or named map", 2)
+    end
+    named_fetches = fetches[1] == nil
+  end
   local function label(spec)
     if type(spec) == "table" then return spec.name or "output" end
     return spec
@@ -138,7 +188,7 @@ function Session:run(feeds, fetches, targets)
   local target_pointer = target_ops and ffi.cast(
     "const TF_Operation* const*", target_ops) or nil
   local status = capi.status()
-  lib.TF_SessionRun(self._ptr, nil,
+  lib.TF_SessionRun(self:handle(), nil,
     input_outputs, input_tensors, #feed_values,
     output_outputs, output_tensors, #fetch_specs,
     target_pointer, #target_specs, nil, status)
@@ -150,15 +200,34 @@ function Session:run(feeds, fetches, targets)
     error(err, 2)
   end
 
-  local results = {}
-  for i, name in ipairs(fetch_names) do
-    results[name] = Tensor.wrap(output_tensors[i - 1])
+  local wrapped = {}
+  for i = 1, #fetch_names do
+    if output_tensors[i - 1] == nil then
+      for j = i, #fetch_names do
+        if output_tensors[j - 1] ~= nil then
+          lib.TF_DeleteTensor(output_tensors[j - 1])
+        end
+      end
+      error('session returned a NULL "' .. fetch_names[i] .. '" tensor', 2)
+    end
+    local ok, value = pcall(Tensor.wrap, output_tensors[i - 1])
+    if not ok then
+      for j = i, #fetch_names do
+        if output_tensors[j - 1] ~= nil then
+          lib.TF_DeleteTensor(output_tensors[j - 1])
+        end
+      end
+      error(value, 2)
+    end
+    wrapped[i] = value
   end
-  if type(fetches) == "string" then return results[fetches] end
-  if named_fetches then return results end
-  local list = {}
-  for i, name in ipairs(fetch_names) do list[i] = results[name] end
-  return list
+  if type(fetches) == "string" then return wrapped[1] end
+  if named_fetches then
+    local results = {}
+    for i, name in ipairs(fetch_names) do results[name] = wrapped[i] end
+    return results
+  end
+  return wrapped
 end
 
 function Session:run_signature(name, feeds)
@@ -185,21 +254,26 @@ function Session:run_signature(name, feeds)
   return result
 end
 
-function Session:close()
-  if self._closed then return end
-  local lib = capi.load()
-  local status = capi.status()
-  lib.TF_CloseSession(self._ptr, status)
-  capi.check(status, "session close")
-  status = capi.status()
-  lib.TF_DeleteSession(self._ptr, status)
-  capi.check(status, "session delete")
-  self._closed = true
-  self._ptr = nil
+function Session:handle()
+  if self._handle == nil then error("session is closed", 2) end
+  return self._handle
 end
 
-function Session:__gc()
-  if self._ptr ~= nil then pcall(Session.close, self) end
+function Session:close()
+  if self._handle == nil then return end
+  local handle = self._handle
+  self._handle = nil
+  ffi.gc(handle, nil)
+  local lib = capi.load()
+  local close_status = capi.status()
+  lib.TF_CloseSession(handle, close_status)
+  local close_ok, close_err = pcall(capi.check, close_status, "session close")
+  local delete_status = capi.status()
+  lib.TF_DeleteSession(handle, delete_status)
+  local delete_ok, delete_err = pcall(capi.check, delete_status,
+    "session delete")
+  if not close_ok then error(close_err, 2) end
+  if not delete_ok then error(delete_err, 2) end
 end
 
 return Session

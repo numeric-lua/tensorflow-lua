@@ -8,5 +8,5 @@
 - No releases, tags, or package publishes without the coordinator.
 - Every behavior change needs a test; tests must run without Python. Small
   pre-generated SavedModel/GraphDef fixtures belong under `tests/fixtures/`.
-- C API calls must check `TF_Status`; every created API object needs a
-  deterministic delete path or `__gc`.
+- C API calls must check `TF_Status`; every created API object needs an
+  `ffi.gc` finalizer and, where practical, an explicit destroy/close method.

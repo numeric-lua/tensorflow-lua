@@ -51,11 +51,23 @@ end
 
 local function shape_of(value)
   if type(value) ~= "table" then return {} end
-  local n = #value
-  if n == 0 then return { 0 } end
+  local count = 0
+  for key in pairs(value) do
+    if type(key) ~= "number" or key % 1 ~= 0 or key < 1 then
+      error("tensor table must be a contiguous array, found non-array key " ..
+        tostring(key), 4)
+    end
+    count = count + 1
+  end
+  for i = 1, count do
+    if value[i] == nil then
+      error("tensor table must not contain nil holes", 4)
+    end
+  end
+  if count == 0 then return { 0 } end
   local child
-  for i = 1, n do
-    if type(value[i]) ~= type(value[1]) then
+  for i = 1, count do
+    if (type(value[i]) == "table") ~= (type(value[1]) == "table") then
       error("tensor table must be rectangular", 4)
     end
     local current = shape_of(value[i])
@@ -70,7 +82,7 @@ local function shape_of(value)
       end
     end
   end
-  local shape = { n }
+  local shape = { count }
   for _, dim in ipairs(child or {}) do shape[#shape + 1] = dim end
   return shape
 end
@@ -94,7 +106,14 @@ local function product(shape)
 end
 
 local function scalar(value, info)
-  if info.name == "bool" then return value and 1 or 0 end
+  if info.name == "bool" then
+    if value == false or value == nil or value == 0 then return 0 end
+    if value == true or value == 1 then return 1 end
+    error("bool tensors accept booleans or 0/1, got " .. tostring(value), 4)
+  end
+  if type(value) ~= "number" then
+    error("numeric tensors require numbers, got " .. type(value), 4)
+  end
   return value
 end
 
@@ -103,7 +122,13 @@ function Tensor.new(value, options)
   if type(options) ~= "table" then
     error("tensor options must be a table or nil", 3)
   end
-  if getmetatable(value) == Tensor then return value end
+  if getmetatable(value) == Tensor then
+    if options.dtype and canonical(options.dtype) ~= value:dtype() then
+      error("tf.tensor cannot convert an existing Tensor; use a named cast",
+        3)
+    end
+    return value
+  end
   local dtype, info = dtype_info(options.dtype)
   local shape = shape_of(value)
   local values = {}
@@ -118,12 +143,24 @@ function Tensor.new(value, options)
   local ptr = lib.TF_AllocateTensor(info.code, dims, ndim,
     count * info.size)
   if ptr == nil then error("TF_AllocateTensor failed", 2) end
-  local data = lib.TF_TensorData(ptr)
-  if count > 0 then
-    local array = ffi.cast(info.ctype .. "*", data)
-    for i = 1, count do array[i - 1] = scalar(values[i], info) end
+  local ok, err = pcall(function()
+    local data = lib.TF_TensorData(ptr)
+    if count > 0 and data == nil then
+      error("TF_TensorData returned NULL for a non-empty tensor", 2)
+    end
+    if count > 0 then
+      local array = ffi.cast(info.ctype .. "*", data)
+      for i = 1, count do array[i - 1] = scalar(values[i], info) end
+    end
+  end)
+  if not ok then
+    lib.TF_DeleteTensor(ptr)
+    error(err, 2)
   end
-  return setmetatable({ _ptr = ptr, _owned = true, _shape = shape,
+  local handle = ffi.gc(ptr, function(pointer)
+    capi.load().TF_DeleteTensor(pointer)
+  end)
+  return setmetatable({ _handle = handle, _shape = shape,
     _dtype = dtype }, Tensor)
 end
 
@@ -139,15 +176,27 @@ function Tensor.wrap(ptr)
     if type(info) == "table" and info.code == code then name = info.name end
   end
   if name == nil then
-    lib.TF_DeleteTensor(ptr)
     error("unsupported output TensorFlow dtype id: " .. tostring(code), 2)
   end
-  return setmetatable({ _ptr = ptr, _owned = true, _shape = shape,
+  local handle = ffi.gc(ptr, function(pointer)
+    capi.load().TF_DeleteTensor(pointer)
+  end)
+  return setmetatable({ _handle = handle, _shape = shape,
     _dtype = name }, Tensor)
 end
 
 function Tensor:handle()
-  return self._ptr
+  if self._handle == nil then error("tensor has been destroyed", 2) end
+  return self._handle
+end
+
+function Tensor:destroy()
+  if self._handle ~= nil then
+    local handle = self._handle
+    self._handle = nil
+    ffi.gc(handle, nil)
+    capi.load().TF_DeleteTensor(handle)
+  end
 end
 
 function Tensor:shape()
@@ -170,7 +219,7 @@ function Tensor:numel()
 end
 
 function Tensor:nbytes()
-  return tonumber(capi.load().TF_TensorByteSize(self._ptr))
+  return tonumber(capi.load().TF_TensorByteSize(self:handle()))
 end
 
 function Tensor:totable()
@@ -179,10 +228,11 @@ function Tensor:totable()
   local count = self:numel()
   local flat = {}
   if count > 0 then
-    local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self._ptr))
+    local array = ffi.cast(info.ctype .. "*", lib.TF_TensorData(self:handle()))
     for i = 1, count do
       local value = array[i - 1]
-      if info.name == "bool" then value = value ~= 0 end
+      if info.name == "bool" then value = value ~= 0
+      elseif info.name:match("^u?int") then value = tonumber(value) end
       flat[i] = value
     end
   end
@@ -207,13 +257,6 @@ function Tensor:format()
 end
 
 Tensor.__tostring = Tensor.format
-
-Tensor.__gc = function(self)
-  if self._owned and self._ptr ~= nil then
-    capi.load().TF_DeleteTensor(self._ptr)
-    self._ptr = nil
-  end
-end
 
 function Tensor.dtype_info(dtype)
   return dtype_info(dtype)

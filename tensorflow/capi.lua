@@ -154,15 +154,24 @@ function capi.load()
     "\nSet TENSORFLOW_LIB to the shared library or TENSORFLOW_ROOT to its root.", 2)
 end
 
+function capi.require(pointer, what)
+  if pointer == nil then
+    error("TensorFlow allocation failed: " .. tostring(what), 2)
+  end
+  return pointer
+end
+
 function capi.status()
-  return capi.load().TF_NewStatus()
+  return capi.require(capi.load().TF_NewStatus(), "TF_NewStatus")
 end
 
 function capi.check(status, context)
   local lib = capi.load()
   local code = lib.TF_GetCode(status)
   if code ~= 0 then
-    local message = ffi.string(lib.TF_Message(status))
+    local message_pointer = lib.TF_Message(status)
+    local message = message_pointer ~= nil and
+      ffi.string(message_pointer) or "unknown TensorFlow error"
     lib.TF_DeleteStatus(status)
     error((context and (context .. ": ") or "") .. message, 3)
   end

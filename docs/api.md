@@ -39,7 +39,8 @@ local b = tf.tensor({ 1, 2 }, { dtype = "int64" })
 | `t:handle()` | raw `TF_Tensor*` (advanced) |
 | `tostring(t)` | shape/dtype summary |
 
-Tensors own their output buffers and delete them in `__gc`.
+Tensors own their output buffers through `ffi.gc` (which runs on LuaJIT) and
+also expose `t:destroy()` for deterministic cleanup.
 
 ## Graphs
 
@@ -119,6 +120,11 @@ Returns the raw operation handle; raises a Lua error if absent.
 
 Serializes the graph to bytes.
 
+### `graph:delete()`
+
+Deletes the TF_Graph immediately. Any live session must be closed first; raw
+operation handles become invalid.
+
 ## Sessions
 
 ### `tf.Session.new(graph[, opts])`
@@ -142,7 +148,9 @@ local named = session:run({ x = { 1 }, y = { 2 } }, { sum = "z:0" })
 
 ### `session:close()`
 
-Closes and deletes the underlying TF_Session. Idempotent.
+Closes and deletes the underlying TF_Session. Idempotent, and safe to call
+explicitly. An `ffi.gc` finalizer is a fallback; explicit close is preferred.
+The session keeps its graph handle alive.
 
 ### `tf.load_saved_model(path[, tags[, opts]])`
 

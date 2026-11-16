@@ -24,3 +24,26 @@ test("rejects malformed tensors", function()
   assert_error(function() tf.tensor({ 1 }, { dtype = "complex64" }) end,
     "unsupported")
 end)
+
+test("bool tensors treat numeric zero as false", function()
+  local values = tf.tensor({ 0, 1, false, true }, { dtype = "bool" }):totable()
+  assert_eq(values[1], false)
+  assert_eq(values[2], true)
+  assert_eq(values[3], false)
+  assert_eq(values[4], true)
+end)
+
+test("rejects maps, holes, and invalid bool values", function()
+  assert_error(function() tf.tensor({ a = 1, b = 2 }) end, "contiguous")
+  assert_error(function() tf.tensor({ 1, nil, 3 }) end, "nil holes")
+  assert_error(function() tf.tensor({ 0, "x" }) end, "numbers")
+  assert_error(function() tf.tensor({ 0, 2 }, { dtype = "bool" }) end,
+    "bool tensors")
+end)
+
+test("int64 conversion and explicit destroy", function()
+  local value = tf.tensor({ 1, 2 }, { dtype = "int64" })
+  assert_eq(type(value:totable()[1]), "number")
+  value:destroy()
+  assert_error(function() value:handle() end, "destroyed")
+end)
