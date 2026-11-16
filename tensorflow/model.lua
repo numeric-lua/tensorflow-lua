@@ -57,8 +57,14 @@ function Sequential.new(options)
 end
 
 function Sequential:add(options)
-  if type(options) ~= "table" or type(options.units) ~= "number" or
-      options.units < 1 then
+  if type(options) ~= "table" then
+    error("add expects a layer definition table", 2)
+  end
+  if options.type == "flatten" then
+    self._layers[#self._layers + 1] = options
+    return self
+  end
+  if type(options.units) ~= "number" or options.units < 1 then
     error("add expects a layer definition with positive units", 2)
   end
   self._layers[#self._layers + 1] = options
@@ -90,18 +96,38 @@ function Sequential:_build()
   local input = tf.placeholder(graph, "float32", input_shape, "input")
   local output = input
   local variables, initializers, layers = {}, {}, {}
+  local feature_size = self._input_shape[#self._input_shape]
   for i, definition in ipairs(self._layers) do
     local options = definition.options or {}
-    options.input_size = options.input_size or
-      (i == 1 and self._input_shape[#self._input_shape] or layers[i - 1].units)
-    options.name = options.name or ("dense_" .. i)
-    local layer = tf.layers.dense(graph, output, definition.units, options)
-    layers[i] = layer
-    for _, variable in ipairs(layer.variables) do variables[#variables + 1] = variable end
-    add_initializers(initializers, layer.initializers)
-    output = layer.output
+    options.name = options.name or (definition.type == "flatten" and
+      ("flatten_" .. i) or ("dense_" .. i))
+    if definition.type == "flatten" then
+      local total = feature_size
+      if i == 1 then
+        total = 1
+        for _, dimension in ipairs(self._input_shape) do
+          total = total * dimension
+        end
+      end
+      local layer = tf.layers.flatten(graph, output, total, options)
+      layers[i] = { output = layer.output, input_size = total,
+        units = total, kind = "flatten" }
+      output = layer.output
+      feature_size = total
+    else
+      options.input_size = options.input_size or feature_size
+      local layer = tf.layers.dense(graph, output, definition.units, options)
+      layers[i] = layer
+      layers[i].kind = "dense"
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+      feature_size = definition.units
+    end
   end
-  local units = layers[#layers].units
+  local units = feature_size
   local loss_spec = self._compiled.loss
   local sparse = loss_spec == "sparse_softmax_cross_entropy" or
     loss_spec == "sparse_ce" or
@@ -571,8 +597,13 @@ function Sequential:summary()
   self:_build()
   local rows = { "Sequential" }
   for i, layer in ipairs(self._layers_built) do
-    rows[#rows + 1] = string.format("  %d: Dense(%d -> %d)", i,
-      layer.input_size, layer.units)
+    if layer.kind == "flatten" then
+      rows[#rows + 1] = string.format("  %d: Flatten(%d)", i,
+        layer.input_size)
+    else
+      rows[#rows + 1] = string.format("  %d: Dense(%d -> %d)", i,
+        layer.input_size, layer.units)
+    end
   end
   rows[#rows + 1] = string.format("Total params: %d", self:count_params())
   return table.concat(rows, "\n")

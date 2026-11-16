@@ -342,6 +342,7 @@ Returns the layer list. The caller must run every layer initializer.
 ```lua
 local model = tf.Sequential.new({ input_shape = { 2 } })
 model:add({ units = 4, options = { activation = "relu" } })
+model:add({ type = "flatten" })       -- optional, no parameters
 model:add({ units = 1 })
 model:compile({ loss = "mse", optimizer = { type = "adam", learning_rate = 0.01 } })
 local history = model:fit(x, y, { epochs = 10, batch_size = 32 })
