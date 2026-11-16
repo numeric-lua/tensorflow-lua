@@ -1,7 +1,6 @@
 --
 -- Minimal Sequential model: Dense layers, a loss, an optimizer, and fit/predict.
 --
-local Tensor = require("tensorflow.tensor")
 local Sequential = {}
 Sequential.__index = Sequential
 
@@ -103,16 +102,20 @@ function Sequential:_build()
   local optimizer_type = optimizer.type or "adam"
   local targets, state
   if optimizer_type == "adam" then
-    targets, _, state = tf.train.adam(graph, loss, variables, optimizer)
+    local result = { tf.train.adam(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "sgd" or optimizer_type == "gradient_descent" then
     targets = tf.train.gradient_descent(graph, loss, variables,
       optimizer.learning_rate or optimizer.lr or 0.01, optimizer.name)
   elseif optimizer_type == "rmsprop" then
-    targets, _, state = tf.train.rmsprop(graph, loss, variables, optimizer)
+    local result = { tf.train.rmsprop(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "adagrad" then
-    targets, _, state = tf.train.adagrad(graph, loss, variables, optimizer)
+    local result = { tf.train.adagrad(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "momentum" then
-    targets, _, state = tf.train.momentum(graph, loss, variables, optimizer)
+    local result = { tf.train.momentum(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   else
     error("unsupported optimizer '" .. tostring(optimizer_type) .. "'", 3)
   end
