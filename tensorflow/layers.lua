@@ -1,8 +1,6 @@
 --
 -- Small compositional layer builders on top of graph variables.
 --
-local Tensor = require("tensorflow.tensor")
-
 local Layers = {}
 
 local function random_uniform(rows, columns, bound)
