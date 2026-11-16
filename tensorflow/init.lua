@@ -78,6 +78,9 @@ tf.train = {
   adadelta = function(graph, loss, variables, options)
     return Train.adadelta(graph, loss, variables, options)
   end,
+  ftrl = function(graph, loss, variables, options)
+    return Train.ftrl(graph, loss, variables, options)
+  end,
   momentum = function(graph, loss, variables, options)
     return Train.momentum(graph, loss, variables, options)
   end,
