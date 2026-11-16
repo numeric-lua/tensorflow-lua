@@ -11,7 +11,9 @@
 - reusable native V2 `Saver` and Dataset batching/`fit_dataset`;
 - Saver, dataset, callback, and benchmark tooling;
 - leaky ReLU and ELU activations;
-- AdamW decoupled weight decay, Adam clipvalue, clip_by_value, and Adadelta;
+- AdamW decoupled weight decay, Adam clipvalue, clip_by_value, Adadelta, and
+  Ftrl;
+- Embedding layers;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;
 - Sequential `fit`, `evaluate`, `predict`, validation loss, callbacks, save,
   load, and GraphDef export;
