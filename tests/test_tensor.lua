@@ -36,7 +36,8 @@ end)
 test("rejects maps, holes, and invalid bool values", function()
   assert_error(function() tf.tensor({ a = 1, b = 2 }) end, "contiguous")
   assert_error(function() tf.tensor({ 1, nil, 3 }) end, "nil holes")
-  assert_error(function() tf.tensor({ 0, "x" }) end, "numbers")
+  assert_error(function() tf.tensor({ 0, "x" }, { dtype = "float32" }) end,
+    "numbers")
   assert_error(function() tf.tensor({ 0, 2 }, { dtype = "bool" }) end,
     "bool tensors")
 end)
@@ -114,4 +115,11 @@ test("round-trips float16 and bfloat16 tensors", function()
   local bfloat = tf.tensor({ 1.5, -2.25 }, { dtype = "bfloat16" }):totable()
   assert_true(math.abs(bfloat[1] - 1.5) < 0.02)
   assert_true(math.abs(bfloat[2] + 2.25) < 0.02)
+end)
+
+
+test("infers string and bool dtypes", function()
+  assert_eq(tf.tensor({ "a", "b" }):dtype(), "string")
+  assert_eq(tf.tensor({ true, false }):dtype(), "bool")
+  assert_eq(tf.tensor({ tf.complex(1, 2) }):dtype(), "complex64")
 end)

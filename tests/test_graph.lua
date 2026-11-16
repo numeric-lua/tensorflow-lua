@@ -196,3 +196,14 @@ test("rejects malformed GraphDefs and missing SavedModels", function()
   assert_error(function() tf.Graph.new():import_graph_def("\255") end)
   assert_error(function() tf.load_saved_model("/definitely/missing/model") end)
 end)
+
+test("runs a string SavedModel signature", function()
+  local session = tf.load_saved_model(
+    TEST_ROOT .. "/tests/fixtures/string_savedmodel")
+  local outputs = session:run_signature("serving_default",
+    { text = { "hello", "lua" } })
+  local values = outputs.upper:totable()
+  assert_eq(values[1], "HELLO")
+  assert_eq(values[2], "LUA")
+  session:close()
+end)

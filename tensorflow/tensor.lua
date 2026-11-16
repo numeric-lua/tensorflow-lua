@@ -84,6 +84,18 @@ local function dtype_info(dtype, level)
   return dtype, info
 end
 
+local function infer_dtype(value)
+  if is_complex(value) then return "complex64" end
+  if type(value) == "string" then return "string" end
+  if type(value) == "boolean" then return "bool" end
+  if type(value) ~= "table" then return "float32" end
+  for _, item in pairs(value) do
+    local inferred = infer_dtype(item)
+    if inferred ~= "float32" then return inferred end
+  end
+  return "float32"
+end
+
 local function shape_of(value)
   if is_complex(value) or type(value) ~= "table" then return {} end
   local count = 0
@@ -255,7 +267,7 @@ function Tensor.new(value, options)
     end
     return value
   end
-  local dtype, info = dtype_info(options.dtype)
+  local dtype, info = dtype_info(options.dtype or infer_dtype(value))
   local shape = shape_of(value)
   local values = {}
   flatten(value, values)
