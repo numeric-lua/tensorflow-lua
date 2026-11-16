@@ -108,6 +108,7 @@ tf.losses = Losses
 tf.reshape = Ops.reshape
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax
+tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
 tf.log = Ops.log
 tf.sqrt = Ops.sqrt

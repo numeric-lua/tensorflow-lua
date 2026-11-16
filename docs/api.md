@@ -235,6 +235,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
+| `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 
 ### `tf.gradients(graph, outputs, inputs)`
 

@@ -79,6 +79,24 @@ function Ops.reduce_mean(graph, input, axes, name, dtype, keep_dims)
   return desc:finish()
 end
 
+function Ops.one_hot(graph, indices, depth, options)
+  options = options or {}
+  local dtype = dtype_name(options.dtype or "float32")
+  local prefix = options.name or "one_hot"
+  local depth_op = constant(graph, depth, prefix .. "/depth", "int32")
+  local on = constant(graph, options.on_value or 1, prefix .. "/on", dtype)
+  local off = constant(graph, options.off_value or 0, prefix .. "/off", dtype)
+  local desc = graph:new_operation("OneHot", prefix)
+  desc:add_input(indices)
+  desc:add_input(depth_op)
+  desc:add_input(on)
+  desc:add_input(off)
+  desc:set_type("T", dtype)
+  desc:set_type("TI", options.indices_dtype or "int32")
+  desc:set_int("axis", options.axis or -1)
+  return desc:finish()
+end
+
 function Ops.argmax(graph, input, axis, name, dtype, output_dtype)
   local dimension = constant(graph, axis or 0, name .. "/dimension", "int32")
   local desc = graph:new_operation("ArgMax", name)
