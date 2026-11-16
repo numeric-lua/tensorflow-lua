@@ -19,6 +19,10 @@ function tf.placeholder(graph, dtype, shape, name)
   return GraphBuilder.placeholder(graph, dtype, shape, name)
 end
 
+function tf.gradients(graph, outputs, inputs)
+  return GraphBuilder.gradients(graph, outputs, inputs)
+end
+
 function tf.add(graph, a, b, name, dtype)
   return GraphBuilder.add(graph, a, b, name, dtype)
 end

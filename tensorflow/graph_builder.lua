@@ -134,6 +134,33 @@ function GraphBuilder.placeholder(graph, dtype, shape, name)
   return desc:finish()
 end
 
+function GraphBuilder.gradients(graph, outputs, inputs)
+  local lib = capi.load()
+  local function array(values)
+    local result = ffi.new("TF_Output[?]", #values)
+    for i, value in ipairs(values) do
+      local output = resolve_output(graph, value)
+      result[i - 1].oper = output.oper
+      result[i - 1].index = output.index
+    end
+    return result
+  end
+  if #outputs == 0 or #inputs == 0 then
+    error("gradients expects at least one output and one input", 3)
+  end
+  local y = array(outputs)
+  local x = array(inputs)
+  local dy = ffi.new("TF_Output[?]", #inputs)
+  local status = capi.status()
+  lib.TF_AddGradients(graph:handle(), y, #outputs, x, #inputs, nil, status, dy)
+  capi.check(status, "gradients")
+  local result = {}
+  for i = 1, #inputs do
+    result[i] = { oper = dy[i - 1].oper, index = dy[i - 1].index }
+  end
+  return result
+end
+
 local function binary(graph, op, a, b, name, dtype)
   local desc = GraphBuilder.new_operation(graph, op, name)
   desc:add_input(a)

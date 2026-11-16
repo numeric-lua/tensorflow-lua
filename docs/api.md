@@ -84,6 +84,13 @@ array; `-1` denotes an unknown dimension.
 Create `AddV2` and `MatMul` operations with the given input outputs. `dtype`
 defaults to `float32`.
 
+### `tf.gradients(graph, outputs, inputs)`
+
+Adds TensorFlow gradient operations for a list of output graph outputs with
+respect to a list of input outputs. Returns one graph output per input. This
+wraps `TF_AddGradients`; TensorFlow's C API gradient coverage is more limited
+than Python's.
+
 ### `graph:operation(name)`
 
 Returns the raw operation handle; raises a Lua error if absent.

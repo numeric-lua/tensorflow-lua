@@ -9,6 +9,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
+- add symbolic gradients for training graphs;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
@@ -82,6 +83,16 @@ local z = tf.add(graph, x, y, "z")
 local session = tf.Session.new(graph)
 local result = session:run({ [x] = { 1, 2 }, [y] = { 10, 20 } }, { z })
 print(result[1]:totable())   -- { 11, 22 }
+```
+
+Symbolic gradients are available for graph optimization:
+
+```lua
+local square = graph:new_operation("Square", "square")
+square:add_input(x)
+square:set_type("T", "float32")
+local y = square:finish()
+local dx = tf.gradients(graph, { y }, { x })[1]
 ```
 
 Tensors can be created explicitly with `tf.tensor(value, { dtype = "float32" })`.

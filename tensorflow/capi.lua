@@ -64,6 +64,8 @@ void TF_SetAttrType(TF_OperationDescription*, const char*, TF_DataType);
 void TF_SetAttrShape(TF_OperationDescription*, const char*, const int64_t*, int);
 void TF_SetAttrTensor(TF_OperationDescription*, const char*, TF_Tensor*, TF_Status*);
 TF_Operation* TF_FinishOperation(TF_OperationDescription*, TF_Status*);
+void TF_AddGradients(TF_Graph*, TF_Output* y, int ny, TF_Output* x, int nx,
+                     TF_Output* dx, TF_Status*, TF_Output* dy);
 void TF_GraphImportGraphDef(TF_Graph*, const TF_Buffer*,
                             const TF_ImportGraphDefOptions*, TF_Status*);
 void TF_GraphToGraphDef(TF_Graph*, TF_Buffer*, TF_Status*);
