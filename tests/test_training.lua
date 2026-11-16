@@ -270,7 +270,7 @@ end)
 test("trains with Adam weight decay", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates, _, state = tf.train.adamw(graph, loss, { w, b },
-    { learning_rate = 0.05, weight_decay = 0.01 })
+    { learning_rate = 0.05, weight_decay = 0.01, clipvalue = 0.5 })
   local session = tf.Session.new(graph)
   local init = { w.initializer, b.initializer }
   for _, value in ipairs(state.initializers) do init[#init + 1] = value end

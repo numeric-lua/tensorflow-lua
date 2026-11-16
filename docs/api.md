@@ -117,7 +117,8 @@ per training step.
 
 Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
 (default `0.001`), `beta1` (0.9), `beta2` (0.999), `epsilon` (1e-8), `name`.
-Options also include `weight_decay`. Returns `targets, gradients, state`.
+Options also include `weight_decay` and `clipvalue` (gradient-value clamping).
+Returns `targets, gradients, state`.
 Initialize each variable and every entry in `state.initializers` before
 training.
 

@@ -128,6 +128,13 @@ function Train.adam(graph, loss, variables, options)
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
   local gradients = require("tensorflow").gradients(graph, { loss }, refs)
   local dtype = variables[1].dtype or "float32"
+  local clipvalue = options.clipvalue or options.clip_value
+  if clipvalue ~= nil then
+    for i, gradient in ipairs(gradients) do
+      gradients[i] = require("tensorflow").clip_by_value(graph, gradient,
+        -clipvalue, clipvalue, name .. "/clip_" .. i, dtype)
+    end
+  end
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     dtype)
   local b1 = Train.constant(graph, beta1, name .. "/beta1", dtype)
