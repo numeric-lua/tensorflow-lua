@@ -156,7 +156,10 @@ function Session:run(feeds, fetches, targets)
     if type(name) ~= "string" and not (type(name) == "table" and name.oper) then
       error("feed names must be strings or graph outputs", 2)
     end
-    if getmetatable(value) ~= Tensor then value = Tensor.new(value) end
+    if getmetatable(value) ~= Tensor then
+      local dtype = type(name) == "table" and name.dtype or nil
+      value = Tensor.new(value, { dtype = dtype })
+    end
     feed_specs[#feed_specs + 1] = name
     feed_values[#feed_values + 1] = value
   end

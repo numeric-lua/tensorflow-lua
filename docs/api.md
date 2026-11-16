@@ -309,7 +309,9 @@ Creates a session. `opts.target` sets the TensorFlow target string.
 
 ### `session:run(feeds, fetches[, targets])`
 
-- `feeds` maps operation names to `tf.Tensor` values or Lua tables.
+- `feeds` maps operation names to `tf.Tensor` values or Lua tables. When the
+  feed key is a placeholder graph output, its dtype is used for table
+  conversion.
 - `fetches` is a `"op:index"` string, a list of such strings, or a named map
   `{ result = "op:index" }`.
 - `targets` is a single operation name or a list.

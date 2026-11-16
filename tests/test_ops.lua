@@ -30,8 +30,8 @@ test("builds one-hot tensors", function()
   local indices = tf.placeholder(graph, "int32", { 2 }, "oh_indices")
   local encoded = tf.one_hot(graph, indices, 3, { name = "oh" })
   local session = tf.Session.new(graph)
-  local values = session:run({ [indices] = tf.tensor({ 0, 2 },
-    { dtype = "int32" }) }, { encoded })[1]:totable()
+  local values = session:run({ [indices] = { 0, 2 } },
+    { encoded })[1]:totable()
   assert_eq(values[1][1], 1)
   assert_eq(values[1][2], 0)
   assert_eq(values[2][3], 1)

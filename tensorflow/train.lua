@@ -17,7 +17,9 @@ function Train.constant(graph, value, name, dtype)
   local desc = graph:new_operation("Const", name)
   desc:set_tensor("value", tensor)
   desc:set_type("dtype", dtype)
-  return desc:finish()
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
 end
 
 function Train.variable(graph, initial, name, options)
@@ -52,6 +54,7 @@ function Train.variable(graph, initial, name, options)
   read_desc:add_input(variable)
   read_desc:set_type("T", dtype)
   local read = read_desc:finish()
+  read.dtype = dtype
 
   return {
     ref = variable,
