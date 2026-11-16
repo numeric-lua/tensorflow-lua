@@ -282,3 +282,20 @@ test("trains with Adam weight decay", function()
   assert_true(math.abs(result[1]:totable() - 2) < 0.4)
   session:close()
 end)
+
+test("trains linear regression with Adadelta", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.adadelta(graph, loss, { w, b },
+    { learning_rate = 10.0 })
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  for _ = 1, 2000 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.2,
+    tostring(result[1]:totable()))
+  session:close()
+end)

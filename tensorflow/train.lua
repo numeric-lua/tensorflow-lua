@@ -347,6 +347,48 @@ function Train.adagrad(graph, loss, variables, options)
   return targets, gradients, { initializers = initializers }
 end
 
+function Train.adadelta(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 1.0
+  local rho = options.rho or 0.95
+  local epsilon = options.epsilon or 1e-8
+  local name = options.name or "Adadelta"
+  if type(variables) ~= "table" or #variables == 0 then
+    error("adadelta expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
+  local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local targets, initializers = {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local shape = variable.shape or { }
+    local accum = Train.variable(graph, zeros(shape), name .. "/accum_" .. i,
+      { dtype = var_dtype })
+    local update = Train.variable(graph, zeros(shape),
+      name .. "/update_slot_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = accum.initializer
+    initializers[#initializers + 1] = update.initializer
+    local desc = graph:new_operation("ApplyAdadelta", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(accum.ref)
+    desc:add_input(update.ref)
+    desc:add_input(lr)
+    desc:add_input(rho_op)
+    desc:add_input(epsilon_op)
+    desc:add_input(gradients[i])
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers }
+end
+
 function Train.momentum(graph, loss, variables, options)
   options = options or {}
   local learning_rate = options.learning_rate or options.lr or 0.01

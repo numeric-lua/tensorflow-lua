@@ -178,6 +178,9 @@ function Sequential:_build()
   elseif optimizer_type == "adagrad" then
     local result = { tf.train.adagrad(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
+  elseif optimizer_type == "adadelta" then
+    local result = { tf.train.adadelta(graph, loss, variables, optimizer) }
+    targets, state = result[1], result[3]
   elseif optimizer_type == "momentum" then
     local result = { tf.train.momentum(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
