@@ -5,3 +5,4 @@ third_party/*.tar.gz
 tests/.tmp/
 .luacheckcache
 third_party/
+dist/

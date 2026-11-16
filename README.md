@@ -46,6 +46,9 @@ experimental `tf.eager` surface with basic arithmetic and activations.
 
 # optional LuaRocks install (pure Lua, external libtensorflow)
 luarocks --lua-version=5.1 make tensorflow-lua-scm-1.rockspec
+
+# or install into a local throwaway tree
+./scripts/package.sh
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
