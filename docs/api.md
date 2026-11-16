@@ -266,8 +266,8 @@ train/validation datasets, and `model:evaluate_dataset` /
 
 Stops when a monitored history entry stops improving. Options: `monitor`
 (default `val_loss`), `mode` (`min`/`max`), `patience`, `min_delta`, and
-`restore_best_weights`. Records `stopped_epoch`; restoration uses the portable
-checkpoint format.
+`restore_best_weights`. Records `stopped_epoch`; restoration uses in-memory
+weight snapshots.
 
 ### `tf.callbacks.ModelCheckpoint(path, opts)`
 

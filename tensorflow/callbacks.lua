@@ -28,18 +28,19 @@ function Callbacks.EarlyStopping(options)
     restore_best_weights = options.restore_best_weights or false,
     best = nil,
     wait = 0,
-    best_path = nil,
+    best_weights = nil,
     stopped_epoch = nil,
   }
   function callback.on_train_begin(_, model)
     callback.best = nil
     callback.wait = 0
     callback.stopped_epoch = nil
+    callback.best_weights = nil
     if callback.restore_best_weights then
-      if model == nil or type(model.save) ~= "function" then
-        error("restore_best_weights requires a model with save/load", 3)
+      if model == nil or type(model.get_weights) ~= "function" or
+          type(model.set_weights) ~= "function" then
+        error("restore_best_weights requires get_weights/set_weights", 3)
       end
-      callback.best_path = os.tmpname()
     end
   end
   function callback.on_epoch_end(history, epoch, model)
@@ -47,23 +48,22 @@ function Callbacks.EarlyStopping(options)
     if improved(callback.mode, value, callback.best, callback.min_delta) then
       callback.best = value
       callback.wait = 0
-      if callback.restore_best_weights then model:save(callback.best_path) end
+      if callback.restore_best_weights then
+        callback.best_weights = model:get_weights()
+      end
     else
       callback.wait = callback.wait + 1
       if callback.wait > callback.patience then
         history.stop_training = true
         callback.stopped_epoch = epoch
-        if callback.restore_best_weights then
-          model:load(callback.best_path)
+        if callback.restore_best_weights and callback.best_weights ~= nil then
+          model:set_weights(callback.best_weights)
         end
       end
     end
   end
   function callback.on_train_end()
-    if callback.best_path ~= nil then
-      os.remove(callback.best_path)
-      callback.best_path = nil
-    end
+    callback.best_weights = nil
   end
   return callback
 end
