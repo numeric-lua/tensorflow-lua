@@ -39,8 +39,9 @@ function Sequential.new(options)
 end
 
 function Sequential:add(options)
-  if type(options) ~= "table" or type(options.units) ~= "number" then
-    error("add expects a layer definition with units", 2)
+  if type(options) ~= "table" or type(options.units) ~= "number" or
+      options.units < 1 then
+    error("add expects a layer definition with positive units", 2)
   end
   self._layers[#self._layers + 1] = options
   return self
@@ -154,6 +155,7 @@ function Sequential:fit(x, y, options)
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = normalize_rows(y, self._units)
+  if #x == 0 then error("fit requires a non-empty dataset", 2) end
   if #x ~= #y then error("x and y must have the same batch size", 2) end
   local epochs = options.epochs or 1
   local batch_size = options.batch_size or #x
@@ -212,6 +214,7 @@ function Sequential:predict(x)
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
+  if #x == 0 then error("predict requires non-empty input", 2) end
   return self._session:run({ [self._input] = x }, { self._output })[1]
 end
 
