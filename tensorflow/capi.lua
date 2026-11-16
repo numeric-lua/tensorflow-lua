@@ -119,7 +119,8 @@ int64_t TF_TensorElementCount(const TF_Tensor*);
 size_t TF_DataTypeSize(TF_DataType);
 ]]
 
-local capi = { ffi = ffi }
+local capi = { ffi = ffi,
+  released = { tensors = 0, graphs = 0, sessions = 0, readers = 0 } }
 
 local function candidates()
   local result = {}
@@ -166,6 +167,21 @@ function capi.load()
   error("cannot load libtensorflow; tried:\n  " ..
     table.concat(errors, "\n  ") ..
     "\nSet TENSORFLOW_LIB to the shared library or TENSORFLOW_ROOT to its root.", 2)
+end
+
+function capi.release_tensor(pointer)
+  capi.released.tensors = capi.released.tensors + 1
+  capi.load().TF_DeleteTensor(pointer)
+end
+
+function capi.release_graph(pointer)
+  capi.released.graphs = capi.released.graphs + 1
+  capi.load().TF_DeleteGraph(pointer)
+end
+
+function capi.release_reader(pointer)
+  capi.released.readers = capi.released.readers + 1
+  capi.load().TF_DeleteCheckpointReader(pointer)
 end
 
 function capi.require(pointer, what)

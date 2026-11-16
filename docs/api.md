@@ -36,6 +36,7 @@ local b = tf.tensor({ 1, 2 }, { dtype = "int64" })
 | `t:numel()` | element count |
 | `t:nbytes()` | backing byte count |
 | `t:totable()` | scalar or nested Lua table |
+| `t:bytes()` | raw tensor bytes |
 | `t:handle()` | raw `TF_Tensor*` (advanced) |
 | `tostring(t)` | shape/dtype summary |
 

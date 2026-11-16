@@ -47,3 +47,32 @@ test("int64 conversion and explicit destroy", function()
   value:destroy()
   assert_error(function() value:handle() end, "destroyed")
 end)
+
+test("ffi.gc releases tensor handles", function()
+  local capi = require("tensorflow.capi")
+  local before = capi.released.tensors
+  do
+    local value = tf.tensor({ 1, 2, 3 })
+    value = nil
+  end
+  for _ = 1, 5 do collectgarbage("collect") end
+  assert_true(capi.released.tensors > before)
+end)
+
+test("round-trips every supported dtype", function()
+  local cases = {
+    { "float32", { 1.5, 2.5 } }, { "float64", { 1.5, 2.5 } },
+    { "int8", { -1, 2 } }, { "int16", { -1, 2 } },
+    { "int32", { -1, 2 } }, { "int64", { -1, 2 } },
+    { "uint8", { 1, 2 } }, { "uint16", { 1, 2 } },
+    { "uint32", { 1, 2 } }, { "uint64", { 1, 2 } },
+    { "bool", { true, false } },
+  }
+  for _, case in ipairs(cases) do
+    local value = tf.tensor(case[2], { dtype = case[1] })
+    assert_eq(value:dtype(), case[1])
+    local result = value:totable()
+    if case[1] == "bool" then assert_eq(result[1], true)
+    else assert_eq(result[1], case[2][1]) end
+  end
+end)

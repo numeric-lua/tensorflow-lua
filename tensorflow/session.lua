@@ -45,6 +45,7 @@ local function install_finalizer(pointer, graph_handle)
     status = lib.TF_NewStatus()
     lib.TF_DeleteSession(value, status)
     lib.TF_DeleteStatus(status)
+    capi.released.sessions = capi.released.sessions + 1
   end
   return ffi.gc(pointer, finalize)
 end
@@ -270,6 +271,7 @@ function Session:close()
   local close_ok, close_err = pcall(capi.check, close_status, "session close")
   local delete_status = capi.status()
   lib.TF_DeleteSession(handle, delete_status)
+  capi.released.sessions = capi.released.sessions + 1
   local delete_ok, delete_err = pcall(capi.check, delete_status,
     "session delete")
   if not close_ok then error(close_err, 2) end

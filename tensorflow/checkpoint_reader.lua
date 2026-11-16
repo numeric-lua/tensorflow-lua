@@ -15,7 +15,7 @@ function Reader.new(path)
   capi.check(status, "checkpoint open")
   if pointer == nil then error("TF_NewCheckpointReader failed", 2) end
   return setmetatable({ _handle = ffi.gc(pointer,
-    function(value) capi.load().TF_DeleteCheckpointReader(value) end) }, Reader)
+    function(value) capi.release_reader(value) end) }, Reader)
 end
 
 function Reader:handle()
@@ -57,7 +57,7 @@ function Reader:close()
     local handle = self._handle
     self._handle = nil
     ffi.gc(handle, nil)
-    capi.load().TF_DeleteCheckpointReader(handle)
+    capi.release_reader(handle)
   end
 end
 

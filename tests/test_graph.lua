@@ -158,3 +158,23 @@ test("graph delete invalidates operation lookup", function()
   graph:delete()
   assert_error(function() graph:operation("x") end, "deleted")
 end)
+
+test("round-trips a graph through GraphDef", function()
+  local graph = tf.Graph.new():import_graph_def(graph_def)
+  local data = graph:graph_def()
+  local copy = tf.Graph.new():import_graph_def(data)
+  local session = tf.Session.new(copy)
+  assert_eq(session:run({ x = { 2 }, y = { 8 } }, "z:0"):totable()[1], 10)
+  session:close()
+end)
+
+test("loads a multi-output SavedModel", function()
+  local session = tf.load_saved_model(
+    TEST_ROOT .. "/tests/fixtures/multi_savedmodel")
+  local outputs = session:run_signature("serving_default",
+    { x = { 3, 4 }, y = { 1, 2 } })
+  assert_eq(outputs.sum:totable()[1], 4)
+  assert_eq(outputs.diff:totable()[2], 2)
+  assert_eq(outputs.product:totable()[1], 3)
+  session:close()
+end)

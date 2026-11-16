@@ -11,7 +11,7 @@ function Graph.new()
   local lib = capi.load()
   local pointer = capi.require(lib.TF_NewGraph(), "TF_NewGraph")
   local handle = ffi.gc(pointer, function(value)
-    capi.load().TF_DeleteGraph(value)
+    capi.release_graph(value)
   end)
   return setmetatable({ _handle = handle }, Graph)
 end
@@ -26,7 +26,7 @@ function Graph:delete()
     local handle = self._handle
     self._handle = nil
     ffi.gc(handle, nil)
-    capi.load().TF_DeleteGraph(handle)
+    capi.release_graph(handle)
   end
 end
 

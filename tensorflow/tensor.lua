@@ -158,7 +158,7 @@ function Tensor.new(value, options)
     error(err, 2)
   end
   local handle = ffi.gc(ptr, function(pointer)
-    capi.load().TF_DeleteTensor(pointer)
+    capi.release_tensor(pointer)
   end)
   return setmetatable({ _handle = handle, _shape = shape,
     _dtype = dtype }, Tensor)
@@ -179,7 +179,7 @@ function Tensor.wrap(ptr)
     error("unsupported output TensorFlow dtype id: " .. tostring(code), 2)
   end
   local handle = ffi.gc(ptr, function(pointer)
-    capi.load().TF_DeleteTensor(pointer)
+    capi.release_tensor(pointer)
   end)
   return setmetatable({ _handle = handle, _shape = shape,
     _dtype = name }, Tensor)
@@ -281,7 +281,7 @@ function Tensor.from_bytes(dtype, shape, bytes)
     ffi.copy(data, bytes, expected)
   end
   local handle = ffi.gc(ptr, function(pointer)
-    capi.load().TF_DeleteTensor(pointer)
+    capi.release_tensor(pointer)
   end)
   return setmetatable({ _handle = handle, _shape = shape, _dtype = name },
     Tensor)
