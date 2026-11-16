@@ -229,7 +229,8 @@ end
 `Dataset.new(x[, y])`, `size()`, `batch(size)`, `shuffle([seed])`, and
 `each()` return batches as `{ x = ..., y = ... }`.
 
-`model:fit_dataset(dataset, opts)` trains directly from labeled dataset batches.
+`model:fit(dataset, opts)` trains directly from labeled dataset batches;
+`fit_dataset(dataset, opts)` is an alias.
 
 ## Callbacks
 

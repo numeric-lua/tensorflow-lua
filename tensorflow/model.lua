@@ -29,6 +29,11 @@ local function normalize_labels(data)
   return flat
 end
 
+local function is_dataset(value)
+  return type(value) == "table" and type(value.data) == "function" and
+    value._x ~= nil
+end
+
 local function normalize_rows(data, width)
   if type(data) ~= "table" then
     error("model input must be a Lua table or Tensor", 3)
@@ -195,7 +200,19 @@ function Sequential:_build()
 end
 
 function Sequential:fit(x, y, options)
+  if is_dataset(x) and options == nil and type(y) == "table" and
+      (y.epochs ~= nil or y.batch_size ~= nil or y.callbacks ~= nil or
+        y.validation_data ~= nil or y.shuffle ~= nil) then
+    options, y = y, nil
+  end
   options = options or {}
+  if is_dataset(x) then
+    local dataset_x, dataset_y, batch_size, shuffle, seed = x:data()
+    x, y = dataset_x, y or dataset_y
+    options.batch_size = options.batch_size or batch_size
+    if options.shuffle == nil then options.shuffle = shuffle end
+    if options.seed == nil then options.seed = seed end
+  end
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
@@ -282,13 +299,7 @@ function Sequential:fit(x, y, options)
 end
 
 function Sequential:fit_dataset(dataset, options)
-  options = options or {}
-  local x, y, batch_size, shuffle, seed = dataset:data()
-  if y == nil then error("fit_dataset requires labeled data", 2) end
-  options.batch_size = options.batch_size or batch_size
-  if options.shuffle == nil then options.shuffle = shuffle end
-  if options.seed == nil then options.seed = seed end
-  return self:fit(x, y, options)
+  return self:fit(dataset, nil, options)
 end
 
 function Sequential:predict(x)
