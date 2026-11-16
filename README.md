@@ -12,6 +12,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 - add symbolic gradients, variables, gradient-descent updates, and Adam;
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;
+- typed ops for reshape, reductions, argmax, and common activations;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;

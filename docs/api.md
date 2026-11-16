@@ -138,6 +138,21 @@ local tensor = reader:tensor(name)
 reader:close()
 ```
 
+## Typed ops
+
+Graph-output arguments can be operation results or `"name:index"` strings.
+
+| function | operation |
+| --- | --- |
+| `tf.nn.relu(graph, x, name[, dtype])` | Relu |
+| `tf.nn.sigmoid(graph, x, name[, dtype])` | Sigmoid |
+| `tf.nn.tanh(graph, x, name[, dtype])` | Tanh |
+| `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
+| `tf.exp`, `tf.log`, `tf.sqrt` | elementwise unary ops |
+| `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
+| `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
+| `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
+
 ### `tf.gradients(graph, outputs, inputs)`
 
 Adds TensorFlow gradient operations for a list of output graph outputs with

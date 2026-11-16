@@ -9,6 +9,7 @@ local GraphBuilder = require("tensorflow.graph_builder")
 local Train = require("tensorflow.train")
 local Checkpoint = require("tensorflow.checkpoint")
 local CheckpointReader = require("tensorflow.checkpoint_reader")
+local Ops = require("tensorflow.ops")
 
 local tf = {
   VERSION = "0.1.0",
@@ -72,6 +73,20 @@ end
 function tf.square(graph, a, name, dtype)
   return GraphBuilder.square(graph, a, name, dtype)
 end
+
+tf.nn = {
+  relu = Ops.relu,
+  sigmoid = Ops.sigmoid,
+  tanh = Ops.tanh,
+  softmax = Ops.softmax,
+}
+
+tf.reshape = Ops.reshape
+tf.reduce_mean = Ops.reduce_mean
+tf.argmax = Ops.argmax
+tf.exp = Ops.exp
+tf.log = Ops.log
+tf.sqrt = Ops.sqrt
 
 function tf.version()
   capi.load()
