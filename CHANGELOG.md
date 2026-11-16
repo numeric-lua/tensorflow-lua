@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+
+- AveragePool2D and GlobalAveragePool2D layers;
+- average-pooling stacks in Sequential.
+
 ## 0.5.0
 
 - Conv2D, MaxPool2D, and BatchNormalization layers;

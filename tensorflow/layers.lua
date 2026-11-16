@@ -283,6 +283,39 @@ function Layers.max_pool2d(graph, input, kernel_size, options)
   return { output = desc:finish(), variables = {}, initializers = {} }
 end
 
+function Layers.avg_pool2d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  local stride_h = options.stride or kernel_h
+  local stride_w = options.stride or kernel_w
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  local desc = graph:new_operation("AvgPool", options.name or "avg_pool2d")
+  desc:add_input(input)
+  desc:set_int_list("ksize", { 1, kernel_h, kernel_w, 1 })
+  desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "VALID")
+  desc:set_string("data_format", "NHWC")
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.global_avg_pool2d(graph, input, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local prefix = options.name or "global_avg_pool2d"
+  local pooled = tf.reduce_mean(graph, input, { 1, 2 }, prefix .. "/mean",
+    "float32", true)
+  local desc = graph:new_operation("Squeeze", prefix .. "/squeeze")
+  desc:add_input(pooled)
+  desc:set_type("T", options.dtype or "float32")
+  desc:set_int_list("squeeze_dims", { 1, 2 })
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
 function Layers.flatten(graph, input, input_size, options)
   options = options or {}
   if type(input_size) ~= "number" or input_size < 1 then

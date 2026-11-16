@@ -62,7 +62,8 @@ function Sequential:add(options)
   end
   if options.type == "flatten" or options.type == "embedding" or
       options.type == "dropout" or options.type == "conv2d" or
-      options.type == "max_pool2d" or options.type == "batchnorm" or
+      options.type == "max_pool2d" or options.type == "avg_pool2d" or
+      options.type == "global_avg_pool2d" or options.type == "batchnorm" or
       options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
         self._input_dtype == nil then
@@ -214,6 +215,47 @@ function Sequential:_build()
       layers[i] = { output = layer.output, input_size = feature_size,
         units = spatial[3], kind = "max_pool2d",
         kernel_size = { kernel_h, kernel_w } }
+      output = layer.output
+    elseif definition.type == "avg_pool2d" then
+      if #spatial ~= 3 then
+        error("avg_pool2d layers require an NHWC input", 3)
+      end
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1], definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or kernel_h,
+        definition.stride or kernel_w
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "VALID")
+      local layer = tf.layers.avg_pool2d(graph, output,
+        { kernel_h, kernel_w }, { stride = { stride_h, stride_w },
+          padding = padding, name = options.name })
+      local function output_dim(size, kernel, stride)
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - kernel) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_h, stride_h),
+        output_dim(spatial[2], kernel_w, stride_w), spatial[3] }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[3], kind = "avg_pool2d",
+        kernel_size = { kernel_h, kernel_w } }
+      output = layer.output
+    elseif definition.type == "global_avg_pool2d" then
+      if #spatial ~= 3 then
+        error("global_avg_pool2d layers require an NHWC input", 3)
+      end
+      local layer = tf.layers.global_avg_pool2d(graph, output,
+        { name = options.name })
+      spatial = { spatial[3] }
+      feature_size = spatial[1]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[1], kind = "global_avg_pool2d" }
       output = layer.output
     elseif definition.type == "dropout" then
       local layer = tf.layers.dropout(graph, output,
@@ -870,6 +912,12 @@ function Sequential:summary()
     elseif layer.kind == "max_pool2d" then
       rows[#rows + 1] = string.format("  %d: MaxPool2D(%dx%d)", i,
         layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "avg_pool2d" then
+      rows[#rows + 1] = string.format("  %d: AvgPool2D(%dx%d)", i,
+        layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "global_avg_pool2d" then
+      rows[#rows + 1] = string.format("  %d: GlobalAvgPool2D(%d)", i,
+        layer.units)
     elseif layer.kind == "batchnorm" then
       rows[#rows + 1] = string.format("  %d: BatchNormalization", i)
     elseif layer.kind == "dropout" then

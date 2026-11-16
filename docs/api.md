@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.5.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.6.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -329,6 +329,16 @@ normalization. Options: `training` (boolean or boolean graph output), `axes`
 moving statistics update only while training is true. Returns
 `{ output, gamma, beta, moving_mean, moving_variance, variables, initializers }`.
 
+### `tf.layers.avg_pool2d(graph, input, kernel_size[, opts])`
+
+Builds an `AvgPool` operation. Options: `stride`, `padding` (`VALID` by
+default), `name`. Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.global_avg_pool2d(graph, input[, opts])`
+
+Averages the H/W dimensions and squeezes them, producing `[batch, channels]`.
+Returns `{ output, variables = {}, initializers = {} }`.
+
 ### `tf.layers.dense(graph, input, units, opts)`
 
 Builds a Dense layer with a `[input_size, units]` weight variable and optional
@@ -369,6 +379,8 @@ model:add({ units = 4, options = { activation = "relu" } })
 model:add({ type = "conv2d", filters = 8, kernel_size = 3,
   options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
+model:add({ type = "avg_pool2d", kernel_size = 2, stride = 2 })
+model:add({ type = "global_avg_pool2d" })
 model:add({ type = "batchnorm" })            -- channels inferred from the stack
 model:add({ type = "dropout", rate = 0.2 })  -- train-only; inference is identity
 model:add({ type = "flatten" })       -- optional, no parameters

@@ -155,3 +155,23 @@ test("runs BatchNormalization in training and inference modes", function()
   assert_true(math.abs(mean) < 1e-3, "mean=" .. tostring(mean))
   session:close()
 end)
+
+test("runs average and global average pooling", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "avg_input")
+  local avg = tf.layers.avg_pool2d(graph, input, 2, { stride = 2 })
+  local global_avg = tf.layers.global_avg_pool2d(graph, input,
+    { name = "global" })
+  local session = tf.Session.new(graph)
+  local values = {}
+  for y = 1, 4 do
+    values[y] = {}
+    for x = 1, 4 do values[y][x] = { y, x } end
+  end
+  local pooled = session:run({ [input] = { values } }, { avg.output })[1]
+  assert_eq(table.concat(pooled:shape(), ","), "1,2,2,2")
+  local global_values = session:run({ [input] = { values } },
+    { global_avg.output })[1]
+  assert_eq(table.concat(global_values:shape(), ","), "1,2")
+  session:close()
+end)

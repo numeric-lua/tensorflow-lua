@@ -549,3 +549,26 @@ test("trains a Conv2D + BatchNorm + Dense stack", function()
   assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
   model:close()
 end)
+
+test("trains a GlobalAvgPool2D Sequential stack", function()
+  math.randomseed(35)
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 2 } })
+  model:add({ type = "avg_pool2d", kernel_size = 2, stride = 2 })
+  model:add({ type = "global_avg_pool2d" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 2 * 1 + 1)
+  local x, y = {}, {}
+  for sample = 1, 2 do
+    x[sample] = {}
+    for r = 1, 4 do
+      x[sample][r] = {}
+      for c = 1, 4 do x[sample][r][c] = { sample + r, c } end
+    end
+    y[sample] = { sample }
+  end
+  local history = model:fit(x, y, { epochs = 2, batch_size = 2 })
+  assert_eq(#history.loss, 2)
+  assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
+  model:close()
+end)
