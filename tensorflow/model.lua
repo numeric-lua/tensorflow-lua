@@ -61,7 +61,8 @@ function Sequential:add(options)
     error("add expects a layer definition table", 2)
   end
   if options.type == "flatten" or options.type == "embedding" then
-    if options.type == "embedding" and self._input_dtype == nil then
+    if options.type == "embedding" and #self._layers == 0 and
+        self._input_dtype == nil then
       self._input_dtype = "int32"
     end
     self._layers[#self._layers + 1] = options
