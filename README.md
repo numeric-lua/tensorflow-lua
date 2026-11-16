@@ -55,7 +55,9 @@ luarocks --lua-version=5.1 make tensorflow-lua-scm-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
-`TENSORFLOW_LIB` to the shared object if it lives elsewhere.
+`TENSORFLOW_LIB` to the shared object if it lives elsewhere. The 2.18.0
+Linux x86-64 archive checksum is pinned in the fetch script; override
+`TENSORFLOW_SHA256` to verify a different build.
 
 ## Quick start
 
