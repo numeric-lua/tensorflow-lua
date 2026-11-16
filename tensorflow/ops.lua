@@ -75,6 +75,17 @@ function Ops.softmax(graph, input, name, dtype)
   return unary(graph, "Softmax", input, name, dtype)
 end
 
+function Ops.clip_by_value(graph, input, minimum, maximum, name, dtype)
+  local prefix = name or "clip_by_value"
+  dtype = dtype_name(dtype)
+  local desc = graph:new_operation("ClipByValue", prefix)
+  desc:add_input(input)
+  desc:add_input(constant(graph, minimum, prefix .. "/minimum", dtype))
+  desc:add_input(constant(graph, maximum, prefix .. "/maximum", dtype))
+  desc:set_type("T", dtype)
+  return desc:finish()
+end
+
 function Ops.cast(graph, input, src_dtype, dst_dtype, name)
   local desc = graph:new_operation("Cast", name)
   desc:add_input(input)

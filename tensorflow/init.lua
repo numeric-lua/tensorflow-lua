@@ -123,6 +123,7 @@ tf.callbacks = Callbacks
 tf.data = Data
 tf.reshape = Ops.reshape
 tf.cast = Ops.cast
+tf.clip_by_value = Ops.clip_by_value
 tf.concat = Ops.concat
 tf.abs = Ops.abs
 tf.reduce_mean = Ops.reduce_mean

@@ -354,6 +354,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
+| `tf.clip_by_value(graph, x, min, max[, name[, dtype]])` | ClipByValue |
 | `tf.concat(graph, {a, b}, axis[, name[, dtype]])` | ConcatV2 |
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 
