@@ -200,6 +200,7 @@ function Sequential:fit(x, y, options)
   if #x == 0 then error("fit requires a non-empty dataset", 2) end
   if #x ~= #y then error("x and y must have the same batch size", 2) end
   if options.shuffle then
+    if options.seed ~= nil then math.randomseed(options.seed) end
     local order = {}
     for i = 1, #x do order[i] = i end
     for i = #order, 2, -1 do
@@ -279,10 +280,11 @@ end
 
 function Sequential:fit_dataset(dataset, options)
   options = options or {}
-  local x, y, batch_size, shuffle = dataset:data()
+  local x, y, batch_size, shuffle, seed = dataset:data()
   if y == nil then error("fit_dataset requires labeled data", 2) end
   options.batch_size = options.batch_size or batch_size
   if options.shuffle == nil then options.shuffle = shuffle end
+  if options.seed == nil then options.seed = seed end
   return self:fit(x, y, options)
 end
 
