@@ -24,6 +24,10 @@ function Graph:operation(name)
   return op
 end
 
+function Graph:new_operation(op_type, name)
+  return require("tensorflow.graph_builder").new_operation(self, op_type, name)
+end
+
 function Graph:import_graph_def(data)
   if type(data) ~= "string" then
     error("import_graph_def expects serialized GraphDef bytes", 2)

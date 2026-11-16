@@ -9,6 +9,7 @@ typedef struct TF_Graph TF_Graph;
 typedef struct TF_Session TF_Session;
 typedef struct TF_SessionOptions TF_SessionOptions;
 typedef struct TF_Operation TF_Operation;
+typedef struct TF_OperationDescription TF_OperationDescription;
 typedef struct TF_Tensor TF_Tensor;
 typedef struct TF_ImportGraphDefOptions TF_ImportGraphDefOptions;
 typedef struct TF_Buffer {
@@ -50,6 +51,19 @@ const char* TF_Message(const TF_Status*);
 TF_Graph* TF_NewGraph(void);
 void TF_DeleteGraph(TF_Graph*);
 TF_Operation* TF_GraphOperationByName(TF_Graph*, const char*);
+TF_OperationDescription* TF_NewOperation(TF_Graph*, const char*, const char*);
+void TF_AddInput(TF_OperationDescription*, TF_Output);
+void TF_AddInputList(TF_OperationDescription*, const TF_Output*, int);
+void TF_AddControlInput(TF_OperationDescription*, TF_Operation*);
+void TF_SetDevice(TF_OperationDescription*, const char*);
+void TF_SetAttrString(TF_OperationDescription*, const char*, const void*, size_t);
+void TF_SetAttrInt(TF_OperationDescription*, const char*, int64_t);
+void TF_SetAttrFloat(TF_OperationDescription*, const char*, float);
+void TF_SetAttrBool(TF_OperationDescription*, const char*, unsigned char);
+void TF_SetAttrType(TF_OperationDescription*, const char*, TF_DataType);
+void TF_SetAttrShape(TF_OperationDescription*, const char*, const int64_t*, int);
+void TF_SetAttrTensor(TF_OperationDescription*, const char*, TF_Tensor*, TF_Status*);
+TF_Operation* TF_FinishOperation(TF_OperationDescription*, TF_Status*);
 void TF_GraphImportGraphDef(TF_Graph*, const TF_Buffer*,
                             const TF_ImportGraphDefOptions*, TF_Status*);
 void TF_GraphToGraphDef(TF_Graph*, TF_Buffer*, TF_Status*);

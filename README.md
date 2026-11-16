@@ -8,6 +8,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 `0.1.0` alpha. First milestone: **graph inference**.
 
 - load serialized `GraphDef` files;
+- build graphs from Lua with operations, inputs, and attributes;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
@@ -69,6 +70,18 @@ local session, graph, signatures = tf.load_saved_model("my_saved_model")
 local outputs = session:run_signature("serving_default",
   { x = { 1, 2 }, y = { 10, 20 } })
 print(outputs.sum:totable())
+```
+
+Graphs can also be built from Lua:
+
+```lua
+local graph = tf.Graph.new()
+local x = tf.placeholder(graph, "float32", { 2 }, "x")
+local y = tf.placeholder(graph, "float32", { 2 }, "y")
+local z = tf.add(graph, x, y, "z")
+local session = tf.Session.new(graph)
+local result = session:run({ [x] = { 1, 2 }, [y] = { 10, 20 } }, { z })
+print(result[1]:totable())   -- { 11, 22 }
 ```
 
 Tensors can be created explicitly with `tf.tensor(value, { dtype = "float32" })`.

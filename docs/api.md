@@ -55,6 +55,35 @@ Imports a serialized `GraphDef` protobuf from a Lua string.
 
 Reads and imports a `.pb` file.
 
+### `graph:new_operation(op_type, name)`
+
+Creates an operation description for the generic graph builder. Description
+methods return the description and must be finished:
+
+```lua
+local desc = graph:new_operation("AddV2", "z")
+desc:add_input("x:0")
+desc:add_input("y:0")
+desc:set_type("T", "float32")
+local z = desc:finish()       -- { oper=..., index=0, name="z:0" }
+```
+
+Description methods: `add_input`, `add_inputs`, `add_control_input`,
+`set_device`, `set_type`, `set_int`, `set_float`, `set_bool`, `set_string`,
+`set_shape`, `set_tensor`, and `finish`.
+
+### `tf.placeholder(graph, dtype, shape, name)`
+
+Creates a placeholder output. `shape` may be `nil` for unknown rank or a Lua
+array; `-1` denotes an unknown dimension.
+
+### `tf.add(graph, a, b, name[, dtype])`
+
+### `tf.matmul(graph, a, b, name[, dtype])`
+
+Create `AddV2` and `MatMul` operations with the given input outputs. `dtype`
+defaults to `float32`.
+
 ### `graph:operation(name)`
 
 Returns the raw operation handle; raises a Lua error if absent.

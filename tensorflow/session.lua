@@ -10,10 +10,12 @@ local Session = {}
 Session.__index = Session
 
 local function parse_output(graph, spec)
+  if type(spec) == "table" and spec.oper ~= nil then return spec end
   local name, index = spec, 0
   local base, suffix = spec:match("^(.-):(%d+)$")
   if base then name, index = base, tonumber(suffix) end
-  return { graph:operation(name), index }
+  return { oper = graph:operation(name), index = index,
+    name = name .. ":" .. tostring(index) }
 end
 
 local function output_array(graph, specs)
@@ -21,8 +23,13 @@ local function output_array(graph, specs)
   local outputs = ffi.new("TF_Output[?]", #specs)
   for i, spec in ipairs(specs) do
     local resolved = parse_output(graph, spec)
-    outputs[i - 1].oper = resolved[1]
-    outputs[i - 1].index = resolved[2]
+    if type(resolved) == "table" then
+      outputs[i - 1].oper = resolved.oper
+      outputs[i - 1].index = resolved.index or 0
+    else
+      outputs[i - 1].oper = resolved[1]
+      outputs[i - 1].index = resolved[2]
+    end
   end
   return outputs
 end
@@ -74,6 +81,10 @@ function Session:run(feeds, fetches, targets)
     error("run expects a fetch name or a list of fetch names", 2)
   end
   local named_fetches = type(fetches) == "table" and not fetches[1]
+  local function label(spec)
+    if type(spec) == "table" then return spec.name or "output" end
+    return spec
+  end
   local fetch_specs, fetch_names = {}, {}
   if type(fetches) == "string" then
     fetch_specs[1] = fetches
@@ -85,14 +96,16 @@ function Session:run(feeds, fetches, targets)
     end
   else
     for i, spec in ipairs(fetches) do
-      fetch_names[i] = spec
+      fetch_names[i] = label(spec)
       fetch_specs[i] = spec
     end
   end
 
   local feed_specs, feed_values = {}, {}
   for name, value in pairs(feeds or {}) do
-    if type(name) ~= "string" then error("feed names must be strings", 2) end
+    if type(name) ~= "string" and not (type(name) == "table" and name.oper) then
+      error("feed names must be strings or graph outputs", 2)
+    end
     if getmetatable(value) ~= Tensor then value = Tensor.new(value) end
     feed_specs[#feed_specs + 1] = name
     feed_values[#feed_values + 1] = value
