@@ -232,8 +232,9 @@ model:close()
 
 - Inputs are batched Lua tables: `input_shape = { features }` expects
   `{{f1, f2}, ...}`.
-- Supported losses: `"mse"`/`"mean_squared_error"` and
-  `"softmax_cross_entropy"`/`"cce"`, or a custom function
+- Supported losses: `"mse"`/`"mean_squared_error"`,
+  `"binary_cross_entropy"`/`"bce"`, `"softmax_cross_entropy"`/`"cce"`, or a
+  custom function
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.

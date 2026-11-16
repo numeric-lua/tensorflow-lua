@@ -136,3 +136,17 @@ test("supports shuffled training", function()
   assert_eq(#history.loss, 3)
   model:close()
 end)
+
+test("trains with binary cross-entropy", function()
+  math.randomseed(10)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ loss = "bce",
+    optimizer = { type = "adam", learning_rate = 0.1 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 }, { 3 } },
+    { { 0 }, { 0 }, { 1 }, { 1 } }, { epochs = 100 })
+  assert_eq(#history.loss, 100)
+  local prediction = model:predict({ { 3 } }):totable()[1][1]
+  assert_true(prediction > 0.5, tostring(prediction))
+  model:close()
+end)
