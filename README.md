@@ -17,7 +17,7 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
-- compositional Dense, Embedding, and Flatten layers;
+- compositional Dense, Embedding, Flatten, and Dropout layers;
 - loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
   binary/class accuracy, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,

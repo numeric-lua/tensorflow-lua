@@ -298,6 +298,12 @@ bias. Required option: `input_size`. Other options: `use_bias` (true),
 
 Returns `{ output, weight, bias, variables, initializers, input_size, units }`.
 
+### `tf.layers.dropout(graph, input, rate[, opts])`
+
+Builds an inverted-dropout mask from the dynamic input shape. Options:
+`training` (default true; false returns the input unchanged), `seed`, `seed2`,
+`dtype`, `name`. Returns `{ output }`.
+
 ### `tf.layers.flatten(graph, input, input_size[, opts])`
 
 Reshapes batched input to `[-1, input_size]`. Options: `name`, `dtype`.
@@ -404,6 +410,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
 | `tf.clip_by_value(graph, x, min, max[, name[, dtype]])` | ClipByValue |
+| `tf.shape(graph, x[, name[, dtype]])` | Shape |
+| `tf.div(graph, a, b[, name[, dtype]])` | RealDiv |
 | `tf.concat(graph, {a, b}, axis[, name[, dtype]])` | ConcatV2 |
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 

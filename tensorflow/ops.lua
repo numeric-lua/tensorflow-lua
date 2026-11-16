@@ -75,6 +75,22 @@ function Ops.softmax(graph, input, name, dtype)
   return unary(graph, "Softmax", input, name, dtype)
 end
 
+function Ops.shape(graph, input, name, dtype)
+  local desc = graph:new_operation("Shape", name)
+  desc:add_input(input)
+  desc:set_type("T", dtype_name(dtype))
+  desc:set_type("out_type", "int32")
+  return desc:finish()
+end
+
+function Ops.div(graph, a, b, name, dtype)
+  local desc = graph:new_operation("RealDiv", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype_name(dtype))
+  return desc:finish()
+end
+
 function Ops.clip_by_value(graph, input, minimum, maximum, name, dtype)
   local prefix = name or "clip_by_value"
   dtype = dtype_name(dtype)

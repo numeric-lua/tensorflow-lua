@@ -82,6 +82,41 @@ function Layers.flatten(graph, input, input_size, options)
   }
 end
 
+function Layers.dropout(graph, input, rate, options)
+  options = options or {}
+  rate = rate or 0.5
+  if type(rate) ~= "number" or rate < 0 or rate >= 1 then
+    error("dropout rate must be in [0, 1)", 3)
+  end
+  if options.training == false then return { output = input } end
+  local tf = require("tensorflow")
+  local prefix = options.name or "dropout"
+  local dtype = options.dtype or "float32"
+  local keep = 1 - rate
+  local shape = tf.shape(graph, input, prefix .. "/shape")
+  local random = graph:new_operation("RandomUniform", prefix .. "/random")
+  random:add_input(shape)
+  random:set_type("dtype", dtype)
+  random:set_int("seed", options.seed or 0)
+  random:set_int("seed2", options.seed2 or 0)
+  local noise = random:finish()
+  local threshold = tf.constant(graph, keep, prefix .. "/keep", dtype)
+  local less = graph:new_operation("Less", prefix .. "/mask")
+  less:add_input(noise)
+  less:add_input(threshold)
+  less:set_type("T", dtype)
+  local mask = less:finish()
+  local cast = graph:new_operation("Cast", prefix .. "/cast")
+  cast:add_input(mask)
+  cast:set_type("SrcT", "bool")
+  cast:set_type("DstT", dtype)
+  local scale = cast:finish()
+  local scaled = tf.mul(graph, input, scale, prefix .. "/scale", dtype)
+  local output = tf.div(graph, scaled, tf.constant(graph, keep,
+    prefix .. "/divide_by", dtype), prefix .. "/output", dtype)
+  return { output = output }
+end
+
 function Layers.embedding(graph, input, input_dim, output_dim, options)
   options = options or {}
   if type(input_dim) ~= "number" or type(output_dim) ~= "number" or

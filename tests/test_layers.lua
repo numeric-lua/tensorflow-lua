@@ -64,3 +64,22 @@ test("flatten validates input size", function()
   local input = tf.placeholder(graph, "float32", { 1 }, "flat_bad")
   assert_error(function() tf.layers.flatten(graph, input, 0) end, "input_size")
 end)
+
+test("dropout with zero rate is identity", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 2, 2 }, "drop_input")
+  local layer = tf.layers.dropout(graph, input, 0, { training = true,
+    seed = 1 })
+  local session = tf.Session.new(graph)
+  local values = { { 1, 2 }, { 3, 4 } }
+  local output = session:run({ [input] = values }, { layer.output })[1]
+  assert_eq(output:totable()[2][1], 3)
+  session:close()
+end)
+
+test("dropout in inference mode returns input", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1 }, "drop_eval")
+  local layer = tf.layers.dropout(graph, input, 0.5, { training = false })
+  assert_true(layer.output == input)
+end)
