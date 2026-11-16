@@ -150,6 +150,11 @@ local tensor = reader:tensor(name)
 reader:close()
 ```
 
+## Training examples
+
+`examples/linear_regression.lua` trains `y = 2x + 1` with gradient descent;
+`examples/xor.lua` trains a 2-4-1 ReLU/sigmoid MLP with Adam.
+
 ## Typed ops
 
 Graph-output arguments can be operation results or `"name:index"` strings.

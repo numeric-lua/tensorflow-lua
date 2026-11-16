@@ -159,9 +159,12 @@ libtensorflow version.
 ```sh
 TENSORFLOW_ROOT=$PWD/third_party/libtensorflow \
   luajit examples/linear_regression.lua
+TENSORFLOW_ROOT=$PWD/third_party/libtensorflow \
+  luajit examples/xor.lua
 ```
 
-The example builds and trains `y = 2x + 1` entirely from Lua.
+The examples build and train linear regression and a 2-4-1 XOR MLP entirely
+from Lua. The XOR example uses Adam.
 
 ## API
 
