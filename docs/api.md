@@ -347,7 +347,8 @@ model:add({ units = 1 })
 model:compile({ loss = "mse", optimizer = { type = "adam", learning_rate = 0.01 } })
 local history = model:fit(x, y, { epochs = 10, batch_size = 32 })
 local prediction = model:predict(x)
-local classes = model:predict_classes(x)  -- int64 argmax labels
+local probabilities = model:predict_proba(x)  -- softmax probabilities
+local classes = model:predict_classes(x)      -- int64 argmax labels
 local loss, metrics = model:evaluate(x, y)
 model:save("model.ckpt")
 model:load("model.ckpt")

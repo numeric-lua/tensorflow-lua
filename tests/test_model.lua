@@ -311,3 +311,18 @@ test("supports Flatten in a Sequential stack", function()
   assert_eq(table.concat(prediction:shape(), ","), "2,3")
   model:close()
 end)
+
+test("predicts class probabilities", function()
+  math.randomseed(23)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce",
+    optimizer = { type = "adam", learning_rate = 0.05 } })
+  local x = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } }
+  model:fit(x, { 0, 1, 1, 0 }, { epochs = 50 })
+  local probabilities = model:predict_proba(x)
+  assert_eq(table.concat(probabilities:shape(), ","), "4,2")
+  local values = probabilities:totable()
+  assert_true(values[1][1] + values[1][2] > 0.99)
+  model:close()
+end)

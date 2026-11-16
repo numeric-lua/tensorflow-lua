@@ -262,8 +262,11 @@ function Sequential:_build()
   if units > 1 then
     self._class_output = tf.argmax(graph, output, 1, "prediction/class",
       "float32", "int64")
+    self._proba_output = tf.nn.softmax(graph, output,
+      "prediction/probabilities", "float32")
   else
     self._class_output = nil
+    self._proba_output = nil
   end
   self._metric_names, self._metric_outputs = metric_names, metric_outputs
 end
@@ -397,6 +400,18 @@ end
 
 function Sequential:fit_dataset(dataset, options)
   return self:fit(dataset, nil, options)
+end
+
+function Sequential:predict_proba(x)
+  if self._units ~= nil and self._units <= 1 then
+    error("predict_proba requires more than one output unit", 2)
+  end
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  if is_dataset(x) then x = x:data() end
+  x = normalize_rows(x, self._input_shape[#self._input_shape])
+  if #x == 0 then error("predict_proba requires non-empty input", 2) end
+  return self._session:run({ [self._input] = x }, { self._proba_output })[1]
 end
 
 function Sequential:predict_classes(x)
