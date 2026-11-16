@@ -653,37 +653,7 @@ function Sequential:evaluate(x, y, options)
     local dataset_x, dataset_y = x:data()
     x, y = dataset_x, y or dataset_y
   end
-  local sample_weights = options.sample_weight
-  if sample_weights ~= nil and #sample_weights ~= #x then
-    error("sample_weight must have one value per sample", 2)
-  end
   if self._session == nil then self._graph = nil end
-  if options.validation_split ~= nil and options.validation_data == nil then
-    local fraction = options.validation_split
-    if type(fraction) ~= "number" or fraction <= 0 or fraction >= 1 then
-      error("validation_split must be between 0 and 1", 2)
-    end
-    local cut = math.floor(#x * (1 - fraction))
-    if cut < 1 or cut >= #x then
-      error("validation_split produces an empty partition", 2)
-    end
-    local validation_x, validation_y = {}, {}
-    for i = cut + 1, #x do
-      validation_x[#validation_x + 1] = x[i]
-      validation_y[#validation_y + 1] = y[i]
-    end
-    local train_x, train_y, train_weights = {}, {}, {}
-    for i = 1, cut do
-      train_x[#train_x + 1] = x[i]
-      train_y[#train_y + 1] = y[i]
-      if sample_weights ~= nil then
-        train_weights[#train_weights + 1] = sample_weights[i]
-      end
-    end
-    x, y = train_x, train_y
-    if sample_weights ~= nil then sample_weights = train_weights end
-    options.validation_data = { validation_x, validation_y }
-  end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
