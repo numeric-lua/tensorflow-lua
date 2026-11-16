@@ -308,6 +308,19 @@ and reduces the mean over the batch. Options: `dtype` (default `int32`), `axes`,
 
 ## Layers
 
+### `tf.layers.conv2d(graph, input, filters, kernel_size[, opts])`
+
+Builds a bias-enabled 2-D convolution with a learned
+`[kh, kw, in_channels, filters]` kernel. Required option: `in_channels`.
+Other options: `stride`, `padding` (`SAME`/`VALID`), `dilation`, `use_bias`,
+`activation`, `dtype`, `name`. Returns
+`{ output, weight, bias, variables, initializers, filters, kernel_size }`.
+
+### `tf.layers.max_pool2d(graph, input, kernel_size[, opts])`
+
+Builds a `MaxPool` operation. Options: `stride`, `padding` (`VALID` by
+default), `name`. Returns `{ output, variables = {}, initializers = {} }`.
+
 ### `tf.layers.dense(graph, input, units, opts)`
 
 Builds a Dense layer with a `[input_size, units]` weight variable and optional

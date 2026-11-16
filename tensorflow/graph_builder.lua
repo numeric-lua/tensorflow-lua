@@ -75,6 +75,13 @@ function Description:set_type_list(name, values)
   return self
 end
 
+function Description:set_int_list(name, values)
+  local array = ffi.new("int64_t[?]", #values)
+  for i, value in ipairs(values) do array[i - 1] = value end
+  capi.load().TF_SetAttrIntList(self._desc, name, array, #values)
+  return self
+end
+
 function Description:set_int(name, value)
   capi.load().TF_SetAttrInt(self._desc, name, value)
   return self

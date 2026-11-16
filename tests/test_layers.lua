@@ -99,3 +99,36 @@ test("dropout masks or scales values", function()
   end
   session:close()
 end)
+
+test("runs a Conv2D layer", function()
+  math.randomseed(28)
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 1 }, "conv_input")
+  local layer = tf.layers.conv2d(graph, input, 2, 3,
+    { in_channels = 1, padding = "SAME", name = "conv" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local values = {}
+  for y = 1, 4 do
+    values[y] = {}
+    for x = 1, 4 do values[y][x] = { y + x } end
+  end
+  local output = session:run({ [input] = { values } }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,4,4,2")
+  session:close()
+end)
+
+test("runs a MaxPool2D layer", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "pool_input")
+  local layer = tf.layers.max_pool2d(graph, input, 2, { stride = 2 })
+  local session = tf.Session.new(graph)
+  local values = {}
+  for y = 1, 4 do
+    values[y] = {}
+    for x = 1, 4 do values[y][x] = { y, x } end
+  end
+  local output = session:run({ [input] = { values } }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,2,2,2")
+  session:close()
+end)

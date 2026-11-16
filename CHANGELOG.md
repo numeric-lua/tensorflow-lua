@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Conv2D and MaxPool2D layers;
+- integer-list graph attributes.
+
 ## 0.4.0
 
 - stabilized public API with an explicit surface regression test;

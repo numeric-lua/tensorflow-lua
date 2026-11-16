@@ -65,6 +65,109 @@ function Layers.dense(graph, input, units, options)
   }
 end
 
+function Layers.conv2d(graph, input, filters, kernel_size, options)
+  options = options or {}
+  if type(filters) ~= "number" or filters < 1 then
+    error("conv2d requires positive filters", 3)
+  end
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("conv2d requires options.in_channels", 3)
+  end
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  local stride_h = options.stride or 1
+  local stride_w = options.stride or 1
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  local dilation_h = options.dilation or 1
+  local dilation_w = options.dilation or 1
+  if type(options.dilation) == "table" then
+    dilation_h, dilation_w = options.dilation[1], options.dilation[2]
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "conv2d"
+  local tf = require("tensorflow")
+  local bound = math.sqrt(6 / (kernel_h * kernel_w * in_channels + filters))
+  local shape = { kernel_h, kernel_w, in_channels, filters }
+  local values = {}
+  for i = 1, kernel_h do
+    values[i] = {}
+    for j = 1, kernel_w do
+      values[i][j] = {}
+      for c = 1, in_channels do
+        values[i][j][c] = {}
+        for f = 1, filters do
+          values[i][j][c][f] = (math.random() * 2 - 1) * bound
+        end
+      end
+    end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
+    { dtype = dtype })
+  local desc = graph:new_operation("Conv2D", prefix .. "/conv")
+  desc:add_input(input)
+  desc:add_input(weight.read)
+  desc:set_type("T", dtype)
+  desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "SAME")
+  desc:set_string("data_format", "NHWC")
+  desc:set_int_list("dilations", { 1, dilation_h, dilation_w, 1 })
+  desc:set_bool("use_cudnn_on_gpu", false)
+  local output = desc:finish()
+  local variables, initializers = { weight }, { weight.initializer }
+  local bias = nil
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, filters do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  local activation = options.activation
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. activation, dtype)
+  elseif type(activation) == "function" then
+    output = activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output,
+    weight = weight,
+    bias = bias,
+    variables = variables,
+    initializers = initializers,
+    filters = filters,
+    kernel_size = { kernel_h, kernel_w },
+    dtype = dtype,
+  }
+end
+
+function Layers.max_pool2d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  local stride_h = options.stride or kernel_h
+  local stride_w = options.stride or kernel_w
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  local desc = graph:new_operation("MaxPool", options.name or "max_pool2d")
+  desc:add_input(input)
+  desc:set_int_list("ksize", { 1, kernel_h, kernel_w, 1 })
+  desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "VALID")
+  desc:set_string("data_format", "NHWC")
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
 function Layers.flatten(graph, input, input_size, options)
   options = options or {}
   if type(input_size) ~= "number" or input_size < 1 then

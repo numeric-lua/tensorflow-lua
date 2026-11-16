@@ -68,6 +68,7 @@ void TF_SetAttrFloat(TF_OperationDescription*, const char*, float);
 void TF_SetAttrBool(TF_OperationDescription*, const char*, unsigned char);
 void TF_SetAttrType(TF_OperationDescription*, const char*, TF_DataType);
 void TF_SetAttrTypeList(TF_OperationDescription*, const char*, const TF_DataType*, int);
+void TF_SetAttrIntList(TF_OperationDescription*, const char*, const int64_t*, int);
 void TF_SetAttrShape(TF_OperationDescription*, const char*, const int64_t*, int);
 void TF_SetAttrTensor(TF_OperationDescription*, const char*, TF_Tensor*, TF_Status*);
 TF_Operation* TF_FinishOperation(TF_OperationDescription*, TF_Status*);
