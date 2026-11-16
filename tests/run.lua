@@ -39,6 +39,9 @@ function assert_error(fn, substring)
   end
 end
 
+current = "test_api.lua"
+dofile(root .. "/tests/test_api.lua")
+
 current = "test_tensor.lua"
 dofile(root .. "/tests/test_tensor.lua")
 
