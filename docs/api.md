@@ -172,6 +172,18 @@ local tensor = reader:tensor(name)
 reader:close()
 ```
 
+## Losses
+
+### `tf.losses.mean_squared_error(graph, predictions, targets[, opts])`
+
+Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
+`dtype`, `name`.
+
+### `tf.losses.softmax_cross_entropy(graph, logits, labels[, opts])`
+
+Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
+`axes = {0}`). Options: `axes`, `keep_dims`, `dtype`, `name`.
+
 ## Layers
 
 ### `tf.layers.dense(graph, input, units, opts)`

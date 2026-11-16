@@ -12,6 +12,7 @@ local CheckpointReader = require("tensorflow.checkpoint_reader")
 local Ops = require("tensorflow.ops")
 local Eager = require("tensorflow.eager")
 local Layers = require("tensorflow.layers")
+local Losses = require("tensorflow.losses")
 
 local tf = {
   VERSION = "0.2.0",
@@ -103,6 +104,7 @@ tf.nn = {
 
 tf.eager = Eager
 tf.layers = Layers
+tf.losses = Losses
 tf.reshape = Ops.reshape
 tf.reduce_mean = Ops.reduce_mean
 tf.argmax = Ops.argmax
