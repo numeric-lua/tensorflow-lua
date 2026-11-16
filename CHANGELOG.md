@@ -17,8 +17,8 @@
 - Sequential parameter counts, summaries, `predict_classes`, and
   `validation_split`;
 - Dataset `repeat_times` and `take`;
-- Sequential `get_weights` / `set_weights`, `predict_proba`, and Flatten layers
-  in stacks;
+- Sequential `get_weights` / `set_weights`, `predict_proba`, Flatten layers,
+  and Embedding/integer-input stacks;
 - class-weighted sparse classification losses;
 - fixed Dense biases to have one element per output unit;
 - GC/leak stress coverage across tensors, graphs, sessions, and readers;

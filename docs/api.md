@@ -357,6 +357,9 @@ model:close()
 
 - Inputs are batched Lua tables: `input_shape = { features }` expects
   `{{f1, f2}, ...}`.
+- `input_dtype = "int32"` with `{ type = "embedding", input_dim = n,
+  output_dim = d }` builds text/index embeddings; combine with Flatten before
+  Dense layers.
 - Supported losses: `"mse"`/`"mean_squared_error"`,
   `"binary_cross_entropy"`/`"bce"`, `"mae"`/`"mean_absolute_error"`,
   `"softmax_cross_entropy"`/`"cce"`,

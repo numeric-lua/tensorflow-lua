@@ -53,14 +53,15 @@ function Sequential.new(options)
     error("Sequential.new requires input_shape", 2)
   end
   return setmetatable({ _input_shape = copy_shape(options.input_shape),
-    _layers = {}, _compiled = nil }, Sequential)
+    _input_dtype = options.input_dtype or "float32", _layers = {},
+    _compiled = nil }, Sequential)
 end
 
 function Sequential:add(options)
   if type(options) ~= "table" then
     error("add expects a layer definition table", 2)
   end
-  if options.type == "flatten" then
+  if options.type == "flatten" or options.type == "embedding" then
     self._layers[#self._layers + 1] = options
     return self
   end
@@ -93,7 +94,7 @@ function Sequential:_build()
   local graph = tf.Graph.new()
   local input_shape = { -1 }
   for _, dimension in ipairs(self._input_shape) do input_shape[#input_shape + 1] = dimension end
-  local input = tf.placeholder(graph, "float32", input_shape, "input")
+  local input = tf.placeholder(graph, self._input_dtype, input_shape, "input")
   local output = input
   local variables, initializers, layers = {}, {}, {}
   local feature_size = self._input_shape[#self._input_shape]
@@ -101,7 +102,32 @@ function Sequential:_build()
     local options = definition.options or {}
     options.name = options.name or (definition.type == "flatten" and
       ("flatten_" .. i) or ("dense_" .. i))
-    if definition.type == "flatten" then
+    if definition.type == "embedding" then
+      local input_dim = definition.input_dim or options.input_dim
+      local output_dim = definition.output_dim or options.output_dim
+      if type(input_dim) ~= "number" or type(output_dim) ~= "number" then
+        error("embedding layers require input_dim and output_dim", 3)
+      end
+      options.indices_dtype = self._input_dtype
+      local layer = tf.layers.embedding(graph, output, input_dim, output_dim,
+        options)
+      local total = feature_size
+      if i == 1 then
+        total = 1
+        for _, dimension in ipairs(self._input_shape) do
+          total = total * dimension
+        end
+      end
+      layers[i] = { output = layer.output, input_size = total,
+        units = total * output_dim, kind = "embedding",
+        input_dim = input_dim, output_dim = output_dim }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+      feature_size = total * output_dim
+    elseif definition.type == "flatten" then
       local total = feature_size
       if i == 1 then
         total = 1
@@ -615,6 +641,9 @@ function Sequential:summary()
     if layer.kind == "flatten" then
       rows[#rows + 1] = string.format("  %d: Flatten(%d)", i,
         layer.input_size)
+    elseif layer.kind == "embedding" then
+      rows[#rows + 1] = string.format("  %d: Embedding(%d -> %d)", i,
+        layer.input_dim, layer.output_dim)
     else
       rows[#rows + 1] = string.format("  %d: Dense(%d -> %d)", i,
         layer.input_size, layer.units)
