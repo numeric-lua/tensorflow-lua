@@ -17,6 +17,29 @@ function Dataset:data()
   return self._x, self._y, self._batch_size, self._shuffle, self._seed
 end
 
+function Dataset:split(fraction)
+  if type(fraction) ~= "number" or fraction <= 0 or fraction >= 1 then
+    error("split fraction must be between 0 and 1", 2)
+  end
+  local cut = math.floor(#self._x * fraction)
+  if cut < 1 or cut >= #self._x then
+    error("split fraction produces an empty partition", 2)
+  end
+  local train_x, train_y, validation_x, validation_y = {}, {}, {}, {}
+  for i = 1, cut do
+    train_x[i] = self._x[i]
+    if self._y ~= nil then train_y[i] = self._y[i] end
+  end
+  for i = cut + 1, #self._x do
+    validation_x[#validation_x + 1] = self._x[i]
+    if self._y ~= nil then
+      validation_y[#validation_y + 1] = self._y[i]
+    end
+  end
+  return Dataset.new(train_x, self._y ~= nil and train_y or nil),
+    Dataset.new(validation_x, self._y ~= nil and validation_y or nil)
+end
+
 function Dataset:size()
   return #self._x
 end

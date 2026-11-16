@@ -281,8 +281,14 @@ function Sequential:fit(x, y, options)
       history[name][#history[name] + 1] = metric_sums[i] / batches
     end
     if validation ~= nil then
-      local val_loss, val_metrics = self:evaluate(validation[1],
-        validation[2], { batch_size = batch_size })
+      local val_loss, val_metrics
+      if is_dataset(validation) then
+        val_loss, val_metrics = self:evaluate(validation, nil,
+          { batch_size = batch_size })
+      else
+        val_loss, val_metrics = self:evaluate(validation[1],
+          validation[2], { batch_size = batch_size })
+      end
       history.val_loss[#history.val_loss + 1] = val_loss
       for name, value in pairs(val_metrics or {}) do
         local target_history = history["val_" .. name]
@@ -308,7 +314,16 @@ function Sequential:fit_dataset(dataset, options)
   return self:fit(dataset, nil, options)
 end
 
+function Sequential:evaluate_dataset(dataset, options)
+  return self:evaluate(dataset, nil, options)
+end
+
+function Sequential:predict_dataset(dataset)
+  return self:predict(dataset)
+end
+
 function Sequential:predict(x)
+  if is_dataset(x) then x = x:data() end
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
@@ -318,6 +333,10 @@ end
 
 function Sequential:evaluate(x, y, options)
   options = options or {}
+  if is_dataset(x) then
+    local dataset_x, dataset_y = x:data()
+    x, y = dataset_x, y or dataset_y
+  end
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])

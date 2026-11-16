@@ -238,11 +238,13 @@ for batch in dataset:each() do
 end
 ```
 
-`Dataset.new(x[, y])`, `size()`, `batch(size)`, `shuffle([seed])`, and
-`each()` return batches as `{ x = ..., y = ... }`.
+`Dataset.new(x[, y])`, `size()`, `batch(size)`, `shuffle([seed])`, `split(fraction)`,
+and `each()` return batches as `{ x = ..., y = ... }`.
 
 `model:fit(dataset, opts)` trains directly from labeled dataset batches;
-`fit_dataset(dataset, opts)` is an alias.
+`fit_dataset(dataset, opts)` is an alias. `Dataset:split(fraction)` returns
+train/validation datasets, and `model:evaluate_dataset` /
+`model:predict_dataset` accept Dataset objects directly.
 
 ## Callbacks
 

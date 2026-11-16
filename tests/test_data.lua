@@ -27,3 +27,12 @@ test("validates dataset arguments", function()
   local dataset = tf.data.Dataset.new({ 1 })
   assert_error(function() dataset:batch(0) end, "positive")
 end)
+
+test("splits datasets into train and validation partitions", function()
+  local train, validation = tf.data.Dataset.new({ 1, 2, 3, 4 },
+    { 10, 20, 30, 40 }):split(0.75)
+  assert_eq(train:size(), 3)
+  assert_eq(validation:size(), 1)
+  local batch = train:each()()
+  assert_eq(batch.y[3], 30)
+end)
