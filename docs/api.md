@@ -184,7 +184,9 @@ Builds a squared-error mean. Options: `axes` (default `{0}`), `keep_dims`,
 
 Builds sparse-label softmax cross-entropy. `labels` is an integer tensor of
 class indices; options: `labels_dtype` (default `int32`), `axes` (default
-`{0}`), `keep_dims`, `dtype`, `name`.
+`{0}`), `keep_dims`, `dtype`, `name`. The TensorFlow C API does not register a
+gradient for this op; `Sequential` converts sparse labels to one-hot and uses
+the differentiable dense loss instead.
 
 ### `tf.losses.mean_absolute_error(graph, predictions, targets[, opts])`
 
@@ -245,7 +247,9 @@ model:close()
   `{{f1, f2}, ...}`.
 - Supported losses: `"mse"`/`"mean_squared_error"`,
   `"binary_cross_entropy"`/`"bce"`, `"mae"`/`"mean_absolute_error"`,
-  `"softmax_cross_entropy"`/`"cce"`, or a custom function
+  `"softmax_cross_entropy"`/`"cce"`,
+  `"sparse_softmax_cross_entropy"`/`"sparse_ce"` (integer labels), or a custom
+  function
   `function(graph, predictions, targets) ... end`.
 - Supported optimizers: `adam`, `sgd`/`gradient_descent`, `rmsprop`,
   `adagrad`, and `momentum`.

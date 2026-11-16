@@ -16,6 +16,19 @@ local function batch_slice(data, first, last)
   return batch
 end
 
+local function normalize_labels(data)
+  if type(data) ~= "table" then error("labels must be a Lua table", 3) end
+  if #data == 0 or type(data[1]) ~= "table" then return data end
+  local flat = {}
+  for i, row in ipairs(data) do
+    if type(row) ~= "table" or #row ~= 1 then
+      error("sparse labels must be a flat list or single-column rows", 3)
+    end
+    flat[i] = row[1]
+  end
+  return flat
+end
+
 local function normalize_rows(data, width)
   if type(data) ~= "table" then
     error("model input must be a Lua table or Tensor", 3)
@@ -84,9 +97,13 @@ function Sequential:_build()
     output = layer.output
   end
   local units = layers[#layers].units
-  local target = tf.placeholder(graph, "float32", { -1, units }, "target")
-
   local loss_spec = self._compiled.loss
+  local sparse = loss_spec == "sparse_softmax_cross_entropy" or
+    loss_spec == "sparse_ce" or
+    loss_spec == "sparse_categorical_cross_entropy"
+  local target = tf.placeholder(graph, sparse and "int32" or "float32",
+    sparse and { -1 } or { -1, units }, "target")
+
   local loss
   if type(loss_spec) == "function" then
     loss = loss_spec(graph, output, target)
@@ -100,6 +117,10 @@ function Sequential:_build()
   elseif loss_spec == "binary_cross_entropy" or loss_spec == "bce" then
     loss = tf.losses.binary_cross_entropy(graph, output, target,
       { axes = { 0, 1 } })
+  elseif sparse then
+    local one_hot = tf.one_hot(graph, target, units, { name = "target_one_hot" })
+    loss = tf.losses.softmax_cross_entropy(graph, output, one_hot,
+      { axes = { 0 } })
   else
     error("unsupported loss '" .. tostring(loss_spec) .. "'", 3)
   end
@@ -109,10 +130,18 @@ function Sequential:_build()
     if name == "accuracy" then
       local predictions = tf.argmax(graph, output, 1, "metric/prediction",
         "float32", "int64")
-      local labels = tf.argmax(graph, target, 1, "metric/label", "float32",
-        "int64")
+      local labels, dtype
+      if sparse then
+        predictions = tf.cast(graph, predictions, "int64", "int32",
+          "metric/prediction_i32")
+        labels, dtype = target, "int32"
+      else
+        labels = tf.argmax(graph, target, 1, "metric/label", "float32",
+          "int64")
+        dtype = "int64"
+      end
       metric_outputs[i] = tf.metrics.accuracy(graph, predictions, labels,
-        { dtype = "int64", name = "metric/accuracy" })
+        { dtype = dtype, name = "metric/accuracy" })
       metric_names[i] = "accuracy"
     else
       error("unsupported metric '" .. tostring(name) .. "'", 3)
@@ -152,6 +181,7 @@ function Sequential:_build()
     initializers
   self._layers_built = layers
   self._units = units
+  self._sparse = sparse
   self._metric_names, self._metric_outputs = metric_names, metric_outputs
 end
 
@@ -160,7 +190,7 @@ function Sequential:fit(x, y, options)
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
-  y = normalize_rows(y, self._units)
+  y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
   if #x == 0 then error("fit requires a non-empty dataset", 2) end
   if #x ~= #y then error("x and y must have the same batch size", 2) end
   if options.shuffle then
@@ -243,7 +273,7 @@ function Sequential:evaluate(x, y, options)
   if self._session == nil then self._graph = nil end
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
-  y = normalize_rows(y, self._units)
+  y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
   local batch_size = options.batch_size or #x
   local total, batches = 0, 0
   local metric_sums = {}

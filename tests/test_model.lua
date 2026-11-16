@@ -150,3 +150,20 @@ test("trains with binary cross-entropy", function()
   assert_true(prediction > 0.5, tostring(prediction))
   model:close()
 end)
+
+test("trains with sparse integer labels", function()
+  math.randomseed(11)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 2 })
+  model:compile({ loss = "sparse_ce",
+    optimizer = { type = "adam", learning_rate = 0.05 },
+    metrics = { "accuracy" } })
+  local x = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } }
+  local y = { 0, 1, 1, 0 }
+  local history = model:fit(x, y, { epochs = 100, batch_size = 4 })
+  assert_eq(#history.loss, 100)
+  assert_eq(#history.accuracy, 100)
+  local _, metrics = model:evaluate(x, y)
+  assert_true(metrics.accuracy >= 0.5)
+  model:close()
+end)
