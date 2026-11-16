@@ -11,7 +11,8 @@
 - CenteredRMSProp, Adadelta, Ftrl, ProximalAdagrad, and Adam clipping/weight
   decay;
 - in-memory EarlyStopping restoration, resumable optimizer/epoch training
-  state, and broader leak/GC stress coverage;
+  state, runtime train/eval Dropout in Sequential, and broader leak/GC stress
+  coverage;
 - README and API navigation refresh.
 
 ## 0.3.0

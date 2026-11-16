@@ -88,7 +88,8 @@ function Layers.dropout(graph, input, rate, options)
   if type(rate) ~= "number" or rate < 0 or rate >= 1 then
     error("dropout rate must be in [0, 1)", 3)
   end
-  if options.training == false then return { output = input } end
+  local training = options.training
+  if training == false then return { output = input } end
   local tf = require("tensorflow")
   local prefix = options.name or "dropout"
   local dtype = options.dtype or "float32"
@@ -112,11 +113,20 @@ function Layers.dropout(graph, input, rate, options)
   cast:set_type("DstT", dtype)
   local scale = cast:finish()
   local scaled = tf.mul(graph, input, scale, prefix .. "/scale", dtype)
-  local output = tf.div(graph, scaled, tf.constant(graph, keep,
-    prefix .. "/divide_by", dtype), prefix .. "/output", dtype)
-  return { output = output }
+  local dropped = tf.div(graph, scaled, tf.constant(graph, keep,
+    prefix .. "/divide_by", dtype), prefix .. "/dropped", dtype)
+  if type(training) == "table" and training.oper ~= nil then
+    local cast_training = graph:new_operation("Cast", prefix .. "/training")
+    cast_training:add_input(training)
+    cast_training:set_type("SrcT", "bool")
+    cast_training:set_type("DstT", dtype)
+    local gate = cast_training:finish()
+    local delta = tf.sub(graph, dropped, input, prefix .. "/delta", dtype)
+    local gated = tf.mul(graph, gate, delta, prefix .. "/gate", dtype)
+    return { output = tf.add(graph, input, gated, prefix .. "/output", dtype) }
+  end
+  return { output = dropped }
 end
-
 function Layers.embedding(graph, input, input_dim, output_dim, options)
   options = options or {}
   if type(input_dim) ~= "number" or type(output_dim) ~= "number" or

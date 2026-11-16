@@ -319,8 +319,9 @@ Returns `{ output, weight, bias, variables, initializers, input_size, units }`.
 ### `tf.layers.dropout(graph, input, rate[, opts])`
 
 Builds an inverted-dropout mask from the dynamic input shape. Options:
-`training` (default true; false returns the input unchanged), `seed`, `seed2`,
-`dtype`, `name`. Returns `{ output }`.
+`training` (default true; false returns the input unchanged; a boolean graph
+output switches at runtime), `seed`, `seed2`, `dtype`, `name`. Returns
+`{ output }`.
 
 ### `tf.layers.flatten(graph, input, input_size[, opts])`
 
@@ -343,6 +344,7 @@ Returns the layer list. The caller must run every layer initializer.
 ```lua
 local model = tf.Sequential.new({ input_shape = { 2 } })
 model:add({ units = 4, options = { activation = "relu" } })
+model:add({ type = "dropout", rate = 0.2 })  -- train-only; inference is identity
 model:add({ type = "flatten" })       -- optional, no parameters
 model:add({ units = 1 })
 model:compile({ loss = "mse", optimizer = { type = "adam", learning_rate = 0.01 } })

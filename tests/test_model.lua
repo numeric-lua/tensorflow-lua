@@ -394,3 +394,21 @@ test("resumes training with optimizer and epoch state", function()
   resumed:close()
   os.execute("rm -rf /tmp/tf-lua-resume")
 end)
+
+test("uses conditional dropout in Sequential", function()
+  math.randomseed(27)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 4, options = { activation = "relu" } })
+  model:add({ type = "dropout", rate = 0.5, seed = 2 })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 } }, { { 1 }, { 3 }, { 5 } },
+    { epochs = 5 })
+  assert_eq(#history.loss, 5)
+  local first = model:predict({ { 3 } }):totable()[1][1]
+  local second = model:predict({ { 3 } }):totable()[1][1]
+  assert_eq(first, second)
+  local summary = model:summary()
+  assert_true(summary:find("Dropout", 1, true) ~= nil)
+  model:close()
+end)

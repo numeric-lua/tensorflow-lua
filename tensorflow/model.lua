@@ -60,7 +60,8 @@ function Sequential:add(options)
   if type(options) ~= "table" then
     error("add expects a layer definition table", 2)
   end
-  if options.type == "flatten" or options.type == "embedding" then
+  if options.type == "flatten" or options.type == "embedding" or
+      options.type == "dropout" then
     if options.type == "embedding" and #self._layers == 0 and
         self._input_dtype == nil then
       self._input_dtype = "int32"
@@ -99,14 +100,23 @@ function Sequential:_build()
   for _, dimension in ipairs(self._input_shape) do input_shape[#input_shape + 1] = dimension end
   local input = tf.placeholder(graph, self._input_dtype or "float32",
     input_shape, "input")
+  local training = tf.placeholder(graph, "bool", { }, "training")
   local output = input
   local variables, initializers, layers = {}, {}, {}
   local feature_size = self._input_shape[#self._input_shape]
   for i, definition in ipairs(self._layers) do
     local options = definition.options or {}
-    options.name = options.name or (definition.type == "flatten" and
-      ("flatten_" .. i) or ("dense_" .. i))
-    if definition.type == "embedding" then
+    options.name = options.name or ((definition.type or "dense") .. "_" .. i)
+    if definition.type == "dropout" then
+      local layer = tf.layers.dropout(graph, output,
+        definition.rate or options.rate or 0.5, {
+          training = training, seed = options.seed, seed2 = options.seed2,
+          name = options.name, dtype = options.dtype,
+        })
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "dropout" }
+      output = layer.output
+    elseif definition.type == "embedding" then
       local input_dim = definition.input_dim or options.input_dim
       local output_dim = definition.output_dim or options.output_dim
       if type(input_dim) ~= "number" or type(output_dim) ~= "number" then
@@ -284,6 +294,7 @@ function Sequential:_build()
   self._graph, self._session = graph, session
   self._input, self._target, self._loss, self._output = input, target, loss,
     output
+  self._training = training
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
   self._optimizer_state = type(state) == "table" and state or nil
@@ -388,8 +399,9 @@ function Sequential:fit(x, y, options)
       for _, output in ipairs(self._metric_outputs or {}) do
         fetch[#fetch + 1] = output
       end
-      local values = self._session:run({ [self._input] = batch_x,
-        [self._target] = batch_y }, fetch, self._updates)
+      local feeds = { [self._input] = batch_x, [self._target] = batch_y }
+      if self._training ~= nil then feeds[self._training] = true end
+      local values = self._session:run(feeds, fetch, self._updates)
       epoch_loss = epoch_loss + values[1]:totable()
       for i = 1, #(self._metric_outputs or {}) do
         metric_sums[i] = (metric_sums[i] or 0) + values[i + 1]:totable()
@@ -444,7 +456,9 @@ function Sequential:predict_proba(x)
   if is_dataset(x) then x = x:data() end
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   if #x == 0 then error("predict_proba requires non-empty input", 2) end
-  return self._session:run({ [self._input] = x }, { self._proba_output })[1]
+  local feeds = { [self._input] = x }
+  if self._training ~= nil then feeds[self._training] = false end
+  return self._session:run(feeds, { self._proba_output })[1]
 end
 
 function Sequential:predict_classes(x)
@@ -456,7 +470,9 @@ function Sequential:predict_classes(x)
   if is_dataset(x) then x = x:data() end
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   if #x == 0 then error("predict_classes requires non-empty input", 2) end
-  return self._session:run({ [self._input] = x }, { self._class_output })[1]
+  local feeds = { [self._input] = x }
+  if self._training ~= nil then feeds[self._training] = false end
+  return self._session:run(feeds, { self._class_output })[1]
 end
 
 function Sequential:evaluate_dataset(dataset, options)
@@ -473,7 +489,9 @@ function Sequential:predict(x)
   self:_build()
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   if #x == 0 then error("predict requires non-empty input", 2) end
-  return self._session:run({ [self._input] = x }, { self._output })[1]
+  local feeds = { [self._input] = x }
+  if self._training ~= nil then feeds[self._training] = false end
+  return self._session:run(feeds, { self._output })[1]
 end
 
 function Sequential:evaluate(x, y, options)
@@ -517,8 +535,10 @@ function Sequential:evaluate(x, y, options)
     for _, output in ipairs(self._metric_outputs or {}) do
       fetch[#fetch + 1] = output
     end
-    local values = self._session:run({ [self._input] = batch_slice(x, first, last),
-      [self._target] = batch_slice(y, first, last) }, fetch)
+    local feeds = { [self._input] = batch_slice(x, first, last),
+      [self._target] = batch_slice(y, first, last) }
+    if self._training ~= nil then feeds[self._training] = false end
+    local values = self._session:run(feeds, fetch)
     total = total + values[1]:totable()
     for i = 1, #(self._metric_outputs or {}) do
       metric_sums[i] = (metric_sums[i] or 0) + values[i + 1]:totable()
@@ -696,6 +716,8 @@ function Sequential:summary()
     if layer.kind == "flatten" then
       rows[#rows + 1] = string.format("  %d: Flatten(%d)", i,
         layer.input_size)
+    elseif layer.kind == "dropout" then
+      rows[#rows + 1] = string.format("  %d: Dropout", i)
     elseif layer.kind == "embedding" then
       rows[#rows + 1] = string.format("  %d: Embedding(%d -> %d)", i,
         layer.input_dim, layer.output_dim)
