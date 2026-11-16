@@ -30,6 +30,16 @@ test("exposes the public API surface", function()
   assert_true(tf.data.Dataset ~= nil)
   assert_true(tf.callbacks.EarlyStopping ~= nil)
   assert_true(tf.callbacks.ModelCheckpoint ~= nil)
+  local sequential_methods = {
+    "new", "add", "compile", "fit", "fit_dataset", "evaluate",
+    "evaluate_dataset", "predict", "predict_dataset", "predict_classes",
+    "predict_proba", "get_weights", "set_weights", "count_params", "summary",
+    "save", "load", "save_native", "load_native", "export", "close",
+  }
+  for _, name in ipairs(sequential_methods) do
+    assert_true(type(tf.Sequential[name]) == "function",
+      "missing Sequential." .. name)
+  end
   assert_true(tf.eager.Context ~= nil)
   assert_true(tf.layers.dense ~= nil and tf.layers.embedding ~= nil)
   assert_true(tf.losses.mean_squared_error ~= nil)
