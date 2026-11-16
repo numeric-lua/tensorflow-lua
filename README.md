@@ -23,6 +23,7 @@ suite currently contains 119 tests.
   Flatten, and Dropout layers, including Conv2D/MaxPool stacks, resumable
   BatchNorm statistics, and runtime train/eval normalization/dropout switching
   in Sequential;
+- tested against libtensorflow 2.16.2 and 2.18.0 on Ubuntu 22.04/24.04;
 - loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
   binary/class accuracy, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
@@ -43,8 +44,8 @@ experimental `tf.eager` surface with basic arithmetic and activations.
 ## Requirements
 
 - LuaJIT 2.1
-- Linux x86_64 libtensorflow 2.18 (download it with
-  `./scripts/fetch_libtensorflow.sh`)
+- Linux x86_64 libtensorflow 2.16.2 or 2.18.0 (download it with
+  `./scripts/fetch_libtensorflow.sh`; set `TENSORFLOW_VERSION` to select)
 - no mandatory Lua rocks (the rockspec is optional packaging)
 
 ```sh

@@ -5,6 +5,7 @@
 - Conv2D, MaxPool2D, and BatchNormalization layers;
 - Conv2D/MaxPool/BatchNorm stacks in Sequential;
 - resumable BatchNorm moving statistics;
+- CI coverage for libtensorflow 2.16.2/2.18.0 on Ubuntu 22.04/24.04;
 - integer-list graph attributes.
 
 ## 0.4.0
