@@ -1021,7 +1021,7 @@ function Sequential:fit_tensor(x, y, options)
   return history
 end
 
-function Sequential:evaluate_tensor(x, y, options)
+function Sequential:evaluate_tensor(x, y, _)
   local Tensor = require("tensorflow.tensor")
   if getmetatable(x) ~= Tensor or getmetatable(y) ~= Tensor then
     error("evaluate_tensor expects Tensor inputs", 2)
