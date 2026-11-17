@@ -743,3 +743,26 @@ test("trains with global gradient clipping", function()
   end
   model:close()
 end)
+
+test("saves and reconstructs model architecture", function()
+  math.randomseed(48)
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 3, options = { activation = "relu" } })
+  model:add({ units = 1 })
+  model:compile({ loss = "mse", optimizer = { type = "sgd", learning_rate = 0.01 } })
+  model:fit({ { 1, 2 }, { 2, 3 } }, { { 1 }, { 2 } }, { epochs = 2 })
+  local path = "/tmp/tf-lua-model-config.lua"
+  model:save_config(path)
+  local restored = tf.Sequential.load_config(path)
+  local config = restored:get_config()
+  assert_eq(config.input_shape[1], 2)
+  assert_eq(#config.layers, 2)
+  assert_eq(config.compile.optimizer.type, "sgd")
+  restored:set_weights(model:get_weights())
+  local expected = model:predict({ { 4, 5 } }):totable()[1][1]
+  local actual = restored:predict({ { 4, 5 } }):totable()[1][1]
+  assert_true(math.abs(expected - actual) < 1e-6)
+  os.remove(path)
+  model:close()
+  restored:close()
+end)

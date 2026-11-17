@@ -7,9 +7,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.8.0` alpha. Graph inference, construction, training, checkpoints, eager
+`0.9.0` alpha. Graph inference, construction, training, checkpoints, eager
 mode, Conv2D/BatchNorm layers, and a small Sequential model. The dependency-free
-suite currently contains 140 tests.
+suite currently contains 141 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -37,7 +37,8 @@ suite currently contains 140 tests.
   sparse losses,
   `predict_proba`/`predict_classes`, weight snapshots, Embedding/Flatten
   stacks, runtime train/eval Dropout, resumable optimizer/epoch state,
-  GraphDef export, and portable/native checkpoints;
+  architecture config save/load, GraphDef export, and portable/native
+  checkpoints;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;

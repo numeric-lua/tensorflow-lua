@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- Sequential architecture configuration (`get_config`, `save_config`,
+  `load_config`, `from_config`);
+- Lua-literal model configuration serializer with cycle/function rejection.
+
 ## 0.8.0
 
 - Reshape, Permute, UpSampling2D, ZeroPadding2D, DepthwiseConv2D, and

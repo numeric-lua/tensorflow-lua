@@ -38,5 +38,6 @@ build = {
     ["tensorflow.callbacks"] = "tensorflow/callbacks.lua",
     ["tensorflow.saver"] = "tensorflow/saver.lua",
     ["tensorflow.data"] = "tensorflow/data.lua",
+    ["tensorflow.serialize"] = "tensorflow/serialize.lua",
   },
 }

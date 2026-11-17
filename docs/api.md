@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.8.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.9.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -498,6 +498,9 @@ model:close()
   functions. Set `history.stop_training = true` to end training early.
 - `count_params()` returns the total number of weights and biases;
   `summary()` renders the layer stack and total;
+- `get_config()` returns a serializable architecture/compile table;
+  `save_config(path)` and `load_config(path)` use a trusted Lua-literal file;
+  `Sequential.from_config(table)` reconstructs a model;
 - `get_weights()` returns variable tensors and `set_weights(list)` assigns them;
 - `save`/`load` use the portable tensorflow-lua checkpoint format;
   `save_native`/`load_native` use TensorFlow V2 checkpoints for model weights;

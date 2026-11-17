@@ -1,6 +1,8 @@
 --
 -- Minimal Sequential model: Dense layers, a loss, an optimizer, and fit/predict.
 --
+local Serialize = require("tensorflow.serialize")
+
 local Sequential = {}
 Sequential.__index = Sequential
 
@@ -1072,6 +1074,54 @@ function Sequential:load_training(prefix)
     if learning_rate ~= nil then self._current_lr = tonumber(learning_rate) end
   end
   return self
+end
+
+function Sequential:get_config()
+  local layers = {}
+  for index, definition in ipairs(self._layers) do
+    layers[index] = Serialize.copy(definition)
+  end
+  return {
+    input_shape = Serialize.copy(self._input_shape),
+    input_dtype = self._input_dtype or "float32",
+    layers = layers,
+    compile = Serialize.copy(self._compiled or {}),
+  }
+end
+
+function Sequential:save_config(path)
+  local file, err = io.open(path, "wb")
+  if file == nil then
+    error("cannot write model configuration: " .. tostring(err), 2)
+  end
+  file:write(Serialize.encode(self:get_config()))
+  file:close()
+  return path
+end
+
+function Sequential.from_config(config)
+  if type(config) ~= "table" or type(config.layers) ~= "table" then
+    error("invalid model configuration", 3)
+  end
+  local model = Sequential.new({
+    input_shape = Serialize.copy(config.input_shape),
+    input_dtype = config.input_dtype,
+  })
+  for _, definition in ipairs(config.layers) do
+    model:add(Serialize.copy(definition))
+  end
+  if config.compile ~= nil then model:compile(Serialize.copy(config.compile)) end
+  return model
+end
+
+function Sequential.load_config(path)
+  local file, err = io.open(path, "rb")
+  if file == nil then
+    error("cannot read model configuration: " .. tostring(err), 2)
+  end
+  local text = file:read("*a")
+  file:close()
+  return Sequential.from_config(Serialize.decode(text))
 end
 
 function Sequential:save(path)
