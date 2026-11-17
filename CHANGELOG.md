@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+- `Sequential:fit_tensor` and `evaluate_tensor` for full-batch Tensor feeds;
+- tensor training avoids Lua-table conversion while retaining callbacks and
+  BatchNorm updates.
+
 ## 0.9.0
 
 - Sequential architecture configuration (`get_config`, `save_config`,

@@ -959,6 +959,98 @@ function Sequential:predict(x)
   return self._session:run(feeds, { self._output })[1]
 end
 
+function Sequential:fit_tensor(x, y, options)
+  options = options or {}
+  local Tensor = require("tensorflow.tensor")
+  if getmetatable(x) ~= Tensor or getmetatable(y) ~= Tensor then
+    error("fit_tensor expects Tensor inputs", 2)
+  end
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local batch = x:shape()[1]
+  if y:shape()[1] ~= batch then
+    error("fit_tensor input and target batch sizes differ", 2)
+  end
+  local ones = {}
+  for index = 1, batch do ones[index] = 1 end
+  local sample_weight = require("tensorflow").tensor(ones)
+  local callbacks = options.callbacks or {}
+  local history = { loss = {} }
+  for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
+  self._epoch = self._epoch or 0
+  for _, callback in ipairs(callbacks) do
+    if type(callback.on_train_begin) == "function" then
+      callback.on_train_begin(history, self)
+    end
+  end
+  for epoch = 1, options.epochs or 1 do
+    local feeds = {
+      [self._input] = x, [self._target] = y, [self._sample_weight] = sample_weight,
+    }
+    if self._training ~= nil then feeds[self._training] = true end
+    feeds[self._learning_rate] = self._current_lr or self._initial_lr
+    if #(self._batchnorm_updates or {}) > 0 then
+      self._session:run(feeds, {}, self._batchnorm_updates)
+    end
+    local fetch = { self._loss }
+    for _, output in ipairs(self._metric_outputs or {}) do
+      fetch[#fetch + 1] = output
+    end
+    local values = self._session:run(feeds, fetch, self._updates)
+    local loss = values[1]:totable()
+    history.loss[#history.loss + 1] = loss
+    for index, name in ipairs(self._metric_names or {}) do
+      local metric = values[index + 1]:totable()
+      history[name] = history[name] or {}
+      history[name][#history[name] + 1] = metric
+    end
+    for index, callback in ipairs(callbacks) do
+      if type(callback.on_epoch_end) == "function" then
+        callback.on_epoch_end(history, epoch, self)
+      end
+    end
+    self._epoch = self._epoch + 1
+    if history.stop_training then break end
+  end
+  for _, callback in ipairs(callbacks) do
+    if type(callback.on_train_end) == "function" then
+      callback.on_train_end(history, self)
+    end
+  end
+  sample_weight:destroy()
+  return history
+end
+
+function Sequential:evaluate_tensor(x, y, options)
+  options = options or {}
+  local Tensor = require("tensorflow.tensor")
+  if getmetatable(x) ~= Tensor or getmetatable(y) ~= Tensor then
+    error("evaluate_tensor expects Tensor inputs", 2)
+  end
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local batch = x:shape()[1]
+  local ones = {}
+  for index = 1, batch do ones[index] = 1 end
+  local sample_weight = require("tensorflow").tensor(ones)
+  local fetch = { self._loss }
+  for _, output in ipairs(self._metric_outputs or {}) do
+    fetch[#fetch + 1] = output
+  end
+  local feeds = {
+    [self._input] = x, [self._target] = y, [self._sample_weight] = sample_weight,
+  }
+  if self._training ~= nil then feeds[self._training] = false end
+  local values = self._session:run(feeds, fetch)
+  local metrics = {}
+  for index, name in ipairs(self._metric_names or {}) do
+    metrics[name] = values[index + 1]:totable()
+  end
+  sample_weight:destroy()
+  if next(metrics) == nil then return values[1]:totable() end
+  return values[1]:totable(), metrics
+end
+
 function Sequential:evaluate(x, y, options)
   options = options or {}
   if is_dataset(x) then
