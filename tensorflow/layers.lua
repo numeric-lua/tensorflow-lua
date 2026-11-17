@@ -449,6 +449,183 @@ function Layers.flatten(graph, input, input_size, options)
   }
 end
 
+function Layers.reshape(graph, input, shape, options)
+  options = options or {}
+  if type(shape) ~= "table" or #shape == 0 then
+    error("reshape requires a non-empty target shape", 3)
+  end
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "reshape"
+  local desc = graph:new_operation("Reshape", prefix .. "/reshape")
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, shape, prefix .. "/shape", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tshape", "int32")
+  return { output = desc:finish(), variables = {}, initializers = {},
+    shape = shape }
+end
+
+function Layers.permute(graph, input, perm, options)
+  options = options or {}
+  if type(perm) ~= "table" or #perm == 0 then
+    error("permute requires a permutation list", 3)
+  end
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "permute"
+  local desc = graph:new_operation("Transpose", prefix .. "/transpose")
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, perm, prefix .. "/perm", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tperm", "int32")
+  return { output = desc:finish(), variables = {}, initializers = {},
+    perm = perm }
+end
+
+function Layers.upsampling2d(graph, input, scale, options)
+  options = options or {}
+  local scale_h, scale_w = scale, scale
+  if type(scale) == "table" then scale_h, scale_w = scale[1], scale[2] end
+  if type(scale_h) ~= "number" or type(scale_w) ~= "number" or
+      scale_h < 1 or scale_w < 1 then
+    error("upsampling2d requires a positive scale", 3)
+  end
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "upsampling2d"
+  local input_shape = options.input_shape
+  if type(input_shape) ~= "table" or #input_shape ~= 3 then
+    error("upsampling2d requires options.input_shape = {h, w, c}", 3)
+  end
+  local size = tf.constant(graph,
+    { math.floor(input_shape[1] * scale_h), math.floor(input_shape[2] * scale_w) },
+    prefix .. "/size", "int32")
+  local desc = graph:new_operation("ResizeNearestNeighbor",
+    prefix .. "/resize")
+  desc:add_input(input)
+  desc:add_input(size)
+  desc:set_type("T", dtype)
+  desc:set_bool("align_corners", false)
+  desc:set_bool("half_pixel_centers", false)
+  return { output = desc:finish(), variables = {}, initializers = {},
+    scale = { scale_h, scale_w } }
+end
+
+function Layers.zero_padding2d(graph, input, padding, options)
+  options = options or {}
+  local top, bottom, left, right
+  if type(padding) == "number" then
+    top, bottom, left, right = padding, padding, padding, padding
+  elseif type(padding) == "table" then
+    top, bottom, left, right = padding[1], padding[2], padding[3], padding[4]
+  end
+  if not top or not bottom or not left or not right then
+    error("zero_padding2d requires a number or {top, bottom, left, right}", 3)
+  end
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "zero_padding2d"
+  local paddings = tf.constant(graph,
+    { { 0, 0 }, { top, bottom }, { left, right }, { 0, 0 } },
+    prefix .. "/paddings", "int32")
+  local desc = graph:new_operation("Pad", prefix .. "/pad")
+  desc:add_input(input)
+  desc:add_input(paddings)
+  desc:set_type("T", dtype)
+  desc:set_type("Tpaddings", "int32")
+  return { output = desc:finish(), variables = {}, initializers = {},
+    padding = { top, bottom, left, right } }
+end
+
+function Layers.depthwise_conv2d(graph, input, multiplier, kernel_size, options)
+  options = options or {}
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("depthwise_conv2d requires options.in_channels", 3)
+  end
+  multiplier = multiplier or 1
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  local stride_h, stride_w = options.stride or 1, options.stride or 1
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  local dilation_h, dilation_w = options.dilation or 1, options.dilation or 1
+  if type(options.dilation) == "table" then
+    dilation_h, dilation_w = options.dilation[1], options.dilation[2]
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "depthwise_conv2d"
+  local tf = require("tensorflow")
+  local bound = math.sqrt(6 / (kernel_h * kernel_w * in_channels))
+  local values = {}
+  for y = 1, kernel_h do
+    values[y] = {}
+    for x = 1, kernel_w do
+      values[y][x] = {}
+      for c = 1, in_channels do
+        values[y][x][c] = {}
+        for m = 1, multiplier do
+          values[y][x][c][m] = (math.random() * 2 - 1) * bound
+        end
+      end
+    end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
+    { dtype = dtype })
+  local desc = graph:new_operation("DepthwiseConv2dNative",
+    prefix .. "/conv")
+  desc:add_input(input)
+  desc:add_input(weight.read)
+  desc:set_type("T", dtype)
+  desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "SAME")
+  desc:set_string("data_format", "NHWC")
+  desc:set_int_list("dilations", { 1, dilation_h, dilation_w, 1 })
+  local output = desc:finish()
+  local variables, initializers = { weight }, { weight.initializer }
+  local bias = nil
+  local channels = in_channels * multiplier
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, channels do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  local activation = options.activation
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. activation, dtype)
+  elseif type(activation) == "function" then
+    output = activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output, weight = weight, bias = bias, variables = variables,
+    initializers = initializers, channels = channels,
+    kernel_size = { kernel_h, kernel_w }, dtype = dtype,
+  }
+end
+
+function Layers.global_max_pool1d(graph, input, options)
+  options = options or {}
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "global_max_pool1d"
+  local desc = graph:new_operation("Max", prefix .. "/max")
+  desc:add_input(input)
+  desc:add_input(require("tensorflow").constant(graph, { 1 },
+    prefix .. "/axes", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tidx", "int32")
+  desc:set_bool("keep_dims", false)
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
 function Layers.dropout(graph, input, rate, options)
   options = options or {}
   rate = rate or 0.5

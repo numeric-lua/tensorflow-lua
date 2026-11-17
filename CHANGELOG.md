@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Reshape, Permute, UpSampling2D, ZeroPadding2D, DepthwiseConv2D, and
+  GlobalMaxPool1D layers;
+- depthwise convolution support in Sequential;
+- global-norm gradient clipping for every optimizer.
+
 ## 0.7.0
 
 - feedable learning rates and `ReduceLROnPlateau`;

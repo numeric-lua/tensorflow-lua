@@ -48,4 +48,4 @@ jobs:
           TREE="$PWD/dist/rock"
           luarocks --lua-version=5.1 make --tree="$TREE" --deps-mode=none tensorflow-lua-scm-1.rockspec
           eval "$(luarocks --lua-version=5.1 path --tree="$TREE" --bin)"
-          luajit -e 'local tf = require("tensorflow"); assert(tf.VERSION == "0.7.0"); assert(tf.Sequential); assert(tf.data.Dataset)'
+          luajit -e 'local tf = require("tensorflow"); assert(tf.VERSION == "0.8.0"); assert(tf.Sequential); assert(tf.data.Dataset)'

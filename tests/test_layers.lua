@@ -210,3 +210,58 @@ test("runs global max pooling and activation layers", function()
   assert_eq(flat[2], 0)
   session:close()
 end)
+
+test("runs reshape and permute layers", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 2, 6 }, "shape_input")
+  local reshape = tf.layers.reshape(graph, input, { 2, 2, 3 },
+    { name = "reshape" })
+  local permute = tf.layers.permute(graph, reshape.output, { 0, 2, 1 },
+    { name = "permute" })
+  local session = tf.Session.new(graph)
+  local values = { { 1, 2, 3, 4, 5, 6 }, { 7, 8, 9, 10, 11, 12 } }
+  local output = session:run({ [input] = values }, { permute.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "2,3,2")
+  session:close()
+end)
+
+test("runs padding, upsampling, and depthwise convolution", function()
+  math.randomseed(43)
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "diff_input")
+  local padded = tf.layers.zero_padding2d(graph, input, 1,
+    { name = "pad" })
+  local depthwise = tf.layers.depthwise_conv2d(graph, padded.output, 2, 3,
+    { in_channels = 2, padding = "SAME", name = "depthwise" })
+  local upsampled = tf.layers.upsampling2d(graph, depthwise.output, 2,
+    { input_shape = { 6, 6, 4 }, name = "upsample" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, depthwise.initializers)
+  local values = {}
+  for y = 1, 4 do
+    values[y] = {}
+    for x = 1, 4 do values[y][x] = { y, x } end
+  end
+  local output = session:run({ [input] = { values } },
+    { upsampled.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,12,12,4")
+  session:close()
+end)
+
+test("runs global max-pooling over time", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 2, 5, 3 }, "gm1_input")
+  local layer = tf.layers.global_max_pool1d(graph, input, { name = "gmp1" })
+  local session = tf.Session.new(graph)
+  local values = {}
+  for n = 1, 2 do
+    values[n] = {}
+    for t = 1, 5 do values[n][t] = { t, -t, n } end
+  end
+  local output = session:run({ [input] = values }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "2,3")
+  local flat = output:totable()
+  assert_eq(flat[1][1], 5)
+  assert_eq(flat[1][2], -1)
+  session:close()
+end)

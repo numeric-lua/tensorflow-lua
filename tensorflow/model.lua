@@ -72,6 +72,10 @@ function Sequential:add(options)
       options.type == "avg_pool2d" or
       options.type == "global_avg_pool2d" or
       options.type == "global_max_pool2d" or options.type == "activation" or
+      options.type == "reshape" or options.type == "permute" or
+      options.type == "upsampling2d" or options.type == "zero_padding2d" or
+      options.type == "depthwise_conv2d" or
+      options.type == "global_max_pool1d" or
       options.type == "batchnorm" or
       options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
@@ -121,7 +125,137 @@ function Sequential:_build()
   for i, definition in ipairs(self._layers) do
     local options = definition.options or {}
     options.name = options.name or ((definition.type or "dense") .. "_" .. i)
-    if definition.type == "batchnorm" or
+    if definition.type == "reshape" then
+      local target = { -1 }
+      local shape = definition.shape
+      if type(shape) ~= "table" or #shape == 0 then
+        error("reshape layers require a non-empty shape", 3)
+      end
+      for _, dimension in ipairs(shape) do target[#target + 1] = dimension end
+      local layer = tf.layers.reshape(graph, output, target,
+        { name = options.name })
+      spatial = copy_shape(shape)
+      feature_size = 1
+      for _, dimension in ipairs(spatial) do feature_size = feature_size * dimension end
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "reshape" }
+      output = layer.output
+    elseif definition.type == "permute" then
+      local perm = definition.perm
+      if type(perm) ~= "table" or #perm ~= #spatial + 1 then
+        error("permute layers require a full permutation including batch", 3)
+      end
+      local layer = tf.layers.permute(graph, output, perm,
+        { name = options.name })
+      local reordered = {}
+      for index = 2, #perm do
+        reordered[#reordered + 1] = spatial[perm[index]]
+      end
+      spatial = reordered
+      feature_size = 1
+      for _, dimension in ipairs(spatial) do feature_size = feature_size * dimension end
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "permute" }
+      output = layer.output
+    elseif definition.type == "upsampling2d" then
+      if #spatial ~= 3 then
+        error("upsampling2d layers require an NHWC input", 3)
+      end
+      local scale_h = definition.scale or 2
+      local scale_w = definition.scale or 2
+      if type(definition.scale) == "table" then
+        scale_h, scale_w = definition.scale[1], definition.scale[2]
+      end
+      local layer = tf.layers.upsampling2d(graph, output,
+        { scale_h, scale_w }, { input_shape = spatial, name = options.name })
+      spatial = { math.floor(spatial[1] * scale_h),
+        math.floor(spatial[2] * scale_w), spatial[3] }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[3], kind = "upsampling2d" }
+      output = layer.output
+    elseif definition.type == "zero_padding2d" then
+      if #spatial ~= 3 then
+        error("zero_padding2d layers require an NHWC input", 3)
+      end
+      local padding = definition.padding
+      local top, bottom, left, right
+      if type(padding) == "number" then
+        top, bottom, left, right = padding, padding, padding, padding
+      elseif type(padding) == "table" then
+        top, bottom, left, right = padding[1], padding[2], padding[3], padding[4]
+      end
+      if not top or not bottom or not left or not right then
+        error("zero_padding2d requires padding", 3)
+      end
+      local layer = tf.layers.zero_padding2d(graph, output,
+        { top, bottom, left, right }, { name = options.name })
+      spatial = { spatial[1] + top + bottom, spatial[2] + left + right,
+        spatial[3] }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[3], kind = "zero_padding2d" }
+      output = layer.output
+    elseif definition.type == "depthwise_conv2d" then
+      if #spatial ~= 3 then
+        error("depthwise_conv2d layers require an NHWC input", 3)
+      end
+      local multiplier = definition.multiplier or 1
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1],
+          definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or 1,
+        definition.stride or 1
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local dilation_h, dilation_w = 1, 1
+      if type(definition.dilation) == "table" then
+        dilation_h, dilation_w = definition.dilation[1], definition.dilation[2]
+      elseif definition.dilation ~= nil then
+        dilation_h, dilation_w = definition.dilation, definition.dilation
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "SAME")
+      local layer = tf.layers.depthwise_conv2d(graph, output, multiplier,
+        { kernel_h, kernel_w }, {
+          in_channels = spatial[3], stride = { stride_h, stride_w },
+          padding = padding, dilation = { dilation_h, dilation_w },
+          use_bias = options.use_bias, activation = options.activation,
+          dtype = options.dtype, name = options.name,
+        })
+      local function output_dim(size, kernel, stride, dilation)
+        local effective = (kernel - 1) * dilation + 1
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - effective) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_h, stride_h, dilation_h),
+        output_dim(spatial[2], kernel_w, stride_w, dilation_w),
+        spatial[3] * multiplier }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[3], kind = "depthwise_conv2d",
+        kernel_size = { kernel_h, kernel_w }, multiplier = multiplier }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "global_max_pool1d" then
+      if #spatial ~= 2 then
+        error("global_max_pool1d layers require { steps, channels }", 3)
+      end
+      local layer = tf.layers.global_max_pool1d(graph, output,
+        { name = options.name })
+      spatial = { spatial[2] }
+      feature_size = spatial[1]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[1], kind = "global_max_pool1d" }
+      output = layer.output
+    elseif definition.type == "batchnorm" or
         definition.type == "batch_normalization" then
       local axes, channels
       if #spatial == 3 then
@@ -559,7 +693,8 @@ function Sequential:_build()
     targets, state = result[1], result[3]
   elseif optimizer_type == "sgd" or optimizer_type == "gradient_descent" then
     targets = tf.train.gradient_descent(graph, loss, variables,
-      optimizer.learning_rate or optimizer.lr or 0.01, optimizer.name)
+      optimizer.learning_rate or optimizer.lr or 0.01, optimizer.name,
+      optimizer)
   elseif optimizer_type == "rmsprop" then
     local result = { tf.train.rmsprop(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
@@ -1059,6 +1194,21 @@ function Sequential:summary()
         layer.units)
     elseif layer.kind == "global_max_pool2d" then
       rows[#rows + 1] = string.format("  %d: GlobalMaxPool2D(%d)", i,
+        layer.units)
+    elseif layer.kind == "reshape" then
+      rows[#rows + 1] = string.format("  %d: Reshape", i)
+    elseif layer.kind == "permute" then
+      rows[#rows + 1] = string.format("  %d: Permute", i)
+    elseif layer.kind == "upsampling2d" then
+      rows[#rows + 1] = string.format("  %d: UpSampling2D", i)
+    elseif layer.kind == "zero_padding2d" then
+      rows[#rows + 1] = string.format("  %d: ZeroPadding2D", i)
+    elseif layer.kind == "depthwise_conv2d" then
+      rows[#rows + 1] = string.format(
+        "  %d: DepthwiseConv2D(%dx%d, mult %d)", i, layer.kernel_size[1],
+        layer.kernel_size[2], layer.multiplier)
+    elseif layer.kind == "global_max_pool1d" then
+      rows[#rows + 1] = string.format("  %d: GlobalMaxPool1D(%d)", i,
         layer.units)
     elseif layer.kind == "activation" then
       rows[#rows + 1] = string.format("  %d: Activation", i)

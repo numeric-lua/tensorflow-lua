@@ -68,8 +68,56 @@ function Train.variable(graph, initial, name, options)
   }
 end
 
-function Train.gradient_descent(graph, loss, variables, learning_rate, name)
+local function maximum(graph, a, b, name, dtype)
+  local desc = graph:new_operation("Maximum", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype)
+  return desc:finish()
+end
+
+local function train_gradients(graph, loss, refs, options, name)
+  local tf = require("tensorflow")
+  local gradients = tf.gradients(graph, { loss }, refs)
+  local clipnorm = options and (options.clipnorm or options.clip_norm)
+  if clipnorm ~= nil then
+    if type(clipnorm) ~= "number" or clipnorm <= 0 then
+      error("clipnorm must be a positive number", 3)
+    end
+    local dtype = refs[1].dtype or "float32"
+    if type(dtype) ~= "string" then dtype = "float32" end
+    local sums = {}
+    for index, gradient in ipairs(gradients) do
+      local flat = tf.reshape(graph, gradient, { -1 },
+        name .. "/norm_flat_" .. index, dtype)
+      local squared = tf.square(graph, flat, name .. "/norm_square_" .. index,
+        dtype)
+      sums[#sums + 1] = tf.reduce_sum(graph, squared, { 0 },
+        name .. "/norm_sum_" .. index, dtype)
+    end
+    local total = sums[1]
+    for index = 2, #sums do
+      total = tf.add(graph, total, sums[index], name .. "/norm_total_" .. index,
+        dtype)
+    end
+    local norm = tf.sqrt(graph, total, name .. "/norm", dtype)
+    local limit = Train.constant(graph, clipnorm, name .. "/clipnorm", dtype)
+    local denominator = maximum(graph, norm, limit, name .. "/clip_denominator",
+      dtype)
+    local scale = tf.div(graph, limit, denominator, name .. "/clip_scale",
+      dtype)
+    for index, gradient in ipairs(gradients) do
+      gradients[index] = tf.mul(graph, gradient, scale,
+        name .. "/clipped_" .. index, dtype)
+    end
+  end
+  return gradients
+end
+
+function Train.gradient_descent(graph, loss, variables, learning_rate, name,
+    options)
   name = name or "GradientDescent"
+  options = options or {}
   if type(variables) ~= "table" or #variables == 0 then
     error("gradient_descent expects a non-empty variable list", 3)
   end
@@ -77,7 +125,7 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name)
   for i, variable in ipairs(variables) do
     refs[i] = variable.ref or variable
   end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local lr_dtype = variables[1].dtype or variables[1].ref.dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     lr_dtype)
@@ -127,7 +175,7 @@ function Train.adam(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local clipvalue = options.clipvalue or options.clip_value
   if clipvalue ~= nil then
@@ -300,7 +348,7 @@ function Train.rmsprop(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -348,7 +396,7 @@ function Train.centered_rmsprop(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -399,7 +447,7 @@ function Train.adagrad(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local targets, initializers, state_variables = {}, {}, {}
@@ -435,7 +483,7 @@ function Train.adadelta(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -480,7 +528,7 @@ function Train.proximal_adagrad(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     dtype)
@@ -522,7 +570,7 @@ function Train.ftrl(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
@@ -568,7 +616,7 @@ function Train.momentum(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = require("tensorflow").gradients(graph, { loss }, refs)
+  local gradients = train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)

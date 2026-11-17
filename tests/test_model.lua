@@ -687,3 +687,59 @@ test("feeds a scheduled learning rate", function()
   assert_true(math.abs(seen[3] - 0.025) < 1e-12)
   model:close()
 end)
+
+test("trains a depthwise Conv2D Sequential stack", function()
+  math.randomseed(44)
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 2 } })
+  model:add({ type = "zero_padding2d", padding = 1,
+    options = { name = "pad" } })
+  model:add({ type = "depthwise_conv2d", multiplier = 2, kernel_size = 3,
+    options = { padding = "SAME", activation = "relu", name = "depthwise" } })
+  model:add({ type = "upsampling2d", scale = 2, options = { name = "up" } })
+  model:add({ type = "global_max_pool2d", options = { name = "gmp" } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 3 * 3 * 2 * 2 + 4 + 4 * 1 + 1)
+  local x, y = {}, {}
+  for sample = 1, 2 do
+    x[sample] = {}
+    for r = 1, 4 do
+      x[sample][r] = {}
+      for c = 1, 4 do x[sample][r][c] = { sample + r / 10, c / 10 } end
+    end
+    y[sample] = { sample }
+  end
+  local history = model:fit(x, y, { epochs = 2, batch_size = 2 })
+  assert_eq(#history.loss, 2)
+  assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
+  local summary = model:summary()
+  assert_true(summary:find("DepthwiseConv2D", 1, true) ~= nil)
+  model:close()
+end)
+
+test("runs reshape and permute in a Sequential model", function()
+  local model = tf.Sequential.new({ input_shape = { 6 } })
+  model:add({ type = "reshape", shape = { 2, 3 } })
+  model:add({ type = "permute", perm = { 0, 2, 1 } })
+  model:add({ type = "flatten" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local prediction = model:predict({ { 1, 2, 3, 4, 5, 6 } })
+  assert_eq(table.concat(prediction:shape(), ","), "1,1")
+  model:close()
+end)
+
+test("trains with global gradient clipping", function()
+  math.randomseed(45)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.1,
+    clipnorm = 0.001 } })
+  local history = model:fit({ { 0 }, { 1 }, { 2 } }, { { 10 }, { 20 }, { 30 } },
+    { epochs = 5 })
+  assert_eq(#history.loss, 5)
+  for _, value in ipairs(history.loss) do
+    assert_true(value == value, "loss must be finite")
+  end
+  model:close()
+end)

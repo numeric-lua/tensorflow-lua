@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.7.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.8.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -364,6 +364,39 @@ Max-pools the H/W dimensions and squeezes them, producing
 
 Applies a named or functional activation without parameters. Returns
 `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.reshape(graph, input, shape[, opts])`
+
+Builds a `Reshape` operation. `shape` includes the batch dimension (use `-1`
+for it). Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.permute(graph, input, perm[, opts])`
+
+Builds a `Transpose` operation. `perm` includes the batch dimension, e.g.
+`{ 0, 2, 1 }`. Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.upsampling2d(graph, input, scale[, opts])`
+
+Nearest-neighbor resizes an NHWC input. Requires `opts.input_shape = { h, w,
+c }`. Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.zero_padding2d(graph, input, padding[, opts])`
+
+Pads an NHWC input. `padding` is a number or
+`{ top, bottom, left, right }`. Returns `{ output, variables = {},
+initializers = {} }`.
+
+### `tf.layers.depthwise_conv2d(graph, input, multiplier, kernel_size[, opts])`
+
+Depthwise convolution with bias and optional activation. Options include
+`in_channels`, `stride`, `padding`, `dilation`, `use_bias`, `activation`,
+`dtype`, and `name`. Returns
+`{ output, weight, bias, variables, initializers, channels }`.
+
+### `tf.layers.global_max_pool1d(graph, input[, opts])`
+
+Max-pools the time dimension of `[batch, steps, channels]`, returning
+`[batch, channels]`. Returns `{ output, variables = {}, initializers = {} }`.
 
 ### `tf.layers.dense(graph, input, units, opts)`
 
