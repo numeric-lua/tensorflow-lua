@@ -324,6 +324,20 @@ Other options: `stride`, `padding` (`SAME`/`VALID`), `dilation`, `use_bias`,
 `activation`, `dtype`, `name`. Returns
 `{ output, weight, bias, variables, initializers, filters, kernel_size }`.
 
+### `tf.layers.conv2d_transpose(graph, input, filters, kernel_size[, opts])`
+
+Builds a bias-enabled transposed 2-D convolution (`Conv2DBackpropInput`) with
+a learned `[kh, kw, filters, in_channels]` kernel. Required option:
+`in_channels`. Other options: `stride`, `padding` (`SAME`/`VALID`), `dilation`,
+`output_shape`, `data_format` (`NHWC` by default; `NCHW` is forwarded to the
+graph op, although CPU TensorFlow only executes NHWC), `use_bias`, `activation`,
+`dtype`, `name`. `output_shape` may be
+`{ height, width, filters }` or the full `{ batch, height, width, filters }`
+(NHWC); when omitted, spatial sizes are derived from `input_shape` or the
+input tensor. Returns
+`{ output, weight, bias, variables, initializers, filters, in_channels,
+kernel_size, stride, padding, output_shape, data_format }`.
+
 ### `tf.layers.conv1d(graph, input, filters, kernel_size[, opts])`
 
 Builds a 1-D convolution over `[batch, steps, channels]` input using an
@@ -439,6 +453,8 @@ model:add({ type = "conv1d", filters = 8, kernel_size = 3,
   options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "conv2d", filters = 8, kernel_size = 3,
   options = { padding = "SAME", activation = "relu" } })
+model:add({ type = "conv2d_transpose", filters = 8, kernel_size = 3,
+  stride = 2, options = { padding = "SAME", activation = "relu" } })
 model:add({ type = "max_pool2d", kernel_size = 2, stride = 2 })
 model:add({ type = "avg_pool2d", kernel_size = 2, stride = 2 })
 model:add({ type = "global_avg_pool2d" })
@@ -463,6 +479,10 @@ model:close()
   `{{f1, f2}, ...}`. Convolutional models use NHWC-shaped input:
   `input_shape = { height, width, channels }`; Conv1D uses
   `input_shape = { steps, channels }`; add Flatten before Dense.
+- `{ type = "conv2d_transpose", filters = n, kernel_size = k }` builds a
+  transposed convolution; its output spatial shape is inferred from `stride`
+  and `padding`, or set explicitly with
+  `output_shape = { height, width, filters }`.
 - `{ type = "embedding", input_dim = n, output_dim = d }` builds text/index
   embeddings; an embedding-first model defaults its input dtype to `int32`.
   Set `input_dtype` explicitly when mixing integer inputs with other layers;

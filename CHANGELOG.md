@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Conv2DTranspose layer support in the layer API and Sequential models,
+  including NHWC/NCHW graph construction, optional output shapes, training,
+  and summaries.
+
 ## 0.10.0
 
 - `Sequential:fit_tensor` and `evaluate_tensor` for full-batch Tensor feeds;

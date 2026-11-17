@@ -70,6 +70,7 @@ function Sequential:add(options)
   end
   if options.type == "flatten" or options.type == "embedding" or
       options.type == "dropout" or options.type == "conv2d" or
+      options.type == "conv2d_transpose" or
       options.type == "conv1d" or options.type == "max_pool2d" or
       options.type == "avg_pool2d" or
       options.type == "global_avg_pool2d" or
@@ -361,6 +362,76 @@ function Sequential:_build()
       layers[i] = { output = layer.output, input_size = feature_size,
         units = definition.filters, kind = "conv2d",
         filters = definition.filters, kernel_size = { kernel_h, kernel_w } }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "conv2d_transpose" then
+      if #spatial ~= 3 then
+        error("conv2d_transpose layers require input_shape = { height, width, channels }",
+          3)
+      end
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1], definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or 1,
+        definition.stride or 1
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local dilation_h, dilation_w = 1, 1
+      if type(definition.dilation) == "table" then
+        dilation_h, dilation_w = definition.dilation[1], definition.dilation[2]
+      elseif definition.dilation ~= nil then
+        dilation_h, dilation_w = definition.dilation, definition.dilation
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "SAME")
+      local data_format = string.upper(options.data_format or
+        definition.data_format or "NHWC")
+      if data_format ~= "NHWC" then
+        error("conv2d_transpose Sequential layers require NHWC", 3)
+      end
+      local configured_shape = definition.output_shape or options.output_shape
+      local out_h, out_w
+      if configured_shape ~= nil then
+        if type(configured_shape) ~= "table" or
+            (#configured_shape ~= 3 and #configured_shape ~= 4) then
+          error("conv2d_transpose requires a 3-D or 4-D output_shape", 3)
+        end
+        if #configured_shape == 4 then
+          out_h, out_w = configured_shape[2], configured_shape[3]
+        else
+          out_h, out_w = configured_shape[1], configured_shape[2]
+        end
+      else
+        local effective_h = (kernel_h - 1) * dilation_h + 1
+        local effective_w = (kernel_w - 1) * dilation_w + 1
+        local function output_dim(size, stride, effective)
+          if padding == "SAME" then return size * stride end
+          return (size - 1) * stride + effective
+        end
+        out_h = output_dim(spatial[1], stride_h, effective_h)
+        out_w = output_dim(spatial[2], stride_w, effective_w)
+      end
+      local layer = tf.layers.conv2d_transpose(graph, output,
+        definition.filters, { kernel_h, kernel_w }, {
+          in_channels = spatial[3], stride = { stride_h, stride_w },
+          padding = padding, dilation = { dilation_h, dilation_w },
+          output_shape = { out_h, out_w, definition.filters },
+          data_format = data_format, use_bias = options.use_bias,
+          activation = options.activation, dtype = options.dtype,
+          name = options.name,
+        })
+      spatial = { out_h, out_w, definition.filters }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = definition.filters, kind = "conv2d_transpose",
+        filters = definition.filters, kernel_size = { kernel_h, kernel_w },
+        stride = { stride_h, stride_w }, padding = padding }
       for _, variable in ipairs(layer.variables) do
         variables[#variables + 1] = variable
       end
@@ -1324,6 +1395,10 @@ function Sequential:summary()
     elseif layer.kind == "conv2d" then
       rows[#rows + 1] = string.format("  %d: Conv2D(%d filters, %dx%d)", i,
         layer.filters, layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "conv2d_transpose" then
+      rows[#rows + 1] = string.format(
+        "  %d: Conv2DTranspose(%d filters, %dx%d)", i, layer.filters,
+        layer.kernel_size[1], layer.kernel_size[2])
     elseif layer.kind == "max_pool2d" then
       rows[#rows + 1] = string.format("  %d: MaxPool2D(%dx%d)", i,
         layer.kernel_size[1], layer.kernel_size[2])

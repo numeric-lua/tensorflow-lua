@@ -14,6 +14,27 @@ local function random_uniform(rows, columns, bound)
   return values
 end
 
+local function gather_dimension(graph, shape, index, name)
+  local tf = require("tensorflow")
+  local indices = tf.constant(graph, { index }, name .. "/index", "int32")
+  local axis = tf.constant(graph, 0, name .. "/axis", "int32")
+  local desc = graph:new_operation("GatherV2", name)
+  desc:add_input(shape)
+  desc:add_input(indices)
+  desc:add_input(axis)
+  desc:set_type("Tparams", "int32")
+  desc:set_type("Tindices", "int32")
+  desc:set_int("batch_dims", 0)
+  return desc:finish()
+end
+
+local function dimension_vector(graph, value, name)
+  if type(value) == "number" then
+    return require("tensorflow").constant(graph, { value }, name, "int32")
+  end
+  return value
+end
+
 function Layers.dense(graph, input, units, options)
   options = options or {}
   local input_size = options.input_size or options.in_features
@@ -259,6 +280,220 @@ function Layers.conv2d(graph, input, filters, kernel_size, options)
     initializers = initializers,
     filters = filters,
     kernel_size = { kernel_h, kernel_w },
+    dtype = dtype,
+  }
+end
+
+function Layers.conv2d_transpose(graph, input, filters, kernel_size, options)
+  options = options or {}
+  if type(filters) ~= "number" or filters < 1 then
+    error("conv2d_transpose requires positive filters", 3)
+  end
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("conv2d_transpose requires options.in_channels", 3)
+  end
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  if type(kernel_h) ~= "number" or type(kernel_w) ~= "number" or
+      kernel_h < 1 or kernel_w < 1 then
+    error("conv2d_transpose requires a positive kernel size", 3)
+  end
+  local stride_h, stride_w = options.stride or 1, options.stride or 1
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  if type(stride_h) ~= "number" or type(stride_w) ~= "number" or
+      stride_h < 1 or stride_w < 1 then
+    error("conv2d_transpose requires a positive stride", 3)
+  end
+  local dilation_h, dilation_w = options.dilation or 1, options.dilation or 1
+  if type(options.dilation) == "table" then
+    dilation_h, dilation_w = options.dilation[1], options.dilation[2]
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "conv2d_transpose"
+  local padding = string.upper(options.padding or "SAME")
+  local data_format = string.upper(options.data_format or "NHWC")
+  if padding ~= "SAME" and padding ~= "VALID" then
+    error("conv2d_transpose padding must be SAME or VALID", 3)
+  end
+  if data_format ~= "NHWC" and data_format ~= "NCHW" then
+    error("conv2d_transpose data_format must be NHWC or NCHW", 3)
+  end
+  local tf = require("tensorflow")
+
+  local output_shape = options.output_shape
+  local output_batch, output_h, output_w, output_c
+  if output_shape ~= nil then
+    if type(output_shape) ~= "table" then
+      error("conv2d_transpose output_shape must be a table", 3)
+    end
+    if #output_shape == 4 then
+      if data_format == "NCHW" then
+        output_batch, output_c = output_shape[1], output_shape[2]
+        output_h, output_w = output_shape[3], output_shape[4]
+      else
+        output_batch, output_h = output_shape[1], output_shape[2]
+        output_w, output_c = output_shape[3], output_shape[4]
+      end
+    elseif #output_shape == 3 then
+      output_h, output_w, output_c = output_shape[1], output_shape[2],
+        output_shape[3]
+    else
+      error("conv2d_transpose output_shape must have 3 or 4 dimensions", 3)
+    end
+  end
+
+  local input_shape = options.input_shape
+  local input_h, input_w
+  if input_shape ~= nil then
+    if type(input_shape) ~= "table" or
+        (#input_shape ~= 3 and #input_shape ~= 4) then
+      error("conv2d_transpose input_shape must have 3 or 4 dimensions", 3)
+    end
+    if #input_shape == 4 then
+      if data_format == "NCHW" then
+        input_h, input_w = input_shape[3], input_shape[4]
+      else
+        input_h, input_w = input_shape[2], input_shape[3]
+      end
+    else
+      input_h, input_w = input_shape[1], input_shape[2]
+    end
+  end
+
+  local shape_op
+  local function dynamic_input_shape()
+    shape_op = shape_op or tf.shape(graph, input, prefix .. "/input_shape")
+    return shape_op
+  end
+  local effective_h = (kernel_h - 1) * dilation_h + 1
+  local effective_w = (kernel_w - 1) * dilation_w + 1
+  local function output_dimension(size, stride, effective, name)
+    if padding == "SAME" then
+      if type(size) == "number" then return size * stride end
+      return tf.mul(graph, size,
+        tf.constant(graph, stride, name .. "/stride", "int32"),
+        name, "int32")
+    end
+    if type(size) == "number" then
+      return (size - 1) * stride + effective
+    end
+    local one = tf.constant(graph, 1, name .. "/one", "int32")
+    local offset = tf.constant(graph, effective, name .. "/effective", "int32")
+    local scaled = tf.mul(graph, tf.sub(graph, size, one, name .. "/minus_one",
+      "int32"), tf.constant(graph, stride, name .. "/stride", "int32"),
+      name .. "/scaled", "int32")
+    return tf.add(graph, scaled, offset, name, "int32")
+  end
+  if output_h == nil then
+    local height_index = data_format == "NCHW" and 2 or 1
+    local width_index = data_format == "NCHW" and 3 or 2
+    local height, width = input_h, input_w
+    if height == nil then
+      height = gather_dimension(graph, dynamic_input_shape(), height_index,
+        prefix .. "/input_height")
+    end
+    if width == nil then
+      width = gather_dimension(graph, dynamic_input_shape(), width_index,
+        prefix .. "/input_width")
+    end
+    output_h = output_dimension(height, stride_h, effective_h,
+      prefix .. "/output_height")
+    output_w = output_dimension(width, stride_w, effective_w,
+      prefix .. "/output_width")
+  end
+  output_c = output_c or filters
+  if type(output_c) ~= "number" or output_c ~= filters then
+    error("conv2d_transpose output_shape channels must equal filters", 3)
+  end
+
+  local batch
+  if type(output_batch) == "number" and output_batch > 0 then
+    batch = dimension_vector(graph, output_batch, prefix .. "/batch_size")
+  else
+    batch = gather_dimension(graph, dynamic_input_shape(), 0,
+      prefix .. "/batch_size")
+  end
+  local height = dimension_vector(graph, output_h, prefix .. "/height")
+  local width = dimension_vector(graph, output_w, prefix .. "/width")
+  local channels = dimension_vector(graph, output_c, prefix .. "/channels")
+  local dims
+  if data_format == "NCHW" then
+    dims = { batch, channels, height, width }
+  else
+    dims = { batch, height, width, channels }
+  end
+  local output_sizes = tf.concat(graph, dims, 0, prefix .. "/output_shape",
+    "int32")
+
+  local bound = math.sqrt(6 / (kernel_h * kernel_w * in_channels + filters))
+  local values = {}
+  for i = 1, kernel_h do
+    values[i] = {}
+    for j = 1, kernel_w do
+      values[i][j] = {}
+      for f = 1, filters do
+        values[i][j][f] = {}
+        for c = 1, in_channels do
+          values[i][j][f][c] = (math.random() * 2 - 1) * bound
+        end
+      end
+    end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
+    { dtype = dtype })
+  local desc = graph:new_operation("Conv2DBackpropInput",
+    prefix .. "/conv_transpose")
+  desc:add_input(output_sizes)
+  desc:add_input(weight.read)
+  desc:add_input(input)
+  desc:set_type("T", dtype)
+  if data_format == "NCHW" then
+    desc:set_int_list("strides", { 1, 1, stride_h, stride_w })
+    desc:set_int_list("dilations", { 1, 1, dilation_h, dilation_w })
+  else
+    desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+    desc:set_int_list("dilations", { 1, dilation_h, dilation_w, 1 })
+  end
+  desc:set_string("padding", padding)
+  desc:set_string("data_format", data_format)
+  desc:set_bool("use_cudnn_on_gpu", false)
+  local output = desc:finish()
+  local variables, initializers = { weight }, { weight.initializer }
+  local bias = nil
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, filters do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  local activation = options.activation
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. activation, dtype)
+  elseif type(activation) == "function" then
+    output = activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output,
+    weight = weight,
+    bias = bias,
+    variables = variables,
+    initializers = initializers,
+    filters = filters,
+    in_channels = in_channels,
+    kernel_size = { kernel_h, kernel_w },
+    stride = { stride_h, stride_w },
+    padding = padding,
+    output_shape = { output_h, output_w, output_c },
+    data_format = data_format,
     dtype = dtype,
   }
 end

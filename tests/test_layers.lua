@@ -118,6 +118,41 @@ test("runs a Conv2D layer", function()
   session:close()
 end)
 
+test("runs a Conv2DTranspose layer with deterministic weights", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 2, 2, 1 },
+    "deconv_input")
+  local layer = tf.layers.conv2d_transpose(graph, input, 1, 2,
+    { in_channels = 1, stride = 1, padding = "VALID", use_bias = false,
+      output_shape = { 1, 3, 3, 1 }, name = "deconv" })
+  assert_eq(table.concat(layer.weight.shape, ","), "2,2,1,1")
+  local weight_values = {
+    { { { 1 } }, { { 2 } } },
+    { { { 3 } }, { { 4 } } },
+  }
+  local assign = graph:new_operation("Assign", "set_deconv_weight")
+  assign:add_input(layer.weight.ref)
+  assign:add_input(tf.constant(graph, weight_values, "deconv_weight",
+    "float32"))
+  assign:set_type("T", "float32")
+  assign:set_bool("use_locking", true)
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  session:run({}, {}, { assign:finish() })
+  local values = { { { { 1 }, { 1 } }, { { 1 }, { 1 } } } }
+  local output = session:run({ [input] = values }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,3,3,1")
+  local expected = { { 1, 3, 2 }, { 4, 10, 6 }, { 3, 7, 4 } }
+  local actual = output:totable()[1]
+  for y = 1, 3 do
+    for x = 1, 3 do
+      assert_true(math.abs(actual[y][x][1] - expected[y][x]) < 1e-6,
+        string.format("output[%d][%d]=%f", y, x, actual[y][x][1]))
+    end
+  end
+  session:close()
+end)
+
 test("runs a MaxPool2D layer", function()
   local graph = tf.Graph.new()
   local input = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "pool_input")

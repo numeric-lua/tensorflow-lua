@@ -717,6 +717,50 @@ test("trains a depthwise Conv2D Sequential stack", function()
   model:close()
 end)
 
+test("trains a Conv2DTranspose Sequential stack", function()
+  math.randomseed(51)
+  local model = tf.Sequential.new({ input_shape = { 2, 2, 1 } })
+  model:add({ type = "conv2d_transpose", filters = 2, kernel_size = 2,
+    stride = 2, options = { padding = "SAME" } })
+  model:add({ type = "flatten" })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  assert_eq(model:count_params(), 2 * 2 * 2 * 1 + 2 + 4 * 4 * 2 + 1)
+  local x, y = {}, {}
+  for sample = 1, 2 do
+    x[sample] = { { { sample }, { sample + 1 } },
+      { { sample + 2 }, { sample + 3 } } }
+    y[sample] = { sample }
+  end
+  local before = {}
+  for i, tensor in ipairs(model:get_weights()) do
+    before[i] = tensor:totable()
+  end
+  local history = model:fit(x, y, { epochs = 3, batch_size = 2 })
+  assert_eq(#history.loss, 3)
+  assert_true(history.loss[3] < history.loss[1],
+    tostring(history.loss[1]) .. " vs " .. tostring(history.loss[3]))
+  local function same(a, b)
+    if type(a) ~= type(b) then return false end
+    if type(a) ~= "table" then return a == b end
+    for key, value in pairs(a) do
+      if not same(value, b[key]) then return false end
+    end
+    for key in pairs(b) do if a[key] == nil then return false end end
+    return true
+  end
+  local after = model:get_weights()
+  local changed = false
+  for i, tensor in ipairs(after) do
+    if not same(before[i], tensor:totable()) then changed = true end
+  end
+  assert_true(changed, "Conv2DTranspose gradients did not update variables")
+  assert_eq(table.concat(model:predict(x):shape(), ","), "2,1")
+  local summary = model:summary()
+  assert_true(summary:find("Conv2DTranspose", 1, true) ~= nil)
+  model:close()
+end)
+
 test("runs reshape and permute in a Sequential model", function()
   local model = tf.Sequential.new({ input_shape = { 6 } })
   model:add({ type = "reshape", shape = { 2, 3 } })
