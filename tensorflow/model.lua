@@ -1004,7 +1004,7 @@ function Sequential:fit_tensor(x, y, options)
       history[name] = history[name] or {}
       history[name][#history[name] + 1] = metric
     end
-    for index, callback in ipairs(callbacks) do
+    for _, callback in ipairs(callbacks) do
       if type(callback.on_epoch_end) == "function" then
         callback.on_epoch_end(history, epoch, self)
       end
@@ -1022,7 +1022,6 @@ function Sequential:fit_tensor(x, y, options)
 end
 
 function Sequential:evaluate_tensor(x, y, options)
-  options = options or {}
   local Tensor = require("tensorflow.tensor")
   if getmetatable(x) ~= Tensor or getmetatable(y) ~= Tensor then
     error("evaluate_tensor expects Tensor inputs", 2)
