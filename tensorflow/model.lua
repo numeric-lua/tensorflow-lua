@@ -42,6 +42,11 @@ local function is_dataset(value)
     value._x ~= nil
 end
 
+local function is_tensor_dataset(value)
+  return type(value) == "table" and type(value.tensor_data) == "function" and
+    value._tensor_dataset == true
+end
+
 local function normalize_rows(data, width)
   if type(data) ~= "table" then
     error("model input must be a Lua table or Tensor", 3)
@@ -1345,6 +1350,14 @@ function Sequential:fit(x, y, options)
 end
 
 function Sequential:fit_dataset(dataset, options)
+  if is_tensor_dataset(dataset) then
+    options = copy_table(options or {})
+    local x, y, batch_size, shuffle, seed = dataset:tensor_data()
+    options.batch_size = options.batch_size or batch_size
+    if options.shuffle == nil then options.shuffle = shuffle end
+    if options.seed == nil then options.seed = seed end
+    return self:fit_tensor(x, y, options)
+  end
   return self:fit(dataset, nil, options)
 end
 
@@ -1377,10 +1390,29 @@ function Sequential:predict_classes(x)
 end
 
 function Sequential:evaluate_dataset(dataset, options)
+  if is_tensor_dataset(dataset) then
+    local x, y = dataset:tensor_data()
+    return self:evaluate_tensor(x, y, options)
+  end
   return self:evaluate(dataset, nil, options)
 end
 
+function Sequential:predict_tensor(x)
+  local Tensor = require("tensorflow.tensor")
+  if getmetatable(x) ~= Tensor then
+    error("predict_tensor expects a Tensor", 2)
+  end
+  if self._session == nil then self._graph = nil end
+  self:_build()
+  local feeds = { [self._input] = x }
+  if self._training ~= nil then feeds[self._training] = false end
+  return self._session:run(feeds, { self._output })[1]
+end
+
 function Sequential:predict_dataset(dataset)
+  if is_tensor_dataset(dataset) then
+    return self:predict_tensor(dataset:tensor_data())
+  end
   return self:predict(dataset)
 end
 

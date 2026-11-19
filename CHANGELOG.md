@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.18.0
+
+- tensor-backed `Dataset.from_tensor`, byte-level batching, shuffle, and
+  `each` iteration;
+- `Sequential:fit_dataset`/`evaluate_dataset`/`predict_dataset` integration,
+  plus `predict_tensor`;
+- 171 dependency-free tests.
+
 ## 0.17.0
 
 - sinusoidal positional encoding;

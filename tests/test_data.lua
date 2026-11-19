@@ -72,3 +72,33 @@ test("maps and filters dataset samples", function()
   local filtered_batch = filtered:each()()
   assert_eq(filtered_batch.x[1], 2)
 end)
+
+test("tensor-backed Dataset batches and feeds fit_dataset", function()
+  local x = tf.tensor({ { 1 }, { 2 }, { 3 }, { 4 } })
+  local y = tf.tensor({ { 2 }, { 4 }, { 6 }, { 8 } })
+  local dataset = tf.data.Dataset.from_tensor(x, y):batch(2):shuffle(7)
+  assert_eq(dataset:size(), 4)
+  local seen = 0
+  local iterator = dataset:each()
+  while true do
+    local batch = iterator()
+    if batch == nil then break end
+    assert_eq(table.concat(batch.x:shape(), ","), "2,1")
+    seen = seen + 1
+    batch.x:destroy(); batch.y:destroy()
+  end
+  assert_eq(seen, 2)
+
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.001 }, loss = "mse" })
+  local clean = tf.data.Dataset.from_tensor(x, y):batch(2)
+  local history = model:fit_dataset(clean, { epochs = 3 })
+  assert_eq(#history.loss, 3)
+  local loss = model:evaluate_dataset(clean)
+  assert_true(loss >= 0)
+  local prediction = model:predict_dataset(clean)
+  assert_eq(prediction:shape()[1], 4)
+  prediction:destroy()
+  x:destroy(); y:destroy(); model:close()
+end)

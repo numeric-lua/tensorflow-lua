@@ -137,6 +137,93 @@ function Dataset:each()
   end
 end
 
+-- Tensor-backed dataset.  Batches are produced without converting the full
+-- tensors to Lua tables.
+local TensorDataset = {}
+TensorDataset.__index = TensorDataset
+
+function Dataset.from_tensor(x, y)
+  local Tensor = require("tensorflow.tensor")
+  if getmetatable(x) ~= Tensor then
+    error("Dataset.from_tensor expects a Tensor input", 2)
+  end
+  if y ~= nil and getmetatable(y) ~= Tensor then
+    error("Dataset.from_tensor target must be a Tensor", 2)
+  end
+  if y ~= nil and x:shape()[1] ~= y:shape()[1] then
+    error("Dataset tensor batch sizes differ", 2)
+  end
+  return setmetatable({
+    _x = x, _y = y, _tensor_dataset = true, _batch_size = nil,
+    _shuffle = false,
+  }, TensorDataset)
+end
+
+function TensorDataset:tensor_data()
+  return self._x, self._y, self._batch_size, self._shuffle, self._seed
+end
+
+function TensorDataset:size()
+  return self._x:shape()[1]
+end
+
+function TensorDataset:batch(size, options)
+  if type(size) ~= "number" or size < 1 then
+    error("batch size must be positive", 2)
+  end
+  options = options or {}
+  self._batch_size = size
+  self._drop_last = options.drop_last or false
+  return self
+end
+
+function TensorDataset:shuffle(seed)
+  self._shuffle = true
+  self._seed = seed
+  return self
+end
+
+function TensorDataset:take(count)
+  self._take = count
+  return self
+end
+
+function TensorDataset:each()
+  local count = self:size()
+  local size = self._batch_size or count
+  local order = {}
+  for index = 1, count do order[index] = index end
+  if self._shuffle then
+    if self._seed ~= nil then math.randomseed(self._seed) end
+    for index = count, 2, -1 do
+      local swap = math.random(index)
+      order[index], order[swap] = order[swap], order[index]
+    end
+  end
+  if self._take ~= nil and #order > self._take then
+    for index = #order, self._take + 1, -1 do order[index] = nil end
+  end
+  local position = 1
+  return function()
+    if position > #order then return nil end
+    local last = math.min(position + size - 1, #order)
+    local indices = {}
+    for index = position, last do
+      indices[#indices + 1] = order[index]
+    end
+    local batch_x = self._x:take_rows(indices)
+    local batch_y = self._y and self._y:take_rows(indices) or nil
+    position = last + 1
+    if self._drop_last and #indices < size then
+      batch_x:destroy(); if batch_y then batch_y:destroy() end
+      return nil
+    end
+    return { x = batch_x, y = batch_y }
+  end
+end
+
+Dataset.TensorDataset = TensorDataset
+
 Dataset.Dataset = Dataset
 
 return Dataset

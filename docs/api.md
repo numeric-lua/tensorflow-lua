@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.17.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.18.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -285,6 +285,14 @@ per-class multipliers. Weighted losses are normalized by the sum of the
 per-example weights.
 
 ## Data batching
+
+`tf.data.Dataset.from_tensor(x, y)` creates a tensor-backed dataset. Batches
+are produced with byte-level row slices and never convert the full tensors to
+Lua tables. It supports `batch(size)`, `shuffle(seed)`, `take(count)`, `each()`,
+and `size()`. `Sequential:fit_dataset`, `evaluate_dataset`, and
+`predict_dataset` detect the tensor dataset and route to the tensor paths;
+`predict_tensor` accepts a tensor directly.
+
 
 ```lua
 local dataset = tf.data.Dataset.new(x, y):shuffle(7):batch(32)
