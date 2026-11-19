@@ -112,6 +112,14 @@ local function add_initializers(target, source)
   for _, value in ipairs(source) do target[#target + 1] = value end
 end
 
+local function zero_table(shape, depth)
+  depth = depth or 1
+  if depth > #shape then return 0 end
+  local result = {}
+  for index = 1, shape[depth] do result[index] = zero_table(shape, depth + 1) end
+  return result
+end
+
 function Sequential:_build()
   if self._graph ~= nil then return end
   local tf = require("tensorflow")
@@ -860,6 +868,31 @@ function Sequential:_build()
         axes = { 0, 1 }, name = "metric/" .. name,
       })
       metric_names[i] = name
+    elseif name == "auc" then
+      local probabilities = tf.nn.sigmoid(graph, output,
+        "metric/auc_sigmoid")
+      metric_outputs[i] = tf.metrics.auc(graph, probabilities, target,
+        { name = "metric/auc" })
+      metric_names[i] = name
+    elseif name == "macro_precision" or name == "macro_recall" or
+        name == "macro_f1" then
+      local class_predictions = tf.argmax(graph, output, 1,
+        "metric/" .. name .. "_prediction", "float32", "int64")
+      local class_labels
+      if sparse then
+        class_labels = target
+      else
+        class_labels = tf.cast(graph, tf.argmax(graph, target, 1,
+          "metric/" .. name .. "_label", "float32", "int64"), "int64", "int32",
+          "metric/" .. name .. "_label_i32")
+      end
+      local precision, recall, f1 = tf.metrics.multiclass_prf(graph,
+        class_predictions, class_labels, units,
+        { name = "metric/" .. name })
+      if name == "macro_precision" then metric_outputs[i] = precision
+      elseif name == "macro_recall" then metric_outputs[i] = recall
+      else metric_outputs[i] = f1 end
+      metric_names[i] = name
     else
       error("unsupported metric '" .. tostring(name) .. "'", 3)
     end
@@ -868,6 +901,58 @@ function Sequential:_build()
   local optimizer = self._compiled.optimizer
   if type(optimizer) == "string" then optimizer = { type = optimizer } end
   optimizer = copy_table(optimizer)
+  local accumulation_steps = self._compiled.gradient_accumulation_steps or 1
+  if type(accumulation_steps) ~= "number" or accumulation_steps % 1 ~= 0 or
+      accumulation_steps < 1 then
+    error("gradient_accumulation_steps must be a positive integer", 3)
+  end
+  local accumulate_updates, reset_updates, accumulate_state = nil, nil, nil
+  if accumulation_steps > 1 then
+    local refs = {}
+    for index, variable in ipairs(variables) do
+      refs[index] = variable.ref or variable
+    end
+    local base_gradients = tf.gradients(graph, { loss }, refs)
+    if #base_gradients ~= #variables then
+      error("gradient accumulation could not build gradients for every variable", 3)
+    end
+    local averaged = {}
+    local accumulators = {}
+    accumulate_updates, reset_updates = {}, {}
+    for index, variable in ipairs(variables) do
+      local dtype = variable.dtype or "float32"
+      local shape = variable.shape or {}
+      local accumulator = tf.variable(graph, zero_table(shape),
+        "gradient_accumulator_" .. index, { dtype = dtype })
+      accumulators[#accumulators + 1] = accumulator
+      local add = graph:new_operation("AssignAdd",
+        "gradient_accumulator/" .. index .. "/add")
+      add:add_input(accumulator.ref)
+      add:add_input(base_gradients[index])
+      add:set_type("T", dtype)
+      add:set_bool("use_locking", false)
+      accumulate_updates[#accumulate_updates + 1] = add:finish()
+      local zero = tf.constant(graph, zero_table(shape),
+        "gradient_accumulator/" .. index .. "/zero", dtype)
+      local reset = graph:new_operation("Assign",
+        "gradient_accumulator/" .. index .. "/reset")
+      reset:add_input(accumulator.ref)
+      reset:add_input(zero)
+      reset:set_type("T", dtype)
+      reset:set_bool("use_locking", false)
+      reset_updates[#reset_updates + 1] = reset:finish()
+      averaged[index] = tf.div(graph, accumulator.read,
+        tf.constant(graph, accumulation_steps,
+          "gradient_accumulator/" .. index .. "/scale", dtype),
+        "gradient_accumulator/" .. index .. "/average", dtype)
+    end
+    accumulate_state = { initializers = {} }
+    for _, accumulator in ipairs(accumulators) do
+      accumulate_state.initializers[#accumulate_state.initializers + 1] =
+        accumulator.initializer
+    end
+    optimizer.gradients = averaged
+  end
   local optimizer_type = optimizer.type or "adam"
   local learning_rate_defaults = {
     adam = 0.001, adamw = 0.001, rmsprop = 0.001,
@@ -921,6 +1006,11 @@ function Sequential:_build()
     error("unsupported optimizer '" .. tostring(optimizer_type) .. "'", 3)
   end
   if type(state) == "table" then add_initializers(initializers, state.initializers) end
+  if accumulate_state ~= nil and accumulate_state.initializers then
+    for _, initializer in ipairs(accumulate_state.initializers) do
+      initializers[#initializers + 1] = initializer
+    end
+  end
 
   local session = tf.Session.new(graph)
   session:run({}, {}, initializers)
@@ -935,6 +1025,10 @@ function Sequential:_build()
   self._lr_schedule = schedule
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
+  self._accumulate_updates = accumulate_updates
+  self._reset_updates = reset_updates
+  self._accumulation_steps = accumulation_steps
+  self._accumulation_step = 0
   self._optimizer_state = type(state) == "table" and state or nil
   self._layers_built = layers
   self._units = units
@@ -951,6 +1045,25 @@ function Sequential:_build()
   self._metric_names, self._metric_outputs = metric_names, metric_outputs
   self._batchnorm_updates = batchnorm_updates
   self._batchnorm_state = batchnorm_state
+end
+
+function Sequential:_accumulate_training_step(feeds)
+  if self._accumulate_updates == nil then return end
+  self._accumulation_step = (self._accumulation_step or 0) + 1
+  if self._accumulation_step >= self._accumulation_steps then
+    self._session:run(feeds, {}, self._updates)
+    self._session:run(feeds, {}, self._reset_updates)
+    self._accumulation_step = 0
+  end
+end
+
+function Sequential:_flush_accumulation(feeds)
+  if self._accumulate_updates == nil or (self._accumulation_step or 0) == 0 then
+    return
+  end
+  self._session:run(feeds, {}, self._updates)
+  self._session:run(feeds, {}, self._reset_updates)
+  self._accumulation_step = 0
 end
 
 function Sequential:fit(x, y, options)
@@ -1046,6 +1159,7 @@ function Sequential:fit(x, y, options)
     end
     local epoch_loss, batches = 0, 0
     local metric_sums = {}
+    local last_feeds
     for first = 1, #x, batch_size do
       local last = math.min(first + batch_size - 1, #x)
       local batch_x = batch_slice(x, first, last)
@@ -1067,13 +1181,17 @@ function Sequential:fit(x, y, options)
       if #(self._batchnorm_updates or {}) > 0 then
         self._session:run(feeds, {}, self._batchnorm_updates)
       end
-      local values = self._session:run(feeds, fetch, self._updates)
+      last_feeds = feeds
+      local targets = self._accumulate_updates or self._updates
+      local values = self._session:run(feeds, fetch, targets)
+      self:_accumulate_training_step(feeds)
       epoch_loss = epoch_loss + values[1]:totable()
       for i = 1, #(self._metric_outputs or {}) do
         metric_sums[i] = (metric_sums[i] or 0) + values[i + 1]:totable()
       end
       batches = batches + 1
     end
+    self:_flush_accumulation(last_feeds)
     history.loss[#history.loss + 1] = epoch_loss / batches
     for i, name in ipairs(self._metric_names or {}) do
       history[name][#history[name] + 1] = metric_sums[i] / batches
@@ -1250,7 +1368,10 @@ function Sequential:fit_tensor(x, y, options)
       for _, output in ipairs(self._metric_outputs or {}) do
         fetch[#fetch + 1] = output
       end
-      local values = self._session:run(feeds, fetch, self._updates)
+      last_feeds = feeds
+      local targets = self._accumulate_updates or self._updates
+      local values = self._session:run(feeds, fetch, targets)
+      self:_accumulate_training_step(feeds)
       local loss = values[1]:totable()
       epoch_loss = epoch_loss + loss * #indices
       seen = seen + #indices
@@ -1259,6 +1380,7 @@ function Sequential:fit_tensor(x, y, options)
       end
       xb:destroy(); yb:destroy(); sample_weight:destroy()
     end
+    self:_flush_accumulation(last_feeds)
     history.loss[#history.loss + 1] = epoch_loss / seen
     for _, name in ipairs(self._metric_names or {}) do
       history[name] = history[name] or {}

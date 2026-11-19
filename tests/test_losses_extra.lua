@@ -62,3 +62,40 @@ test("computes precision, recall, and F1", function()
   assert_true(math.abs(values[3]:totable() - 0.5) < 1e-5)
   session:close()
 end)
+
+test("computes macro multiclass precision, recall, and F1", function()
+  local graph = tf.Graph.new()
+  local predictions = tf.placeholder(graph, "int64", { 4 }, "class_pred")
+  local labels = tf.placeholder(graph, "int32", { 4 }, "class_label")
+  local precision, recall, f1, per_class = tf.metrics.multiclass_prf(
+    graph, predictions, labels, 3, { name = "macro" })
+  local session = tf.Session.new(graph)
+  local values = session:run({
+    [predictions] = { 0, 1, 2, 0 },
+    [labels] = { 0, 1, 2, 1 },
+  }, { precision, recall, f1, per_class.precision[1] })
+  assert_true(math.abs(values[1]:totable() - (5 / 6)) < 1e-5)
+  assert_true(math.abs(values[2]:totable() - (5 / 6)) < 1e-5)
+  assert_true(math.abs(values[3]:totable() - (7 / 9)) < 1e-5)
+  assert_true(math.abs(values[4]:totable() - 1.0) < 1e-5)
+  session:close()
+end)
+
+test("computes binary ROC AUC including ties", function()
+  local graph = tf.Graph.new()
+  local predictions = tf.placeholder(graph, "float32", { 4 }, "auc_pred")
+  local labels = tf.placeholder(graph, "float32", { 4 }, "auc_label")
+  local auc = tf.metrics.auc(graph, predictions, labels, { name = "auc" })
+  local session = tf.Session.new(graph)
+  local perfect = session:run({
+    [predictions] = { 0.9, 0.8, 0.2, 0.1 },
+    [labels] = { 1, 1, 0, 0 },
+  }, { auc })[1]:totable()
+  assert_true(math.abs(perfect - 1) < 1e-6)
+  local reversed = session:run({
+    [predictions] = { 0.1, 0.2, 0.8, 0.9 },
+    [labels] = { 1, 1, 0, 0 },
+  }, { auc })[1]:totable()
+  assert_true(math.abs(reversed) < 1e-6)
+  session:close()
+end)

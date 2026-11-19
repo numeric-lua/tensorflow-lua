@@ -118,6 +118,7 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
     options)
   name = name or "GradientDescent"
   options = options or {}
+  options.gradients = options.gradients
   if type(variables) ~= "table" or #variables == 0 then
     error("gradient_descent expects a non-empty variable list", 3)
   end
@@ -125,7 +126,7 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
   for i, variable in ipairs(variables) do
     refs[i] = variable.ref or variable
   end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local lr_dtype = variables[1].dtype or variables[1].ref.dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     lr_dtype)
@@ -175,7 +176,7 @@ function Train.adam(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local clipvalue = options.clipvalue or options.clip_value
   if clipvalue ~= nil then
@@ -348,7 +349,7 @@ function Train.rmsprop(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -396,7 +397,7 @@ function Train.centered_rmsprop(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -447,7 +448,7 @@ function Train.adagrad(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local targets, initializers, state_variables = {}, {}, {}
@@ -483,7 +484,7 @@ function Train.adadelta(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
@@ -528,7 +529,7 @@ function Train.proximal_adagrad(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     dtype)
@@ -570,7 +571,7 @@ function Train.ftrl(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
@@ -616,7 +617,7 @@ function Train.momentum(graph, loss, variables, options)
   end
   local refs = {}
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
-  local gradients = train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)

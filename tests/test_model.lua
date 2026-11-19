@@ -872,3 +872,67 @@ test("Sequential trains with Huber and reports binary metrics", function()
   end
   x:destroy(); y:destroy(); model:close()
 end)
+
+test("Sequential reports AUC and macro multiclass metrics", function()
+  local binary = tf.Sequential.new({ input_shape = { 1 } })
+  binary:add({ units = 1 })
+  binary:compile({ optimizer = { type = "sgd", learning_rate = 0.01 },
+    loss = "binary_cross_entropy", metrics = { "auc" } })
+  local bx = tf.tensor({ { 0 }, { 1 }, { 2 }, { 3 } })
+  local by = tf.tensor({ { 0 }, { 0 }, { 1 }, { 1 } })
+  local binary_history = binary:fit_tensor(bx, by, { epochs = 2 })
+  assert_eq(#binary_history.auc, 2)
+  bx:destroy(); by:destroy(); binary:close()
+
+  local model = tf.Sequential.new({ input_shape = { 2 } })
+  model:add({ units = 3 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 },
+    loss = "sparse_softmax_cross_entropy",
+    metrics = { "macro_precision", "macro_recall", "macro_f1" } })
+  local x = tf.tensor({ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 0 } })
+  local y = tf.tensor({ 0, 1, 2, 0 }, { dtype = "int32" })
+  local history = model:fit_tensor(x, y, { epochs = 2 })
+  for _, name in ipairs({ "macro_precision", "macro_recall", "macro_f1" }) do
+    assert_eq(#history[name], 2)
+  end
+  x:destroy(); y:destroy(); model:close()
+end)
+
+test("gradient accumulation applies averaged micro-batch updates", function()
+  math.randomseed(123)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({
+    optimizer = { type = "sgd", learning_rate = 0.01 },
+    loss = "mse", gradient_accumulation_steps = 2,
+  })
+  local x = tf.tensor({ { 0 }, { 1 }, { 2 }, { 3 }, { 4 }, { 5 }, { 6 }, { 7 } })
+  local y = tf.tensor({ { 1 }, { 3 }, { 5 }, { 7 }, { 9 }, { 11 }, { 13 }, { 15 } })
+  local before = model:evaluate_tensor(x, y, { batch_size = 8 })
+  local history = model:fit_tensor(x, y, { epochs = 40, batch_size = 2 })
+  local after = model:evaluate_tensor(x, y, { batch_size = 8 })
+  assert_eq(#history.loss, 40)
+  assert_true(after < before)
+  assert_error(function()
+    local bad = tf.Sequential.new({ input_shape = { 1 } })
+    bad:add({ units = 1 })
+    bad:compile({ optimizer = "sgd", gradient_accumulation_steps = 0 })
+    bad:fit_tensor(tf.tensor({ { 1 } }), tf.tensor({ { 1 } }), { epochs = 1 })
+  end, "gradient_accumulation_steps")
+  x:destroy(); y:destroy(); model:close()
+end)
+
+test("gradient accumulation also works through table fit", function()
+  math.randomseed(44)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({
+    optimizer = { type = "adam", learning_rate = 0.01 },
+    loss = "mse", gradient_accumulation_steps = 2,
+  })
+  local x = { { 0 }, { 1 }, { 2 }, { 3 }, { 4 } }
+  local y = { { 1 }, { 3 }, { 5 }, { 7 }, { 9 } }
+  local history = model:fit(x, y, { epochs = 4, batch_size = 2 })
+  assert_eq(#history.loss, 4)
+  model:close()
+end)

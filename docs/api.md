@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.11.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.12.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -343,7 +343,16 @@ and reduces the mean over the batch. Options: `dtype` (default `int32`), `axes`,
 
 Binary metrics over probabilities (thresholded by `opts.threshold`, default
 `0.5`). `opts.axes` defaults to `{ 0 }`; pass `{ 0, 1 }` for `[batch, 1]`
-outputs. These are not multi-class macro metrics and AUC is not yet exposed.
+outputs. ### `tf.metrics.auc(graph, predictions, labels[, opts])`
+
+Binary ROC AUC using a pairwise comparison matrix; ties count as half a win.
+The implementation is exact but O(N^2) in the batch size. Use moderate
+evaluation batches.
+
+### `tf.metrics.multiclass_prf(graph, predictions, labels, num_classes[, opts])`
+
+Returns macro precision, recall, F1, and a per-class table for integer class
+predictions and labels. Classes are numbered from zero.
 
 ## Layers
 
@@ -588,6 +597,10 @@ model:close()
 - `export(path)` writes the graph as a GraphDef protobuf.
 
 ### Tensor mini-batches
+
+`model:compile({ gradient_accumulation_steps = 4 })` accumulates gradients
+over micro-batches and applies the optimizer every fourth step, including a
+final partial group at epoch end.
 
 `model:fit_tensor(x, y, { batch_size = 32, shuffle = true, seed = 7 })` slices
 the first dimension without converting tensors to Lua tables. `evaluate_tensor`

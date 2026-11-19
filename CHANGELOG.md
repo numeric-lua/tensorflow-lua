@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0
+
+- graph-level SGD/Adam/... gradient accumulation via
+  `gradient_accumulation_steps`;
+- macro multiclass precision/recall/F1 for sparse and one-hot labels;
+- binary ROC AUC computed with a pairwise comparison matrix;
+- Sequential metric integration for AUC and macro metrics;
+- 162 dependency-free tests.
+
 ## 0.11.0
 
 - tensor-backed mini-batch `fit_tensor`/`evaluate_tensor` with slicing and

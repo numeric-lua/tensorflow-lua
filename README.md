@@ -7,9 +7,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.11.0` alpha. Graph inference, construction, training, checkpoints, eager
+`0.12.0` alpha. Graph inference, construction, training, checkpoints, eager
 mode, convolutional/recurrent primitives, a functional graph model, and a
-Sequential model. The dependency-free suite currently contains 157 tests.
+Sequential model. The dependency-free suite currently contains 162 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -49,11 +49,13 @@ Sequential model. The dependency-free suite currently contains 157 tests.
 - `tf.Functional` for multi-input, multi-output graphs built from named
   placeholders and arbitrary TensorFlow operations;
 - pure Lua exponential, cosine, polynomial, piecewise, and constant
-  learning-rate schedules.
+  learning-rate schedules;
+- graph-level gradient accumulation for Sequential training;
+- binary AUC and macro multiclass precision/recall/F1.
 
 Not yet implemented: official SavedModel export, GPU placement, complete
-Keras-style functional layers, and graph-level gradient accumulation. Eager
-execution is available as an experimental `tf.eager` surface with basic
+Keras-style functional layers, and verified libtensorflow 2.19/2.20 support.
+Eager execution is available as an experimental `tf.eager` surface with basic
 arithmetic and activations.
 
 ## Requirements
@@ -72,11 +74,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.11.0/tensorflow-lua-0.11.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.12.0/tensorflow-lua-0.12.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-0.11.0-1.rockspec
-./scripts/package.sh tensorflow-lua-0.11.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.12.0-1.rockspec
+./scripts/package.sh tensorflow-lua-0.12.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -250,7 +252,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v0.11.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.11.0)
+[**v0.12.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.12.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
