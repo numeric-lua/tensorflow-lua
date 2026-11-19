@@ -1481,6 +1481,45 @@ function Layers.upsampling2d(graph, input, scale, options)
     scale = { scale_h, scale_w } }
 end
 
+function Layers.upsampling3d(graph, input, scale, options)
+  options = options or {}
+  local scale_d, scale_h, scale_w = scale, scale, scale
+  if type(scale) == "table" then
+    scale_d, scale_h, scale_w = scale[1], scale[2], scale[3]
+  end
+  if type(scale_d) ~= "number" or type(scale_h) ~= "number" or
+      type(scale_w) ~= "number" or scale_d < 1 or scale_h < 1 or scale_w < 1 or
+      scale_d % 1 ~= 0 or scale_h % 1 ~= 0 or scale_w % 1 ~= 0 then
+    error("upsampling3d requires positive integer scales", 3)
+  end
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 4 then
+    error("upsampling3d requires input_shape = { d, h, w, c }", 3)
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "upsampling3d"
+  local tf = require("tensorflow")
+  local expanded = tf.reshape(graph, input,
+    { -1, shape[1], 1, shape[2], 1, shape[3], 1, shape[4] },
+    prefix .. "/expand", dtype)
+  local desc = graph:new_operation("Tile", prefix .. "/tile")
+  desc:add_input(expanded)
+  desc:add_input(tf.constant(graph,
+    { 1, 1, scale_d, 1, scale_h, 1, scale_w, 1 }, prefix .. "/multiples",
+    "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tmultiples", "int32")
+  local tiled = desc:finish()
+  local output = tf.reshape(graph, tiled,
+    { -1, shape[1] * scale_d, shape[2] * scale_h, shape[3] * scale_w,
+      shape[4] }, prefix .. "/output", dtype)
+  return {
+    output = output, variables = {}, initializers = {},
+    output_shape = { shape[1] * scale_d, shape[2] * scale_h,
+      shape[3] * scale_w, shape[4] },
+  }
+end
+
 function Layers.zero_padding2d(graph, input, padding, options)
   options = options or {}
   local top, bottom, left, right

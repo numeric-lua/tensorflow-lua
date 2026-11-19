@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+- trainable UpSampling3D for NDHWC volumes using reshape/tile/reshape;
+- Sequential 3-D upsampling shape tracking and summaries;
+- 173 dependency-free tests.
+
 ## 0.18.0
 
 - tensor-backed `Dataset.from_tensor`, byte-level batching, shuffle, and

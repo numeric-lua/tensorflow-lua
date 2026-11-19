@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.18.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.19.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -496,6 +496,12 @@ Pre-norm transformer block: multi-head self-attention + residual + layer norm,
 then a two-layer feed-forward + residual + layer norm. Requires
 `opts.input_shape = { time, features }`; accepts `num_heads`, `key_dim`,
 `ff_dim`, and `causal`. Returns `{ output, variables, initializers }`.
+
+### `tf.layers.upsampling3d(graph, input, scale[, opts])`
+
+Nearest-neighbor 3-D upsampling for an NDHWC volume. `scale` is a number or
+`{ d, h, w }`; requires `opts.input_shape = { d, h, w, c }`. Implemented with
+reshape/tile/reshape and trainable through those ops.
 
 ### `tf.layers.conv3d(graph, input, filters, kernel_size[, opts])`
 

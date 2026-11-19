@@ -492,3 +492,21 @@ test("positional encoding and transformer block are trainable", function()
   assert_eq(table.concat(result:shape(), ","), "1,4,8")
   session:close()
 end)
+
+test("upsampling3d repeats voxels and preserves shapes", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 2, 2, 2, 1 }, "up3_in")
+  local layer = tf.layers.upsampling3d(graph, input, 2, {
+    input_shape = { 2, 2, 2, 1 }, name = "up3",
+  })
+  local session = tf.Session.new(graph)
+  local values = { { { { { 1 } }, { { 2 } } }, { { { 3 } }, { { 4 } } } },
+    { { { { 5 } }, { { 6 } } }, { { { 7 } }, { { 8 } } } } }
+  local output = session:run({ [input] = values }, { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,4,4,4,1")
+  local flat = output:totable()
+  assert_eq(flat[1][1][1][1][1], 1)
+  assert_eq(flat[1][1][1][2][1], 1)
+  assert_eq(flat[1][2][1][1][1], 1)
+  session:close()
+end)

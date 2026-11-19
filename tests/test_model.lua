@@ -984,3 +984,19 @@ test("Sequential trains a composed Conv3D stack", function()
   assert_true(after < before)
   x:destroy(); y:destroy(); model:close()
 end)
+
+test("Sequential trains through 3-D upsampling", function()
+  local model = tf.Sequential.new({ input_shape = { 2, 2, 2, 1 } })
+  model:add({ type = "upsampling3d", scale = 2 })
+  model:add({ type = "global_avg_pool3d" })
+  model:add({ type = "dense", units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.001 },
+    loss = "mse" })
+  local volume = { { { { { 1 } }, { { 2 } } }, { { { 3 } }, { { 4 } } } },
+    { { { { 5 } }, { { 6 } } }, { { { 7 } }, { { 8 } } } } }
+  local x = tf.tensor({ volume })
+  local y = tf.tensor({ { 1 } })
+  local history = model:fit_tensor(x, y, { epochs = 3 })
+  assert_eq(#history.loss, 3)
+  x:destroy(); y:destroy(); model:close()
+end)

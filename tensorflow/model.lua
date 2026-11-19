@@ -87,7 +87,8 @@ function Sequential:add(options)
       options.type == "max_pool1d" or options.type == "avg_pool1d" or
       options.type == "global_avg_pool1d" or
       options.type == "separable_conv2d" or
-      options.type == "conv3d" or options.type == "max_pool3d" or
+      options.type == "conv3d" or options.type == "upsampling3d" or
+      options.type == "max_pool3d" or
       options.type == "avg_pool3d" or options.type == "global_avg_pool3d" or
       options.type == "global_max_pool3d" or
       options.type == "layer_normalization" or
@@ -196,6 +197,25 @@ function Sequential:_build()
       feature_size = spatial[1] * spatial[2] * spatial[3]
       layers[i] = { output = layer.output, input_size = feature_size,
         units = spatial[3], kind = "upsampling2d" }
+      output = layer.output
+    elseif definition.type == "upsampling3d" then
+      if #spatial ~= 4 then
+        error("upsampling3d layers require an NDHWC input", 3)
+      end
+      local scale_d, scale_h, scale_w = definition.scale or 2,
+        definition.scale or 2, definition.scale or 2
+      if type(definition.scale) == "table" then
+        scale_d, scale_h, scale_w = definition.scale[1], definition.scale[2],
+          definition.scale[3]
+      end
+      local layer = tf.layers.upsampling3d(graph, output,
+        { scale_d, scale_h, scale_w }, { input_shape = spatial,
+          name = options.name })
+      spatial = { spatial[1] * scale_d, spatial[2] * scale_h,
+        spatial[3] * scale_w, spatial[4] }
+      feature_size = spatial[1] * spatial[2] * spatial[3] * spatial[4]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[4], kind = "upsampling3d" }
       output = layer.output
     elseif definition.type == "zero_padding2d" then
       if #spatial ~= 3 then
@@ -1881,6 +1901,8 @@ function Sequential:summary()
       rows[#rows + 1] = string.format(
         "  %d: Conv2DTranspose(%d filters, %dx%d)", i, layer.filters,
         layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "upsampling3d" then
+      rows[#rows + 1] = string.format("  %d: UpSampling3D", i)
     elseif layer.kind == "conv3d" then
       rows[#rows + 1] = string.format("  %d: Conv3D(%dx%dx%d, %d filters)", i,
         layer.kernel_size[1], layer.kernel_size[2], layer.kernel_size[3],
