@@ -82,6 +82,9 @@ function Sequential:add(options)
       options.type == "max_pool1d" or options.type == "avg_pool1d" or
       options.type == "global_avg_pool1d" or
       options.type == "separable_conv2d" or
+      options.type == "conv3d" or options.type == "max_pool3d" or
+      options.type == "avg_pool3d" or options.type == "global_avg_pool3d" or
+      options.type == "global_max_pool3d" or
       options.type == "layer_normalization" or
       options.type == "batchnorm" or
       options.type == "batch_normalization" then
@@ -448,6 +451,114 @@ function Sequential:_build()
         variables[#variables + 1] = variable
       end
       add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "conv3d" then
+      if #spatial ~= 4 then
+        error("conv3d layers require an NDHWC input", 3)
+      end
+      local kernel_d, kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size, definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_d, kernel_h, kernel_w = definition.kernel_size[1],
+          definition.kernel_size[2], definition.kernel_size[3]
+      end
+      local stride_d, stride_h, stride_w = definition.stride or 1,
+        definition.stride or 1, definition.stride or 1
+      if type(definition.stride) == "table" then
+        stride_d, stride_h, stride_w = definition.stride[1],
+          definition.stride[2], definition.stride[3]
+      end
+      local dilation_d, dilation_h, dilation_w = 1, 1, 1
+      if type(definition.dilation) == "table" then
+        dilation_d, dilation_h, dilation_w = definition.dilation[1],
+          definition.dilation[2], definition.dilation[3]
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "SAME")
+      local layer = tf.layers.conv3d(graph, output, definition.filters,
+        { kernel_d, kernel_h, kernel_w }, {
+          in_channels = spatial[4], stride = { stride_d, stride_h, stride_w },
+          padding = padding, dilation = { dilation_d, dilation_h, dilation_w },
+          use_bias = options.use_bias, activation = options.activation,
+          dtype = options.dtype, name = options.name,
+        })
+      local function output_dim(size, kernel, stride, dilation)
+        local effective = (kernel - 1) * dilation + 1
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - effective) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_d, stride_d, dilation_d),
+        output_dim(spatial[2], kernel_h, stride_h, dilation_h),
+        output_dim(spatial[3], kernel_w, stride_w, dilation_w),
+        definition.filters }
+      feature_size = spatial[1] * spatial[2] * spatial[3] * spatial[4]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = definition.filters, kind = "conv3d",
+        filters = definition.filters,
+        kernel_size = { kernel_d, kernel_h, kernel_w },
+        stride = { stride_d, stride_h, stride_w }, padding = padding }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "max_pool3d" or definition.type == "avg_pool3d" then
+      if #spatial ~= 4 then
+        error(definition.type .. " layers require an NDHWC input", 3)
+      end
+      local kernel_d, kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size, definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_d, kernel_h, kernel_w = definition.kernel_size[1],
+          definition.kernel_size[2], definition.kernel_size[3]
+      end
+      local stride_d, stride_h, stride_w = definition.stride or kernel_d,
+        definition.stride or kernel_h, definition.stride or kernel_w
+      if type(definition.stride) == "table" then
+        stride_d, stride_h, stride_w = definition.stride[1],
+          definition.stride[2], definition.stride[3]
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "VALID")
+      local layer
+      if definition.type == "max_pool3d" then
+        layer = tf.layers.max_pool3d(graph, output,
+          { kernel_d, kernel_h, kernel_w }, { stride = { stride_d, stride_h,
+            stride_w }, padding = padding, name = options.name })
+      else
+        layer = tf.layers.avg_pool3d(graph, output,
+          { kernel_d, kernel_h, kernel_w }, { stride = { stride_d, stride_h,
+            stride_w }, padding = padding, name = options.name })
+      end
+      local function output_dim(size, kernel, stride)
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - kernel) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_d, stride_d),
+        output_dim(spatial[2], kernel_h, stride_h),
+        output_dim(spatial[3], kernel_w, stride_w), spatial[4] }
+      feature_size = spatial[1] * spatial[2] * spatial[3] * spatial[4]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[4], kind = definition.type,
+        kernel_size = { kernel_d, kernel_h, kernel_w } }
+      output = layer.output
+    elseif definition.type == "global_avg_pool3d" or
+        definition.type == "global_max_pool3d" then
+      if #spatial ~= 4 then
+        error(definition.type .. " layers require an NDHWC input", 3)
+      end
+      local layer
+      if definition.type == "global_avg_pool3d" then
+        layer = tf.layers.global_avg_pool3d(graph, output,
+          { name = options.name })
+      else
+        layer = tf.layers.global_max_pool3d(graph, output,
+          { name = options.name })
+      end
+      spatial = { spatial[4] }
+      feature_size = spatial[1]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[1], kind = definition.type }
       output = layer.output
     elseif definition.type == "max_pool2d" then
       if #spatial ~= 3 then
@@ -968,7 +1079,8 @@ function Sequential:_build()
     "learning_rate")
   optimizer.learning_rate = learning_rate_input
   optimizer.lr = learning_rate_input
-  local targets, state
+  local targets, state = {}, nil
+  if optimizer_type ~= "none" then
   if optimizer_type == "adam" then
     local result = { tf.train.adam(graph, loss, variables, optimizer) }
     targets, state = result[1], result[3]
@@ -1004,6 +1116,7 @@ function Sequential:_build()
     targets, state = result[1], result[3]
   else
     error("unsupported optimizer '" .. tostring(optimizer_type) .. "'", 3)
+  end
   end
   if type(state) == "table" then add_initializers(initializers, state.initializers) end
   if accumulate_state ~= nil and accumulate_state.initializers then
@@ -1112,6 +1225,9 @@ function Sequential:fit(x, y, options)
     options.validation_data = { validation_x, validation_y }
   end
   self:_build()
+  if #self._updates == 0 then
+    error("model was compiled without an optimizer; fit is unavailable", 2)
+  end
   x = normalize_rows(x, self._input_shape[#self._input_shape])
   y = self._sparse and normalize_labels(y) or normalize_rows(y, self._units)
   if #x == 0 then error("fit requires a non-empty dataset", 2) end
@@ -1327,6 +1443,9 @@ function Sequential:fit_tensor(x, y, options)
   end
   if self._session == nil then self._graph = nil end
   self:_build()
+  if #self._updates == 0 then
+    error("model was compiled without an optimizer; fit_tensor is unavailable", 2)
+  end
   local count = x:shape()[1]
   if y:shape()[1] ~= count then
     error("fit_tensor input and target batch sizes differ", 2)
@@ -1729,6 +1848,19 @@ function Sequential:summary()
       rows[#rows + 1] = string.format(
         "  %d: Conv2DTranspose(%d filters, %dx%d)", i, layer.filters,
         layer.kernel_size[1], layer.kernel_size[2])
+    elseif layer.kind == "conv3d" then
+      rows[#rows + 1] = string.format("  %d: Conv3D(%dx%dx%d, %d filters)", i,
+        layer.kernel_size[1], layer.kernel_size[2], layer.kernel_size[3],
+        layer.filters)
+    elseif layer.kind == "max_pool3d" or layer.kind == "avg_pool3d" then
+      rows[#rows + 1] = string.format("  %d: %s(%dx%dx%d)", i,
+        layer.kind == "max_pool3d" and "MaxPool3D" or "AvgPool3D",
+        layer.kernel_size[1], layer.kernel_size[2], layer.kernel_size[3])
+    elseif layer.kind == "global_avg_pool3d" or
+        layer.kind == "global_max_pool3d" then
+      rows[#rows + 1] = string.format("  %d: %s(%d)", i,
+        layer.kind == "global_avg_pool3d" and "GlobalAvgPool3D" or
+        "GlobalMaxPool3D", layer.units)
     elseif layer.kind == "max_pool2d" then
       rows[#rows + 1] = string.format("  %d: MaxPool2D(%dx%d)", i,
         layer.kernel_size[1], layer.kernel_size[2])

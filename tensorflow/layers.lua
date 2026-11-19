@@ -578,6 +578,88 @@ function Layers.conv1d(graph, input, filters, kernel_size, options)
   }
 end
 
+function Layers.conv3d(graph, input, filters, kernel_size, options)
+  options = options or {}
+  if type(filters) ~= "number" or filters < 1 then
+    error("conv3d requires positive filters", 3)
+  end
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("conv3d requires options.in_channels", 3)
+  end
+  local kernel_d, kernel_h, kernel_w = kernel_size, kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_d, kernel_h, kernel_w = kernel_size[1], kernel_size[2],
+      kernel_size[3]
+  end
+  local stride_d, stride_h, stride_w = options.stride or 1,
+    options.stride or 1, options.stride or 1
+  if type(options.stride) == "table" then
+    stride_d, stride_h, stride_w = options.stride[1], options.stride[2],
+      options.stride[3]
+  end
+  local dilation_d, dilation_h, dilation_w = options.dilation or 1,
+    options.dilation or 1, options.dilation or 1
+  if type(options.dilation) == "table" then
+    dilation_d, dilation_h, dilation_w = options.dilation[1],
+      options.dilation[2], options.dilation[3]
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "conv3d"
+  local tf = require("tensorflow")
+  local bound = math.sqrt(6 / (kernel_d * kernel_h * kernel_w * in_channels +
+    filters))
+  local values = {}
+  for d = 1, kernel_d do
+    values[d] = {}
+    for y = 1, kernel_h do
+      values[d][y] = {}
+      for x = 1, kernel_w do
+        values[d][y][x] = {}
+        for c = 1, in_channels do
+          values[d][y][x][c] = {}
+          for f = 1, filters do
+            values[d][y][x][c][f] = (math.random() * 2 - 1) * bound
+          end
+        end
+      end
+    end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
+    { dtype = dtype })
+  local desc = graph:new_operation("Conv3D", prefix .. "/conv")
+  desc:add_input(input)
+  desc:add_input(weight.read)
+  desc:set_type("T", dtype)
+  desc:set_int_list("strides", { 1, stride_d, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "SAME")
+  desc:set_string("data_format", "NDHWC")
+  desc:set_int_list("dilations", { 1, dilation_d, dilation_h, dilation_w, 1 })
+  local output = desc:finish()
+  local variables, initializers = { weight }, { weight.initializer }
+  local bias = nil
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, filters do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  if type(options.activation) == "string" then
+    local fn = tf.nn[options.activation]
+    if fn == nil then error("unknown activation '" .. options.activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. options.activation, dtype)
+  elseif type(options.activation) == "function" then
+    output = options.activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output, weight = weight, bias = bias, variables = variables,
+    initializers = initializers, filters = filters,
+    kernel_size = { kernel_d, kernel_h, kernel_w }, dtype = dtype,
+  }
+end
+
 function Layers.max_pool2d(graph, input, kernel_size, options)
   options = options or {}
   local kernel_h, kernel_w = kernel_size, kernel_size
@@ -870,6 +952,71 @@ function Layers.layer_normalization(graph, input, options)
     initializers = { gamma.initializer, beta.initializer },
     normalized_shape = shape, dtype = dtype,
   }
+end
+
+function Layers.max_pool3d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel_d, kernel_h, kernel_w = kernel_size, kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_d, kernel_h, kernel_w = kernel_size[1], kernel_size[2], kernel_size[3]
+  end
+  local stride_d, stride_h, stride_w = options.stride or kernel_d,
+    options.stride or kernel_h, options.stride or kernel_w
+  if type(options.stride) == "table" then
+    stride_d, stride_h, stride_w = options.stride[1], options.stride[2],
+      options.stride[3]
+  end
+  local desc = graph:new_operation("MaxPool3D", options.name or "max_pool3d")
+  desc:add_input(input)
+  desc:set_int_list("ksize", { 1, kernel_d, kernel_h, kernel_w, 1 })
+  desc:set_int_list("strides", { 1, stride_d, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "VALID")
+  desc:set_string("data_format", "NDHWC")
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.avg_pool3d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel_d, kernel_h, kernel_w = kernel_size, kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_d, kernel_h, kernel_w = kernel_size[1], kernel_size[2], kernel_size[3]
+  end
+  local stride_d, stride_h, stride_w = options.stride or kernel_d,
+    options.stride or kernel_h, options.stride or kernel_w
+  if type(options.stride) == "table" then
+    stride_d, stride_h, stride_w = options.stride[1], options.stride[2],
+      options.stride[3]
+  end
+  local desc = graph:new_operation("AvgPool3D", options.name or "avg_pool3d")
+  desc:add_input(input)
+  desc:set_int_list("ksize", { 1, kernel_d, kernel_h, kernel_w, 1 })
+  desc:set_int_list("strides", { 1, stride_d, stride_h, stride_w, 1 })
+  desc:set_string("padding", options.padding or "VALID")
+  desc:set_string("data_format", "NDHWC")
+  return { output = desc:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.global_avg_pool3d(graph, input, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local prefix = options.name or "global_avg_pool3d"
+  local pooled = tf.reduce_mean(graph, input, { 1, 2, 3 }, prefix .. "/mean",
+    options.dtype or "float32", false)
+  return { output = pooled, variables = {}, initializers = {} }
+end
+
+function Layers.global_max_pool3d(graph, input, options)
+  options = options or {}
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "global_max_pool3d"
+  local tf = require("tensorflow")
+  local desc = graph:new_operation("Max", prefix .. "/max")
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, { 1, 2, 3 }, prefix .. "/axes", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tidx", "int32")
+  desc:set_bool("keep_dims", false)
+  return { output = desc:finish(), variables = {}, initializers = {} }
 end
 
 function Layers.activation(graph, input, activation, options)

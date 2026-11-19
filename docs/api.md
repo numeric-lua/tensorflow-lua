@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.13.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.14.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -461,6 +461,18 @@ kernel size and `opts.padding` to `"VALID"`.
 
 Reduces a rank-3 `[batch, steps, channels]` tensor over the time axis.
 
+### `tf.layers.conv3d(graph, input, filters, kernel_size[, opts])`
+
+NDHWC 3-D convolution with `opts.in_channels`, strides, dilation, padding,
+bias, and activation. **Inference only** in this binding: the C library does
+not register the Conv3D gradient, so do not put it in a trainable Sequential
+model.
+
+### `tf.layers.max_pool3d`, `avg_pool3d`, `global_avg_pool3d`, `global_max_pool3d`
+
+3-D pooling over NDHWC tensors. The global variants reduce the depth, height,
+and width axes.
+
 ### `tf.layers.separable_conv2d(graph, input, filters, kernel_size[, opts])`
 
 Depthwise + pointwise convolution. Requires `opts.in_channels` and accepts
@@ -595,6 +607,13 @@ model:close()
   `save_training`/`load_training` also persist optimizer slots and epoch
   metadata so training can resume (small floating-point drift is possible).
 - `export(path)` writes the graph as a GraphDef protobuf.
+
+### Inference-only models
+
+`compile({ optimizer = "none" })` builds a Sequential model without optimizer
+updates. It supports `predict`/`evaluate`, and is required for architectures
+containing inference-only ops such as Conv3D. Calling `fit` then raises a clear
+error.
 
 ### Tensor mini-batches
 

@@ -363,3 +363,31 @@ test("embedding padding_idx returns a zero row", function()
   for column = 1, 4 do assert_eq(output[2][column], 0) end
   session:close()
 end)
+
+test("runs 3-D convolution, pooling, and global pooling", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 4, 4, 2 }, "vol")
+  local conv = tf.layers.conv3d(graph, input, 3, 3, {
+    in_channels = 2, padding = "SAME", name = "conv3",
+  })
+  local pool = tf.layers.max_pool3d(graph, conv.output, 2,
+    { name = "pool3" })
+  local global_avg = tf.layers.global_avg_pool3d(graph, conv.output,
+    { name = "global3" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, conv.initializers)
+  local values = {}
+  for d = 1, 4 do
+    values[d] = {}
+    for y = 1, 4 do
+      values[d][y] = {}
+      for x = 1, 4 do values[d][y][x] = { d / 4, y / 4 } end
+    end
+  end
+  local outputs = session:run({ [input] = { values } },
+    { conv.output, pool.output, global_avg.output })
+  assert_eq(table.concat(outputs[1]:shape(), ","), "1,4,4,4,3")
+  assert_eq(table.concat(outputs[2]:shape(), ","), "1,2,2,2,3")
+  assert_eq(table.concat(outputs[3]:shape(), ","), "1,3")
+  session:close()
+end)

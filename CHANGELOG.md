@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+
+- Conv3D, MaxPool3D, AvgPool3D, GlobalAvgPool3D, and GlobalMaxPool3D layers;
+- NDHWC shape tracking and summaries for 3-D Sequential stacks;
+- `optimizer = "none"` for inference-only Sequential models;
+- 165 dependency-free tests.
+
 ## 0.13.0
 
 - `tf.Functional` native checkpoint save/load, weight get/set, GraphDef

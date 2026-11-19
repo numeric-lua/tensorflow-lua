@@ -936,3 +936,26 @@ test("gradient accumulation also works through table fit", function()
   assert_eq(#history.loss, 4)
   model:close()
 end)
+
+test("Sequential runs a Conv3D stack in inference-only mode", function()
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 4, 2 } })
+  model:add({ type = "conv3d", filters = 3, kernel_size = 3 })
+  model:add({ type = "max_pool3d", kernel_size = 2 })
+  model:add({ type = "global_avg_pool3d" })
+  model:add({ type = "dense", units = 2 })
+  model:compile({ optimizer = "none", loss = "mse" })
+  local volume = {}
+  for d = 1, 4 do
+    volume[d] = {}
+    for y = 1, 4 do
+      volume[d][y] = {}
+      for x = 1, 4 do volume[d][y][x] = { d / 4, y / 4 } end
+    end
+  end
+  local output = model:predict({ volume })
+  assert_eq(table.concat(output:shape(), ","), "1,2")
+  assert_error(function()
+    model:fit({ { 1 } }, { { 1 } }, { epochs = 1 })
+  end, "without an optimizer")
+  model:close()
+end)
