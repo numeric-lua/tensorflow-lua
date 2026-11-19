@@ -415,3 +415,53 @@ test("composed Conv3D honors VALID padding and strides", function()
   assert_eq(table.concat(output:shape(), ","), "1,2,2,2,2")
   session:close()
 end)
+
+test("scaled dot-product attention returns context and weights", function()
+  local graph = tf.Graph.new()
+  local query = tf.placeholder(graph, "float32", { 1, 4, 8 }, "q")
+  local key = tf.placeholder(graph, "float32", { 1, 4, 8 }, "k")
+  local value = tf.placeholder(graph, "float32", { 1, 4, 8 }, "v")
+  local output, weights = tf.layers.attention(graph, query, key, value, {
+    query_shape = { 4, 8 }, key_shape = { 4, 8 }, causal = true,
+    name = "attn",
+  })
+  local session = tf.Session.new(graph)
+  local values = {}
+  for i = 1, 4 do values[i] = {}; for j = 1, 8 do values[i][j] = i + j end end
+  local result = session:run({
+    [query] = { values }, [key] = { values }, [value] = { values },
+  }, { output, weights })
+  assert_eq(table.concat(result[1]:shape(), ","), "1,4,8")
+  assert_eq(table.concat(result[2]:shape(), ","), "1,4,4")
+  local first = result[2]:totable()[1][1]
+  assert_true(math.abs(first[2]) < 1e-6)
+  assert_true(math.abs(first[3]) < 1e-6)
+  session:close()
+end)
+
+test("multi-head attention is trainable", function()
+  local graph = tf.Graph.new()
+  local query = tf.placeholder(graph, "float32", { 1, 4, 8 }, "mha_q")
+  local key = tf.placeholder(graph, "float32", { 1, 4, 8 }, "mha_k")
+  local value = tf.placeholder(graph, "float32", { 1, 4, 8 }, "mha_v")
+  local layer = tf.layers.multi_head_attention(graph, query, key, value, {
+    query_shape = { 4, 8 }, key_shape = { 4, 8 },
+    num_heads = 2, key_dim = 4, output_dim = 8, name = "mha",
+  })
+  local loss = tf.reduce_sum(graph, layer.output, { 0, 1, 2 }, "mha_loss",
+    "float32")
+  local refs = {}
+  for index, variable in ipairs(layer.variables) do refs[index] = variable.ref end
+  local gradients = tf.gradients(graph, { loss }, refs)
+  assert_eq(#gradients, #refs)
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local values = {}
+  for i = 1, 4 do values[i] = {}; for j = 1, 8 do values[i][j] = i * j / 8 end end
+  local result = session:run({
+    [query] = { values }, [key] = { values }, [value] = { values },
+  }, { layer.output, gradients[1] })
+  assert_eq(table.concat(result[1]:shape(), ","), "1,4,8")
+  assert_true(result[2] ~= nil)
+  session:close()
+end)

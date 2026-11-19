@@ -1121,6 +1121,178 @@ function Layers.global_max_pool3d(graph, input, options)
   return { output = desc:finish(), variables = {}, initializers = {} }
 end
 
+local function batch_matmul(graph, a, b, name, dtype, transpose_b)
+  local desc = graph:new_operation("BatchMatMulV2", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype or "float32")
+  desc:set_bool("adj_x", false)
+  desc:set_bool("adj_y", transpose_b == true)
+  return desc:finish()
+end
+
+local function project_sequence(graph, input, input_size, time, units, name,
+    dtype)
+  local tf = require("tensorflow")
+  local flat = tf.reshape(graph, input, { -1, input_size }, name .. "/flatten",
+    dtype)
+  local layer = tf.layers.dense(graph, flat, units, {
+    input_size = input_size, dtype = dtype, name = name,
+  })
+  local output = tf.reshape(graph, layer.output, { -1, time, units },
+    name .. "/sequence", dtype)
+  return output, layer.variables, layer.initializers
+end
+
+local function transpose_heads(graph, input, perm, shape, name, dtype)
+  local tf = require("tensorflow")
+  local desc = graph:new_operation("Transpose", name)
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, perm, name .. "/perm", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Tperm", "int32")
+  return tf.reshape(graph, desc:finish(), shape, name .. "/reshape", dtype)
+end
+
+-- Scaled dot-product attention over rank-3 [batch, time, features] tensors.
+-- Returns the context tensor and the attention weights.
+function Layers.attention(graph, query, key, value, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "attention"
+  local query_shape = options.query_shape
+  local key_shape = options.key_shape
+  if type(query_shape) ~= "table" or #query_shape ~= 2 or
+      type(key_shape) ~= "table" or #key_shape ~= 2 then
+    error("attention requires query_shape and key_shape = { time, features }", 3)
+  end
+  local time_q, feature_q = query_shape[1], query_shape[2]
+  local time_k, feature_k = key_shape[1], key_shape[2]
+  if feature_q ~= feature_k then
+    error("attention query and key feature sizes differ", 3)
+  end
+  local scores = batch_matmul(graph, query, key, prefix .. "/scores", dtype,
+    true)
+  local scale = 1 / math.sqrt(feature_q)
+  scores = tf.mul(graph, scores, tf.constant(graph, scale, prefix .. "/scale",
+    dtype), prefix .. "/scaled", dtype)
+  local mask = options.mask
+  if options.causal then
+    local values = {}
+    for i = 1, time_q do
+      values[i] = {}
+      for j = 1, time_k do values[i][j] = j <= i and 0 or -1e9 end
+    end
+    mask = tf.constant(graph, values, prefix .. "/causal", dtype)
+  end
+  if mask ~= nil then
+    scores = tf.add(graph, scores, mask, prefix .. "/masked", dtype)
+  end
+  local flat = tf.reshape(graph, scores, { -1, time_k }, prefix .. "/flat",
+    dtype)
+  local probabilities = tf.nn.softmax(graph, flat, prefix .. "/softmax", dtype)
+  local weights = tf.reshape(graph, probabilities, { -1, time_q, time_k },
+    prefix .. "/weights", dtype)
+  local context = batch_matmul(graph, weights, value, prefix .. "/context",
+    dtype, false)
+  return context, weights
+end
+
+-- Multi-head scaled dot-product attention.  Inputs are rank-3
+-- [batch, time, features]; query_shape/key_shape/value_shape are required.
+-- Returns the projected context and per-head attention weights.
+function Layers.multi_head_attention(graph, query, key, value, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "multi_head_attention"
+  local heads = options.num_heads or 8
+  local key_dim = options.key_dim or 64
+  local value_dim = options.value_dim or key_dim
+  local output_dim = options.output_dim or options.query_shape and
+    options.query_shape[2] or key_dim
+  if type(heads) ~= "number" or heads % 1 ~= 0 or heads < 1 then
+    error("multi_head_attention num_heads must be a positive integer", 3)
+  end
+  local query_shape = options.query_shape
+  local key_shape = options.key_shape
+  local value_shape = options.value_shape or key_shape
+  if type(query_shape) ~= "table" or #query_shape ~= 2 or
+      type(key_shape) ~= "table" or #key_shape ~= 2 or
+      type(value_shape) ~= "table" or #value_shape ~= 2 then
+    error("multi_head_attention requires query/key/value shapes", 3)
+  end
+  local time_q, feature_q = query_shape[1], query_shape[2]
+  local time_k, feature_k = key_shape[1], key_shape[2]
+  local time_v, feature_v = value_shape[1], value_shape[2]
+  if time_k ~= time_v then
+    error("multi_head_attention key and value time sizes differ", 3)
+  end
+
+  local q, q_vars, q_init = project_sequence(graph, query, feature_q, time_q,
+    heads * key_dim, prefix .. "/query", dtype)
+  local k, k_vars, k_init = project_sequence(graph, key, feature_k, time_k,
+    heads * key_dim, prefix .. "/key", dtype)
+  local v, v_vars, v_init = project_sequence(graph, value, feature_v, time_v,
+    heads * value_dim, prefix .. "/value", dtype)
+
+  q = tf.reshape(graph, q, { -1, time_q, heads, key_dim },
+    prefix .. "/query_split", dtype)
+  k = tf.reshape(graph, k, { -1, time_k, heads, key_dim },
+    prefix .. "/key_split", dtype)
+  v = tf.reshape(graph, v, { -1, time_v, heads, value_dim },
+    prefix .. "/value_split", dtype)
+  q = transpose_heads(graph, q, { 0, 2, 1, 3 },
+    { -1, heads, time_q, key_dim }, prefix .. "/query_heads", dtype)
+  k = transpose_heads(graph, k, { 0, 2, 1, 3 },
+    { -1, heads, time_k, key_dim }, prefix .. "/key_heads", dtype)
+  v = transpose_heads(graph, v, { 0, 2, 1, 3 },
+    { -1, heads, time_v, value_dim }, prefix .. "/value_heads", dtype)
+
+  local scores = batch_matmul(graph, q, k, prefix .. "/scores", dtype, true)
+  local scale = 1 / math.sqrt(key_dim)
+  scores = tf.mul(graph, scores, tf.constant(graph, scale, prefix .. "/scale",
+    dtype), prefix .. "/scaled", dtype)
+  local mask = options.mask
+  if options.causal then
+    local values = {}
+    for i = 1, time_q do
+      values[i] = {}
+      for j = 1, time_k do values[i][j] = j <= i and 0 or -1e9 end
+    end
+    mask = tf.constant(graph, values, prefix .. "/causal", dtype)
+  end
+  if mask ~= nil then
+    scores = tf.add(graph, scores, mask, prefix .. "/masked", dtype)
+  end
+  local flat = tf.reshape(graph, scores, { -1, time_k }, prefix .. "/flat",
+    dtype)
+  local probabilities = tf.nn.softmax(graph, flat, prefix .. "/softmax", dtype)
+  local weights = tf.reshape(graph, probabilities,
+    { -1, heads, time_q, time_k }, prefix .. "/weights", dtype)
+  local context = batch_matmul(graph, weights, v, prefix .. "/context", dtype,
+    false)
+  context = transpose_heads(graph, context, { 0, 2, 1, 3 },
+    { -1, time_q, heads * value_dim }, prefix .. "/context_heads", dtype)
+  local output, o_vars, o_init = project_sequence(graph, context,
+    heads * value_dim, time_q, output_dim, prefix .. "/output", dtype)
+  local variables, initializers = {}, {}
+  for _, group in ipairs({ q_vars, k_vars, v_vars, o_vars }) do
+    for _, variable in ipairs(group) do variables[#variables + 1] = variable end
+  end
+  for _, group in ipairs({ q_init, k_init, v_init, o_init }) do
+    for _, initializer in ipairs(group) do
+      initializers[#initializers + 1] = initializer
+    end
+  end
+  return {
+    output = output, weights = weights, variables = variables,
+    initializers = initializers, num_heads = heads, key_dim = key_dim,
+    value_dim = value_dim, output_dim = output_dim, dtype = dtype,
+  }
+end
+
 function Layers.activation(graph, input, activation, options)
   options = options or {}
   local tf = require("tensorflow")

@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.15.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.16.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -460,6 +460,21 @@ kernel size and `opts.padding` to `"VALID"`.
 ### `tf.layers.global_avg_pool1d(graph, input[, opts])`
 
 Reduces a rank-3 `[batch, steps, channels]` tensor over the time axis.
+
+### `tf.layers.attention(graph, query, key, value[, opts])`
+
+Scaled dot-product attention over rank-3 `[batch, time, features]` tensors.
+Requires `opts.query_shape` and `opts.key_shape` as `{ time, features }`.
+Returns `context, weights`. `opts.causal` adds a lower-triangular mask;
+`opts.mask` adds an explicit additive mask.
+
+### `tf.layers.multi_head_attention(graph, query, key, value[, opts])`
+
+Projects query/key/value, splits them into `opts.num_heads` heads of
+`opts.key_dim`/`opts.value_dim`, applies scaled dot-product attention, and
+projects to `opts.output_dim`. Requires `query_shape`, `key_shape`, and
+optionally `value_shape`. Returns a table with `output`, `weights`, `variables`,
+and `initializers`. The layer is composed from portable ops and is trainable.
 
 ### `tf.layers.conv3d(graph, input, filters, kernel_size[, opts])`
 

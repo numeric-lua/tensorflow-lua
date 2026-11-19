@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+- scaled dot-product attention and multi-head attention layers with optional
+  causal masking and per-head weights;
+- 169 dependency-free tests.
+
 ## 0.15.0
 
 - trainable Conv3D composed from depth slices and Conv2D kernels, supporting
