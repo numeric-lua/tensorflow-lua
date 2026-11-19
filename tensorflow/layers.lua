@@ -1293,6 +1293,97 @@ function Layers.multi_head_attention(graph, query, key, value, options)
   }
 end
 
+-- Sinusoidal positional encoding added to a [batch, time, features] tensor.
+function Layers.positional_encoding(graph, input, options)
+  options = options or {}
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 2 then
+    error("positional_encoding requires input_shape = { time, features }", 3)
+  end
+  local time, features = shape[1], shape[2]
+  if features % 2 ~= 0 then
+    error("positional_encoding requires an even feature count", 3)
+  end
+  local values = {}
+  for position = 0, time - 1 do
+    values[position + 1] = {}
+    for index = 0, features - 1 do
+      local pair = math.floor(index / 2)
+      local angle = position / (10000 ^ (2 * pair / features))
+      values[position + 1][index + 1] =
+        (index % 2 == 0) and math.sin(angle) or math.cos(angle)
+    end
+  end
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local encoding = tf.constant(graph, values, (options.name or
+    "positional_encoding") .. "/table", dtype)
+  return {
+    output = tf.add(graph, input, encoding, (options.name or
+      "positional_encoding") .. "/output", dtype),
+    variables = {}, initializers = {},
+  }
+end
+
+-- Pre-norm transformer block: attention + residual + layer norm, then a
+-- two-layer feed-forward + residual + layer norm.
+function Layers.transformer_block(graph, input, options)
+  options = options or {}
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 2 then
+    error("transformer_block requires input_shape = { time, features }", 3)
+  end
+  local time, features = shape[1], shape[2]
+  local heads = options.num_heads or 4
+  local key_dim = options.key_dim or math.max(1, math.floor(features / heads))
+  local ff_dim = options.ff_dim or features * 4
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "transformer_block"
+  local tf = require("tensorflow")
+
+  local attention = Layers.multi_head_attention(graph, input, input, input, {
+    query_shape = { time, features }, key_shape = { time, features },
+    num_heads = heads, key_dim = key_dim, output_dim = features,
+    causal = options.causal, mask = options.mask,
+    dtype = dtype, name = prefix .. "/attention",
+  })
+  local first_residual = tf.add(graph, input, attention.output,
+    prefix .. "/attention_residual", dtype)
+  local first_norm = Layers.layer_normalization(graph, first_residual, {
+    normalized_shape = { features }, dtype = dtype,
+    name = prefix .. "/attention_norm",
+  })
+
+  local ff, ff1_vars, ff1_init = project_sequence(graph, first_norm.output,
+    features, time, ff_dim, prefix .. "/ff1", dtype)
+  ff = tf.nn.relu(graph, ff, prefix .. "/ff1_relu", dtype)
+  local ff2, ff2_vars, ff2_init = project_sequence(graph, ff, ff_dim, time,
+    features, prefix .. "/ff2", dtype)
+  ff = ff2
+  local second_residual = tf.add(graph, first_norm.output, ff,
+    prefix .. "/ff_residual", dtype)
+  local second_norm = Layers.layer_normalization(graph, second_residual, {
+    normalized_shape = { features }, dtype = dtype,
+    name = prefix .. "/ff_norm",
+  })
+
+  local variables, initializers = {}, {}
+  for _, group in ipairs({ attention.variables, first_norm.variables, ff1_vars,
+    ff2_vars, second_norm.variables }) do
+    for _, variable in ipairs(group) do variables[#variables + 1] = variable end
+  end
+  for _, group in ipairs({ attention.initializers, first_norm.initializers,
+    ff1_init, ff2_init, second_norm.initializers }) do
+    for _, initializer in ipairs(group) do
+      initializers[#initializers + 1] = initializer
+    end
+  end
+  return {
+    output = second_norm.output, variables = variables,
+    initializers = initializers, dtype = dtype,
+  }
+end
+
 function Layers.activation(graph, input, activation, options)
   options = options or {}
   local tf = require("tensorflow")

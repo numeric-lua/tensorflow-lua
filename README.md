@@ -7,10 +7,10 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.16.0` alpha. Graph inference, construction, training, checkpoints, eager
-mode, trainable 2-D/3-D convolution and pooling, attention layers, a
-checkpointable functional graph model, and a Sequential model. The
-dependency-free suite currently contains 169 tests.
+`0.17.0` alpha. Graph inference, construction, training, checkpoints, eager
+mode, trainable 2-D/3-D convolution and pooling, attention/transformer layers,
+a checkpointable functional graph model, and a Sequential model. The
+dependency-free suite currently contains 170 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -60,6 +60,7 @@ dependency-free suite currently contains 169 tests.
 - MaxPool3D, AvgPool3D, GlobalAvgPool3D, and GlobalMaxPool3D layers;
 - scaled dot-product attention and multi-head attention with optional causal
   masking;
+- sinusoidal positional encoding and a pre-norm transformer block;
 - `optimizer = "none"` inference-only Sequential models.
 
 Not yet implemented: official SavedModel export, GPU placement, complete
@@ -83,11 +84,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.16.0/tensorflow-lua-0.16.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.17.0/tensorflow-lua-0.17.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-0.16.0-1.rockspec
-./scripts/package.sh tensorflow-lua-0.16.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.17.0-1.rockspec
+./scripts/package.sh tensorflow-lua-0.17.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -261,7 +262,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v0.16.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.16.0)
+[**v0.17.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.17.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).

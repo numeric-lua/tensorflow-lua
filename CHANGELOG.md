@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.0
+
+- sinusoidal positional encoding;
+- pre-norm transformer block with multi-head attention, residual connections,
+  layer normalization, and a feed-forward sublayer;
+- 170 dependency-free tests.
+
 ## 0.16.0
 
 - scaled dot-product attention and multi-head attention layers with optional

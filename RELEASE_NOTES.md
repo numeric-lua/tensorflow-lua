@@ -1,29 +1,31 @@
-# tensorflow-lua 0.16.0
+# tensorflow-lua 0.17.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- scaled dot-product attention over rank-3 `[batch, time, features]` inputs;
-- multi-head attention with query/key/value projections, per-head weights,
-  output projection, and optional causal masking;
-- attention is composed from portable TensorFlow ops and is trainable;
-- 169 dependency-free tests.
+- sinusoidal positional encoding for `[batch, time, features]` inputs;
+- pre-norm transformer block combining multi-head attention, residual
+  connections, layer normalization, and a two-layer feed-forward network;
+- transformer block is trainable and returns its variables/initializers for
+  use with `tf.Functional` or a custom graph;
+- 170 dependency-free tests.
 
-The 0.15 feature set remains: trainable composed Conv3D, 3-D pooling,
-functional-model checkpointing, gradient accumulation, AUC/macro metrics,
-tensor mini-batches, separable convolution, and native LR schedules.
+The 0.16 feature set remains: scaled dot-product and multi-head attention,
+trainable composed Conv3D, 3-D pooling, functional-model checkpointing,
+gradient accumulation, AUC/macro metrics, tensor mini-batches, and native LR
+schedules.
 
 ## API notes
 
-`tf.layers.attention` requires `query_shape` and `key_shape` as
-`{ time, features }`. `tf.layers.multi_head_attention` additionally takes
-`num_heads`, `key_dim`, `value_dim`, and `output_dim`.
+`tf.layers.transformer_block` requires `input_shape = { time, features }` and
+accepts `num_heads`, `key_dim`, `ff_dim`, and `causal`. It is pre-norm: the
+attention and feed-forward residual paths are each normalized.
 
 ## Install
 
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-0.16.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.17.0-1.rockspec
 ```

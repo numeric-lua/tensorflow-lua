@@ -465,3 +465,30 @@ test("multi-head attention is trainable", function()
   assert_true(result[2] ~= nil)
   session:close()
 end)
+
+test("positional encoding and transformer block are trainable", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 8 }, "tf_in")
+  local encoded = tf.layers.positional_encoding(graph, input, {
+    input_shape = { 4, 8 }, name = "pos",
+  })
+  local block = tf.layers.transformer_block(graph, encoded.output, {
+    input_shape = { 4, 8 }, num_heads = 2, key_dim = 4, ff_dim = 16,
+    name = "block",
+  })
+  assert_true(#block.variables > 0)
+  local loss = tf.reduce_sum(graph, block.output, { 0, 1, 2 }, "tf_loss",
+    "float32")
+  local refs = {}
+  for index, variable in ipairs(block.variables) do refs[index] = variable.ref end
+  local gradients = tf.gradients(graph, { loss }, refs)
+  assert_eq(#gradients, #refs)
+  local session = tf.Session.new(graph)
+  session:run({}, {}, block.initializers)
+  local values = {}
+  for i = 1, 4 do values[i] = {}; for j = 1, 8 do values[i][j] = i / 4 end end
+  local result = session:run({ [input] = { values } },
+    { block.output, gradients[1] })[1]
+  assert_eq(table.concat(result:shape(), ","), "1,4,8")
+  session:close()
+end)
