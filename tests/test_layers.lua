@@ -368,7 +368,8 @@ test("runs 3-D convolution, pooling, and global pooling", function()
   local graph = tf.Graph.new()
   local input = tf.placeholder(graph, "float32", { 1, 4, 4, 4, 2 }, "vol")
   local conv = tf.layers.conv3d(graph, input, 3, 3, {
-    in_channels = 2, padding = "SAME", name = "conv3",
+    in_channels = 2, input_shape = { 4, 4, 4, 2 }, padding = "SAME",
+    name = "conv3",
   })
   local pool = tf.layers.max_pool3d(graph, conv.output, 2,
     { name = "pool3" })
@@ -389,5 +390,28 @@ test("runs 3-D convolution, pooling, and global pooling", function()
   assert_eq(table.concat(outputs[1]:shape(), ","), "1,4,4,4,3")
   assert_eq(table.concat(outputs[2]:shape(), ","), "1,2,2,2,3")
   assert_eq(table.concat(outputs[3]:shape(), ","), "1,3")
+  session:close()
+end)
+
+test("composed Conv3D honors VALID padding and strides", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 5, 5, 5, 2 }, "valid_vol")
+  local layer = tf.layers.conv3d(graph, input, 2, 3, {
+    in_channels = 2, input_shape = { 5, 5, 5, 2 }, padding = "VALID",
+    stride = 2, name = "valid_conv3",
+  })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local volume = {}
+  for d = 1, 5 do
+    volume[d] = {}
+    for y = 1, 5 do
+      volume[d][y] = {}
+      for x = 1, 5 do volume[d][y][x] = { 1, 0 } end
+    end
+  end
+  local output = session:run({ [input] = { volume } },
+    { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,2,2,2,2")
   session:close()
 end)

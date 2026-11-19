@@ -7,9 +7,10 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.14.0` alpha. Graph inference, construction, training, checkpoints, eager
-mode, 2-D/3-D convolution and pooling, a checkpointable functional graph model,
-and a Sequential model. The dependency-free suite currently contains 165 tests.
+`0.15.0` alpha. Graph inference, construction, training, checkpoints, eager
+mode, trainable 2-D/3-D convolution and pooling, a checkpointable functional
+graph model, and a Sequential model. The dependency-free suite currently
+contains 167 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -54,14 +55,15 @@ and a Sequential model. The dependency-free suite currently contains 165 tests.
 - binary AUC and macro multiclass precision/recall/F1;
 - `tf.Functional` checkpointing, weight get/set, GraphDef export, summaries,
   callbacks, validation loss, and per-output loss weights;
-- Conv3D, MaxPool3D, AvgPool3D, GlobalAvgPool3D, and GlobalMaxPool3D layers;
+- trainable Conv3D built from depth slices plus portable Conv2D kernels, with
+  SAME/VALID padding, strides, and dilation;
+- MaxPool3D, AvgPool3D, GlobalAvgPool3D, and GlobalMaxPool3D layers;
 - `optimizer = "none"` inference-only Sequential models.
 
 Not yet implemented: official SavedModel export, GPU placement, complete
 Keras-style functional layers, and verified libtensorflow 2.19/2.20 support.
-Conv3D is inference-only because the C library does not register its gradient;
-use `optimizer = "none"` for 3-D inference models. Eager execution is available
-as an experimental `tf.eager` surface with basic arithmetic and activations.
+Eager execution is available as an experimental `tf.eager` surface with basic
+arithmetic and activations.
 
 ## Requirements
 
@@ -79,11 +81,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.14.0/tensorflow-lua-0.14.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.15.0/tensorflow-lua-0.15.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-0.14.0-1.rockspec
-./scripts/package.sh tensorflow-lua-0.14.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.15.0-1.rockspec
+./scripts/package.sh tensorflow-lua-0.15.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -257,7 +259,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v0.14.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.14.0)
+[**v0.15.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.15.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).

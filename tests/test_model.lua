@@ -959,3 +959,28 @@ test("Sequential runs a Conv3D stack in inference-only mode", function()
   end, "without an optimizer")
   model:close()
 end)
+
+test("Sequential trains a composed Conv3D stack", function()
+  local model = tf.Sequential.new({ input_shape = { 4, 4, 4, 2 } })
+  model:add({ type = "conv3d", filters = 2, kernel_size = 3 })
+  model:add({ type = "global_avg_pool3d" })
+  model:add({ type = "dense", units = 2 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.001 },
+    loss = "mse" })
+  local volume = {}
+  for d = 1, 4 do
+    volume[d] = {}
+    for y = 1, 4 do
+      volume[d][y] = {}
+      for x = 1, 4 do volume[d][y][x] = { d / 4, y / 4 } end
+    end
+  end
+  local x = tf.tensor({ volume })
+  local y = tf.tensor({ { 0, 1 } })
+  local before = model:evaluate_tensor(x, y)
+  local history = model:fit_tensor(x, y, { epochs = 5 })
+  local after = model:evaluate_tensor(x, y)
+  assert_eq(#history.loss, 5)
+  assert_true(after < before)
+  x:destroy(); y:destroy(); model:close()
+end)

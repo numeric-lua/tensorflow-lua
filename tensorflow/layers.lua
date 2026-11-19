@@ -583,9 +583,13 @@ function Layers.conv3d(graph, input, filters, kernel_size, options)
   if type(filters) ~= "number" or filters < 1 then
     error("conv3d requires positive filters", 3)
   end
-  local in_channels = options.in_channels
-  if type(in_channels) ~= "number" or in_channels < 1 then
-    error("conv3d requires options.in_channels", 3)
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 4 then
+    error("conv3d requires options.input_shape = { d, h, w, c }", 3)
+  end
+  local in_channels = options.in_channels or shape[4]
+  if type(in_channels) ~= "number" or in_channels ~= shape[4] then
+    error("conv3d input_shape channels must match options.in_channels", 3)
   end
   local kernel_d, kernel_h, kernel_w = kernel_size, kernel_size, kernel_size
   if type(kernel_size) == "table" then
@@ -604,9 +608,51 @@ function Layers.conv3d(graph, input, filters, kernel_size, options)
     dilation_d, dilation_h, dilation_w = options.dilation[1],
       options.dilation[2], options.dilation[3]
   end
+  local padding = string.upper(options.padding or "SAME")
+  if padding ~= "SAME" and padding ~= "VALID" then
+    error("conv3d padding must be SAME or VALID", 3)
+  end
   local dtype = options.dtype or "float32"
   local prefix = options.name or "conv3d"
   local tf = require("tensorflow")
+
+  local effective_d = (kernel_d - 1) * dilation_d + 1
+  local effective_h = (kernel_h - 1) * dilation_h + 1
+  local effective_w = (kernel_w - 1) * dilation_w + 1
+  local function output_dim(size, effective, stride, same)
+    if same then return math.ceil(size / stride) end
+    return math.floor((size - effective) / stride) + 1
+  end
+  local out_d = output_dim(shape[1], effective_d, stride_d, padding == "SAME")
+  local out_h = output_dim(shape[2], effective_h, stride_h, padding == "SAME")
+  local out_w = output_dim(shape[3], effective_w, stride_w, padding == "SAME")
+  if out_d < 1 or out_h < 1 or out_w < 1 then
+    error("conv3d kernel is larger than the input volume", 3)
+  end
+  local padded_d = (out_d - 1) * stride_d + effective_d
+  local padded_h = (out_h - 1) * stride_h + effective_h
+  local padded_w = (out_w - 1) * stride_w + effective_w
+  local pad_d = padded_d - shape[1]
+  local pad_h = padded_h - shape[2]
+  local pad_w = padded_w - shape[3]
+  local pads = {
+    { 0, 0 },
+    { math.floor(pad_d / 2), pad_d - math.floor(pad_d / 2) },
+    { math.floor(pad_h / 2), pad_h - math.floor(pad_h / 2) },
+    { math.floor(pad_w / 2), pad_w - math.floor(pad_w / 2) },
+    { 0, 0 },
+  }
+  local padded = input
+  if pad_d + pad_h + pad_w > 0 then
+    local pad_desc = graph:new_operation("Pad", prefix .. "/pad")
+    pad_desc:add_input(input)
+    pad_desc:add_input(tf.constant(graph, pads, prefix .. "/paddings",
+      "int32"))
+    pad_desc:set_type("T", dtype)
+    pad_desc:set_type("Tpaddings", "int32")
+    padded = pad_desc:finish()
+  end
+
   local bound = math.sqrt(6 / (kernel_d * kernel_h * kernel_w * in_channels +
     filters))
   local values = {}
@@ -627,15 +673,70 @@ function Layers.conv3d(graph, input, filters, kernel_size, options)
   end
   local weight = tf.variable(graph, values, prefix .. "/weight",
     { dtype = dtype })
-  local desc = graph:new_operation("Conv3D", prefix .. "/conv")
-  desc:add_input(input)
-  desc:add_input(weight.read)
-  desc:set_type("T", dtype)
-  desc:set_int_list("strides", { 1, stride_d, stride_h, stride_w, 1 })
-  desc:set_string("padding", options.padding or "SAME")
-  desc:set_string("data_format", "NDHWC")
-  desc:set_int_list("dilations", { 1, dilation_d, dilation_h, dilation_w, 1 })
-  local output = desc:finish()
+  local depth = padded_d - (out_d - 1) * stride_d - effective_d
+  local function depth_slice(kernel_index)
+    local begin = tf.constant(graph, { 0, (kernel_index - 1) * dilation_d,
+      0, 0, 0 }, prefix .. "/depth_begin_" .. kernel_index, "int32")
+    local finish = tf.constant(graph, { 0,
+      (kernel_index - 1) * dilation_d + (out_d - 1) * stride_d + 1,
+      padded_h, padded_w, in_channels },
+      prefix .. "/depth_end_" .. kernel_index, "int32")
+    local strides = tf.constant(graph, { 1, stride_d, 1, 1, 1 },
+      prefix .. "/depth_strides_" .. kernel_index, "int32")
+    local desc = graph:new_operation("StridedSlice",
+      prefix .. "/depth_" .. kernel_index)
+    desc:add_input(padded)
+    desc:add_input(begin)
+    desc:add_input(finish)
+    desc:add_input(strides)
+    desc:set_type("T", dtype)
+    desc:set_type("Index", "int32")
+    desc:set_int("begin_mask", 0)
+    desc:set_int("end_mask", 1)
+    desc:set_int("ellipsis_mask", 0)
+    desc:set_int("new_axis_mask", 0)
+    desc:set_int("shrink_axis_mask", 0)
+    return desc:finish()
+  end
+  local function kernel_slice(kernel_index)
+    local begin = tf.constant(graph, { kernel_index - 1, 0, 0, 0, 0 },
+      prefix .. "/kernel_begin_" .. kernel_index, "int32")
+    local size = tf.constant(graph, { 1, kernel_h, kernel_w, in_channels,
+      filters }, prefix .. "/kernel_size_" .. kernel_index, "int32")
+    local desc = graph:new_operation("Slice",
+      prefix .. "/kernel_" .. kernel_index)
+    desc:add_input(weight.read)
+    desc:add_input(begin)
+    desc:add_input(size)
+    desc:set_type("T", dtype)
+    desc:set_type("Index", "int32")
+    return desc:finish()
+  end
+  local total
+  for kernel_index = 1, kernel_d do
+    local slab = depth_slice(kernel_index)
+    local flat = tf.reshape(graph, slab, { -1, padded_h, padded_w,
+      in_channels }, prefix .. "/flat_" .. kernel_index, dtype)
+    local kernel2 = tf.reshape(graph, kernel_slice(kernel_index),
+      { kernel_h, kernel_w, in_channels, filters },
+      prefix .. "/kernel2_" .. kernel_index, dtype)
+    local desc = graph:new_operation("Conv2D",
+      prefix .. "/conv2d_" .. kernel_index)
+    desc:add_input(flat)
+    desc:add_input(kernel2)
+    desc:set_type("T", dtype)
+    desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+    desc:set_string("padding", "VALID")
+    desc:set_string("data_format", "NHWC")
+    desc:set_int_list("dilations", { 1, dilation_h, dilation_w, 1 })
+    desc:set_bool("use_cudnn_on_gpu", false)
+    local conv = desc:finish()
+    local volume = tf.reshape(graph, conv, { -1, out_d, out_h, out_w,
+      filters }, prefix .. "/volume_" .. kernel_index, dtype)
+    total = total == nil and volume or tf.add(graph, total, volume,
+      prefix .. "/sum_" .. kernel_index, dtype)
+  end
+  local output = total
   local variables, initializers = { weight }, { weight.initializer }
   local bias = nil
   if options.use_bias ~= false then
@@ -657,6 +758,7 @@ function Layers.conv3d(graph, input, filters, kernel_size, options)
     output = output, weight = weight, bias = bias, variables = variables,
     initializers = initializers, filters = filters,
     kernel_size = { kernel_d, kernel_h, kernel_w }, dtype = dtype,
+    output_shape = { out_d, out_h, out_w, filters },
   }
 end
 

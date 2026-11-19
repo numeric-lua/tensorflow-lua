@@ -477,7 +477,8 @@ function Sequential:_build()
         "SAME")
       local layer = tf.layers.conv3d(graph, output, definition.filters,
         { kernel_d, kernel_h, kernel_w }, {
-          in_channels = spatial[4], stride = { stride_d, stride_h, stride_w },
+          in_channels = spatial[4], input_shape = spatial,
+          stride = { stride_d, stride_h, stride_w },
           padding = padding, dilation = { dilation_d, dilation_h, dilation_w },
           use_bias = options.use_bias, activation = options.activation,
           dtype = options.dtype, name = options.name,

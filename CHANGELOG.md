@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0
+
+- trainable Conv3D composed from depth slices and Conv2D kernels, supporting
+  SAME/VALID padding, strides, and dilation;
+- 166 dependency-free tests.
+
 ## 0.14.0
 
 - Conv3D, MaxPool3D, AvgPool3D, GlobalAvgPool3D, and GlobalMaxPool3D layers;
