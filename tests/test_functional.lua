@@ -16,12 +16,13 @@ test("functional model trains a two-input weighted sum and predicts", function()
       { name = "a", shape = { 1 } },
       { name = "b", shape = { 1 } },
     },
-    targets = { sum = { shape = { 1 } } },
+    targets = { sum = { shape = { 1 } }, diff = { shape = { 1 } } },
     build = build_two_input(),
     optimizer = { type = "sgd", learning_rate = 0.001 },
   })
   local inputs = { a = { { 1 }, { 2 }, { 3 } }, b = { { 2 }, { 4 }, { 6 } } }
-  local targets = { sum = { { 6 }, { 12 }, { 18 } } }
+  local targets = { sum = { { 6 }, { 12 }, { 18 } },
+    diff = { { -1 }, { -2 }, { -3 } } }
   local before = model:evaluate(inputs, targets)
   local history = model:fit(inputs, targets, { epochs = 200 })
   local after = model:evaluate(inputs, targets)
@@ -29,5 +30,6 @@ test("functional model trains a two-input weighted sum and predicts", function()
   assert_true(#history.loss == 200)
   local predicted = model:predict({ a = { { 1 } }, b = { { 2 } } })
   assert_true(math.abs(predicted.sum:totable()[1][1] - 6) < 0.5)
+  assert_true(math.abs(predicted.diff:totable()[1][1] - (-1)) < 1e-6)
   model:close()
 end)
