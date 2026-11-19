@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- verify the full suite against libtensorflow 2.16.2, 2.18.0, and 2.18.1;
+- pin Linux x86-64 archive checksums for 2.16.2 and 2.18.1 and reject a
+  destination containing a different libtensorflow version;
+- report libtensorflow 2.19/2.20 as unavailable with a clear diagnostic
+  instead of attempting archives that Google never published;
+- add a compatibility matrix with operation coverage for separable
+  convolution, pooling, and checkpoints;
+- extend CI to 2.18.1 and add fetch-script version regression tests.
+
 ## 2.0.0
 
 - portable deployment bundles: GraphDef + native V2 checkpoint + manifest;

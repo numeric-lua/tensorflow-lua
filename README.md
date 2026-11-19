@@ -30,7 +30,8 @@ dependency-free suite currently contains 175 tests. See
   Activation, Reshape, Permute, UpSampling2D, ZeroPadding2D, Embedding,
   Flatten, and Dropout layers, including pooling stacks, resumable BatchNorm
   statistics, and runtime train/eval normalization/dropout switching;
-- tested against libtensorflow 2.16.2 and 2.18.0 on Ubuntu 22.04/24.04;
+- tested against libtensorflow 2.16.2, 2.18.0, and 2.18.1 on Ubuntu
+  22.04/24.04; see [docs/compatibility.md](docs/compatibility.md);
 - loss helpers (MSE, MAE, Huber, hinge, categorical hinge,
   binary/softmax/sparse-softmax cross-entropy), binary/class accuracy,
   precision/recall/F1, cast, concat, and OneHot;
@@ -69,15 +70,17 @@ dependency-free suite currently contains 175 tests. See
 - unrolled LSTM and GRU layers for fixed-length sequences;
 - `optimizer = "none"` inference-only Sequential models.
 
-Not yet implemented: official SavedModel export, GPU placement, complete
-Keras-style functional layers, and verified libtensorflow 2.19/2.20 support.
-Eager execution is available as an experimental `tf.eager` surface with basic
-arithmetic and activations.
+Not yet implemented: official SavedModel export, GPU placement, and complete
+Keras-style functional layers. Linux x86-64 libtensorflow 2.19/2.20 are
+unsupported because Google stopped publishing C archives after 2.18; the fetch
+script reports this explicitly. See
+[docs/compatibility.md](docs/compatibility.md). Eager execution is available as
+an experimental `tf.eager` surface with basic arithmetic and activations.
 
 ## Requirements
 
 - LuaJIT 2.1
-- Linux x86_64 libtensorflow 2.16.2 or 2.18.0 (download it with
+- Linux x86_64 libtensorflow 2.16.2, 2.18.0, or 2.18.1 (download it with
   `./scripts/fetch_libtensorflow.sh`; set `TENSORFLOW_VERSION` to select)
 - no mandatory Lua rocks (the rockspec is optional packaging)
 
@@ -98,9 +101,10 @@ luarocks --lua-version=5.1 make tensorflow-lua-2.0.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
-`TENSORFLOW_LIB` to the shared object if it lives elsewhere. The 2.18.0
-Linux x86-64 archive checksum is pinned in the fetch script; override
-`TENSORFLOW_SHA256` to verify a different build.
+`TENSORFLOW_LIB` to the shared object if it lives elsewhere. The fetch script
+pins the Linux x86-64 archive checksums for 2.16.2, 2.18.0, and 2.18.1. It
+rejects unpinned versions unless `TENSORFLOW_SHA256` verifies the build, and
+reports that official 2.19/2.20 Linux x86-64 C archives do not exist.
 
 ## Quick start
 

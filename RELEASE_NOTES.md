@@ -32,12 +32,13 @@ and Sequential models, and native LR schedules.
 ## Verification
 
 - 175 dependency-free tests;
-- CI on Ubuntu 22.04/24.04 with libtensorflow 2.16.2/2.18.0.
+- CI on Ubuntu 22.04/24.04 with libtensorflow 2.16.2/2.18.0/2.18.1.
 
 ## Limits
 
 Linux x86-64 CPU; no GPU placement; no official SavedModel export; composed
-Conv3D is slower than a fused kernel; 2.19/2.20 are unverified.
+Conv3D is slower than a fused kernel. libtensorflow 2.19/2.20 are unsupported
+because Google stopped publishing Linux x86-64 C archives after 2.18.
 
 ## Install
 

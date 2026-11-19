@@ -25,8 +25,10 @@ print(tf.version())          -- "2.18.0"
 ```
 
 The module is available from LuaRocks as `tensorflow-lua` and has been tested
-with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
-`third_party/libtensorflow`, or the dynamic linker path.
+with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
+[docs/compatibility.md](compatibility.md). It loads `libtensorflow.so` from
+`TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
+linker path.
 
 `tf.VERSION` is the binding version (`2.0.0`); `tf.version()` returns
 libtensorflow's version.

@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
-        tensorflow: ["2.16.2", "2.18.0"]
+        tensorflow: ["2.16.2", "2.18.0", "2.18.1"]
     runs-on: ${{ matrix.os }}
     env:
       TENSORFLOW_VERSION: ${{ matrix.tensorflow }}
@@ -33,6 +33,14 @@ jobs:
         run: ./scripts/fetch_libtensorflow.sh
       - name: Run tests
         run: ./scripts/test.sh
+
+  unsupported-versions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check fetch script diagnostics
+        run: ./tests/test_fetch_libtensorflow.sh
 
   package:
     runs-on: ubuntu-24.04

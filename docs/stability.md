@@ -28,7 +28,10 @@ Names not in those documents are internal. The `_` prefix marks private fields.
 
 ## Known platform limits
 
-- Linux x86-64 with libtensorflow 2.16.2 or 2.18.0 is the tested matrix.
+- Linux x86-64 with libtensorflow 2.16.2, 2.18.0, or 2.18.1 is the tested
+  matrix. libtensorflow 2.19/2.20 are unsupported because Google did not
+  publish Linux x86-64 C archives after 2.18; see
+  [compatibility.md](compatibility.md).
 - CUDA/GPU placement is not implemented.
 - Official SavedModel export is not implemented because the TensorFlow C API
   does not expose the MetaGraphDef writer. GraphDef export plus native
