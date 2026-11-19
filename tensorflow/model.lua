@@ -1797,6 +1797,19 @@ function Sequential:save(path)
   return require("tensorflow").save_checkpoint(self._session, path, entries)
 end
 
+function Sequential:save_bundle(directory, metadata)
+  if self._session == nil then self:_build() end
+  local entries = {}
+  for _, variable in ipairs(self._variables) do
+    entries[#entries + 1] = { name = variable.name, variable = variable }
+  end
+  metadata = metadata or {}
+  metadata.inputs = metadata.inputs or { self._graph:output_spec(self._input) }
+  metadata.outputs = metadata.outputs or { self._graph:output_spec(self._output) }
+  return require("tensorflow").save_bundle(directory, self._graph, self._session,
+    entries, metadata)
+end
+
 function Sequential:save_native(prefix)
   if self._session == nil then error("model has no session to save", 2) end
   local tf = require("tensorflow")

@@ -35,6 +35,8 @@ Names not in those documents are internal. The `_` prefix marks private fields.
   checkpoints is the supported deployment path.
 - The native C library has no gradient for `Conv3D`; the layer composes
   portable Conv2D kernels and is trainable but slower than a fused kernel.
+- Deployment uses the portable bundle format (`graph.pb` + native V2 checkpoint
+  + manifest); official SavedModel export is unavailable.
 - LSTM/GRU layers unroll a static time dimension at graph-construction time.
 - AUC uses an O(N^2) pairwise graph and is intended for moderate evaluation
   batches.

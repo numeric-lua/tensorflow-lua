@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0
+
+- portable deployment bundles: GraphDef + native V2 checkpoint + manifest;
+- `tf.save_bundle`/`tf.load_bundle` and Sequential/Functional
+  `save_bundle` methods;
+- bundle loading restores variables by name and returns a runnable
+  graph/session;
+- 175 dependency-free tests.
+
 ## 1.0.0
 
 - public API stability policy and documented public surface;

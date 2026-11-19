@@ -311,7 +311,7 @@ function Train.restore_v2(graph, prefix, variables, name)
     names[i] = entry.name or variable.name
     if names[i] == nil then error("restore_v2 variable is missing a name", 3) end
     slices[i] = ""
-    dtypes[i] = variable.dtype or "float32"
+    dtypes[i] = entry.dtype or variable.dtype or "float32"
   end
   local prefix_op = Train.constant(graph, prefix, (name or "restore") .. "/prefix",
     "string")
@@ -330,7 +330,7 @@ function Train.restore_v2(graph, prefix, variables, name)
       (name or "restore") .. "/assign_" .. i)
     assign_desc:add_input(variable.ref or variable)
     assign_desc:add_input(value)
-    assign_desc:set_type("T", variable.dtype or "float32")
+    assign_desc:set_type("T", entry.dtype or variable.dtype or "float32")
     assign_desc:set_bool("use_locking", true)
     targets[#targets + 1] = assign_desc:finish()
   end

@@ -283,6 +283,26 @@ function Functional:summary()
   return text
 end
 
+function Functional:save_bundle(directory, metadata)
+  local entries = entries_for(self._variables)
+  metadata = metadata or {}
+  if metadata.inputs == nil then
+    metadata.inputs = {}
+    for _, name in ipairs(self._input_order) do
+      metadata.inputs[#metadata.inputs + 1] =
+        self._graph:output_spec(self._inputs[name])
+    end
+  end
+  if metadata.outputs == nil then
+    metadata.outputs = {}
+    for _, output in pairs(self._outputs) do
+      metadata.outputs[#metadata.outputs + 1] = self._graph:output_spec(output)
+    end
+  end
+  return require("tensorflow").save_bundle(directory, self._graph, self._session,
+    entries, metadata)
+end
+
 function Functional:save(prefix)
   local tf = require("tensorflow")
   self._session:run({}, {}, { tf.save_v2(self._graph, prefix,

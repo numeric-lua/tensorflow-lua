@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`1.0.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.0.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -798,6 +798,24 @@ Serializes the graph to bytes.
 
 Deletes the TF_Graph immediately. Any live session must be closed first; raw
 operation handles become invalid.
+
+## Deployment bundles
+
+A portable bundle contains `graph.pb`, a native V2 checkpoint at `variables`,
+and a `manifest.lua`:
+
+```lua
+model:save_bundle("/tmp/model.bundle")
+local bundle = tf.load_bundle("/tmp/model.bundle")
+local output = bundle.session:run({
+  [bundle.inputs[1]] = input_tensor,
+}, { bundle.outputs[1] })[1]
+```
+
+`tf.save_bundle(directory, graph, session, variables, metadata)` is the
+low-level form. `tf.load_bundle` returns `{ graph, session, manifest, inputs,
+outputs }`. This is not official SavedModel export; the C API does not expose
+the MetaGraphDef writer.
 
 ## Sessions
 

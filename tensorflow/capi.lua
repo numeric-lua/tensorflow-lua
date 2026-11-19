@@ -57,6 +57,7 @@ const char* TF_Message(const TF_Status*);
 TF_Graph* TF_NewGraph(void);
 void TF_DeleteGraph(TF_Graph*);
 TF_Operation* TF_GraphOperationByName(TF_Graph*, const char*);
+const char* TF_OperationName(TF_Operation*);
 TF_OperationDescription* TF_NewOperation(TF_Graph*, const char*, const char*);
 void TF_AddInput(TF_OperationDescription*, TF_Output);
 void TF_AddInputList(TF_OperationDescription*, const TF_Output*, int);

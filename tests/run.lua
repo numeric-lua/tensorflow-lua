@@ -75,6 +75,8 @@ current = "test_schedules.lua"
 dofile(root .. "/tests/test_schedules.lua")
 current = "test_functional.lua"
 dofile(root .. "/tests/test_functional.lua")
+current = "test_bundle.lua"
+dofile(root .. "/tests/test_bundle.lua")
 current = "test_model.lua"
 dofile(root .. "/tests/test_model.lua")
 

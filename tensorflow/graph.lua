@@ -38,6 +38,13 @@ function Graph:operation(name)
   return op
 end
 
+function Graph:output_spec(output)
+  local lib = capi.load()
+  local operation = output.oper or output
+  return ffi.string(lib.TF_OperationName(operation)) .. ":" ..
+    tostring(output.index or 0)
+end
+
 function Graph:new_operation(op_type, name)
   return require("tensorflow.graph_builder").new_operation(self, op_type, name)
 end
