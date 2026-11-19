@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.12.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.13.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -634,7 +634,13 @@ local outputs = model:predict({ left = ..., right = ... })
 ```
 
 Without a custom loss, the default is the summed mean-squared error over every
-declared target. This is a graph-building API, not a Keras layer registry.
+declared target. `loss_weights` scales each named output's default loss.
+
+`fit` accepts `callbacks` and `validation_data = { inputs, targets }`.
+`get_weights`/`set_weights`, `save(prefix)`/`load(prefix)` (native V2
+checkpoints), `export(path)` (GraphDef), `summary()`, `count_params()`, and
+`close()` mirror the corresponding Sequential conveniences. This remains a
+graph-building API, not a Keras layer registry or architecture serializer.
 
 ## Learning-rate schedules
 

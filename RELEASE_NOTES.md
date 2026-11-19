@@ -1,27 +1,26 @@
-# tensorflow-lua 0.12.0
+# tensorflow-lua 0.13.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- graph-level gradient accumulation via
-  `compile({ gradient_accumulation_steps = N })` for the supported optimizers;
-- binary ROC AUC;
-- macro multiclass precision, recall, and F1 over sparse or one-hot labels;
-- AUC and macro metrics wired into Sequential `compile({ metrics = ... })`;
-- 162 dependency-free tests.
+- `tf.Functional` now supports native checkpoint save/load, weight get/set,
+  GraphDef export, summaries, callbacks, validation loss, and per-output loss
+  weights;
+- 163 dependency-free tests.
 
-The 0.11 feature set remains: tensor-backed mini-batches, `tf.Functional`
-multi-input/multi-output graphs, 1-D pooling, separable convolution, layer
-normalization, new losses, and native LR schedules.
+The 0.12 feature set remains: graph-level gradient accumulation, binary ROC
+AUC, macro multiclass PRF, tensor-backed mini-batches, multi-input/multi-output
+functional graphs, 1-D/separable convolution, layer normalization, and native
+LR schedules.
 
 ## Known limits
 
-- AUC uses an O(N^2) pairwise graph; keep evaluation batches moderate.
-- Macro PRF covers integer classes, not per-class reporting tables in
-  Sequential history.
-- libtensorflow 2.19/2.20 archives were not available at the standard URLs
-  during this work, so 2.16.2 and 2.18.0 remain the tested matrix.
+- `tf.Functional` remains a graph-building API, not a Keras layer registry or
+  architecture serializer.
+- AUC is O(N^2) in evaluation batch size.
+- libtensorflow 2.19/2.20 archives were unavailable (404) at the standard URLs;
+  2.16.2 and 2.18.0 remain the tested matrix.
 - SavedModel export and GPU placement remain out of scope.
 
 ## Install
@@ -29,5 +28,5 @@ normalization, new losses, and native LR schedules.
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-0.12.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.13.0-1.rockspec
 ```

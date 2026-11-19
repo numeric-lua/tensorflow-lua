@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0
+
+- `tf.Functional` native checkpoint save/load, weight get/set, GraphDef
+  export, summaries, callbacks, validation loss, and per-output loss weights;
+- 163 dependency-free tests.
+
 ## 0.12.0
 
 - graph-level SGD/Adam/... gradient accumulation via
