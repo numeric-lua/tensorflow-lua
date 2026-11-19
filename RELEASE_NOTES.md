@@ -1,22 +1,27 @@
-# tensorflow-lua 0.19.0
+# tensorflow-lua 0.20.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- trainable UpSampling3D for NDHWC volumes, implemented with
-  reshape/tile/reshape;
-- Sequential shape tracking and summaries for 3-D upsampling;
-- 173 dependency-free tests.
+- unrolled LSTM for fixed-length `[batch, time, input]` sequences;
+- unrolled GRU with input/recurrent gate projections;
+- trainable parameters and graph-level gradients;
+- final hidden/cell states and full output sequences;
+- 174 dependency-free tests.
 
-The 0.18 feature set remains: tensor-backed datasets, attention/transformer
-layers, trainable composed Conv3D, 3-D pooling, functional-model checkpointing,
-gradient accumulation, AUC/macro metrics, and native LR schedules.
+These layers unroll the time dimension at graph construction time, so the
+sequence length is static. They are composed from portable TensorFlow ops and
+do not depend on a native recurrent kernel.
+
+The 0.19 feature set remains: 3-D convolution/pooling/upsampling,
+attention/transformer layers, tensor-backed datasets, functional-model
+checkpointing, gradient accumulation, AUC/macro metrics, and native schedules.
 
 ## Install
 
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-0.19.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.20.0-1.rockspec
 ```

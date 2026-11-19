@@ -510,3 +510,37 @@ test("upsampling3d repeats voxels and preserves shapes", function()
   assert_eq(flat[1][2][1][1][1], 1)
   session:close()
 end)
+
+test("unrolled LSTM and GRU are trainable", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 2, 3, 4 }, "rnn_in")
+  local lstm = tf.layers.lstm(graph, input, nil, { input_shape = { 3, 4 },
+    units = 5, name = "lstm" })
+  local gru = tf.layers.gru(graph, input, nil, { input_shape = { 3, 4 },
+    units = 5, name = "gru" })
+  local loss = tf.add(graph, tf.reduce_sum(graph, lstm.output, { 0, 1, 2 },
+    "lstm_loss", "float32"), tf.reduce_sum(graph, gru.output, { 0, 1, 2 },
+    "gru_loss", "float32"), "rnn_loss", "float32")
+  local refs = {}
+  for _, group in ipairs({ lstm.variables, gru.variables }) do
+    for _, variable in ipairs(group) do refs[#refs + 1] = variable.ref end
+  end
+  local gradients = tf.gradients(graph, { loss }, refs)
+  assert_eq(#gradients, #refs)
+  local session = tf.Session.new(graph)
+  session:run({}, {}, lstm.initializers)
+  session:run({}, {}, gru.initializers)
+  local values = {}
+  for i = 1, 2 do
+    values[i] = {}
+    for j = 1, 3 do values[i][j] = { 0.1, 0.2, 0.3, 0.4 } end
+  end
+  local outputs = session:run({ [input] = values },
+    { lstm.output, lstm.h, lstm.c, gru.output, gradients[1] })
+  assert_eq(table.concat(outputs[1]:shape(), ","), "2,3,5")
+  assert_eq(table.concat(outputs[2]:shape(), ","), "2,5")
+  assert_eq(table.concat(outputs[3]:shape(), ","), "2,5")
+  assert_eq(table.concat(outputs[4]:shape(), ","), "2,3,5")
+  assert_true(outputs[5] ~= nil)
+  session:close()
+end)

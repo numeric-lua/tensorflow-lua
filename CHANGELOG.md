@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+
+- unrolled LSTM and GRU layers for fixed-length `[batch, time, input]`
+  sequences, with trainable kernels/recurrent/bias parameters;
+- 174 dependency-free tests.
+
 ## 0.19.0
 
 - trainable UpSampling3D for NDHWC volumes using reshape/tile/reshape;

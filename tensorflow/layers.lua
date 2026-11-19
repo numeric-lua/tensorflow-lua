@@ -1384,6 +1384,240 @@ function Layers.transformer_block(graph, input, options)
   }
 end
 
+local function dynamic_zeros(graph, batch_size, width, dtype, name)
+  local tf = require("tensorflow")
+  local shape_desc = graph:new_operation("Pack", name .. "/shape")
+  shape_desc:add_inputs({ batch_size, tf.constant(graph, width,
+    name .. "/width", "int32") })
+  shape_desc:set_type("T", "int32")
+  shape_desc:set_int("axis", 0)
+  shape_desc:set_int("N", 2)
+  local desc = graph:new_operation("Fill", name)
+  desc:add_input(shape_desc:finish())
+  desc:add_input(tf.constant(graph, 0, name .. "/value", dtype))
+  desc:set_type("T", dtype)
+  desc:set_type("Tindex", "int32")
+  return desc:finish()
+end
+
+local function pack_tensors(graph, values, axis, name, dtype)
+  local desc = graph:new_operation("Pack", name)
+  desc:add_inputs(values)
+  desc:set_int("N", #values)
+  desc:set_int("axis", axis)
+  desc:set_type("T", dtype)
+  return desc:finish()
+end
+
+local function batch_size_of(graph, input, name)
+  local tf = require("tensorflow")
+  local shape = tf.shape(graph, input, name .. "/shape", "float32")
+  local gather = graph:new_operation("GatherV2", name .. "/gather")
+  gather:add_input(shape)
+  gather:add_input(tf.constant(graph, 0, name .. "/index", "int32"))
+  gather:add_input(tf.constant(graph, 0, name .. "/axis", "int32"))
+  gather:set_type("Tparams", "int32")
+  gather:set_type("Tindices", "int32")
+  return gather:finish()
+end
+
+local function time_slice(graph, input, index, input_dim, dtype, name)
+  local tf = require("tensorflow")
+  local desc = graph:new_operation("Slice", name .. "/slice")
+  desc:add_input(input)
+  desc:add_input(tf.constant(graph, { 0, index, 0 }, name .. "/begin",
+    "int32"))
+  desc:add_input(tf.constant(graph, { -1, 1, input_dim }, name .. "/size",
+    "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Index", "int32")
+  return tf.reshape(graph, desc:finish(), { -1, input_dim },
+    name .. "/flatten", dtype)
+end
+
+local function gate_slice(graph, gates, index, hidden, dtype, name)
+  local tf = require("tensorflow")
+  local desc = graph:new_operation("Slice", name)
+  desc:add_input(gates)
+  desc:add_input(tf.constant(graph, { 0, index * hidden }, name .. "/begin",
+    "int32"))
+  desc:add_input(tf.constant(graph, { -1, hidden }, name .. "/size", "int32"))
+  desc:set_type("T", dtype)
+  desc:set_type("Index", "int32")
+  return desc:finish()
+end
+
+local function linear_gates(graph, input, hidden_states, kernel, recurrent, bias,
+    input_dim, hidden, name, dtype)
+  local tf = require("tensorflow")
+  local projected = tf.matmul(graph, input, kernel.read, name .. "/input",
+    dtype)
+  local previous = tf.matmul(graph, hidden_states, recurrent.read,
+    name .. "/recurrent", dtype)
+  local gates = tf.add(graph, projected, previous, name .. "/sum", dtype)
+  if bias ~= nil then gates = tf.add(graph, gates, bias.read, name .. "/bias", dtype) end
+  return gates
+end
+
+-- Unrolled LSTM over a fixed time dimension.  Input is [batch, time, input].
+-- Returns output [batch, time, hidden], final h/c, and the trainable tensors.
+function Layers.lstm(graph, input, hidden, options)
+  options = options or {}
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 2 then
+    error("lstm requires input_shape = { time, input }", 3)
+  end
+  local time, input_dim = shape[1], shape[2]
+  local hidden_size = options.units or options.hidden_size
+  if type(hidden_size) ~= "number" or hidden_size < 1 then
+    error("lstm requires options.units", 3)
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "lstm"
+  local tf = require("tensorflow")
+  local bound = 1 / math.sqrt(hidden_size)
+  local function random(rows, columns)
+    local values = {}
+    for r = 1, rows do
+      values[r] = {}
+      for c = 1, columns do values[r][c] = (math.random() * 2 - 1) * bound end
+    end
+    return values
+  end
+  local kernel = tf.variable(graph, random(input_dim, 4 * hidden_size),
+    prefix .. "/kernel", { dtype = dtype })
+  local recurrent = tf.variable(graph, random(hidden_size, 4 * hidden_size),
+    prefix .. "/recurrent", { dtype = dtype })
+  local zeros = {}
+  for i = 1, 4 * hidden_size do zeros[i] = 0 end
+  local bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+  local variables = { kernel, recurrent, bias }
+  local initializers = { kernel.initializer, recurrent.initializer,
+    bias.initializer }
+  local batch_size = batch_size_of(graph, input, prefix)
+  local h
+  local c
+  if hidden ~= nil then
+    h = hidden.h
+    c = hidden.c
+  else
+    h = dynamic_zeros(graph, batch_size, hidden_size, dtype, prefix .. "/h0")
+    c = dynamic_zeros(graph, batch_size, hidden_size, dtype, prefix .. "/c0")
+  end
+  local outputs = {}
+  for index = 1, time do
+    local x = time_slice(graph, input, index - 1, input_dim, dtype,
+      prefix .. "/input_" .. index)
+    local gates = linear_gates(graph, x, h, kernel, recurrent, bias, input_dim,
+      hidden_size, prefix .. "/gates_" .. index, dtype)
+    local input_gate = tf.nn.sigmoid(graph, gate_slice(graph, gates, 0,
+      hidden_size, dtype, prefix .. "/input_gate_" .. index),
+      prefix .. "/input_sigmoid_" .. index, dtype)
+    local forget_gate = tf.nn.sigmoid(graph, gate_slice(graph, gates, 1,
+      hidden_size, dtype, prefix .. "/forget_gate_" .. index),
+      prefix .. "/forget_sigmoid_" .. index, dtype)
+    local cell_gate = tf.nn.tanh(graph, gate_slice(graph, gates, 2,
+      hidden_size, dtype, prefix .. "/cell_gate_" .. index),
+      prefix .. "/cell_tanh_" .. index, dtype)
+    local output_gate = tf.nn.sigmoid(graph, gate_slice(graph, gates, 3,
+      hidden_size, dtype, prefix .. "/output_gate_" .. index),
+      prefix .. "/output_sigmoid_" .. index, dtype)
+    c = tf.add(graph, tf.mul(graph, forget_gate, c, prefix .. "/forget_" .. index,
+      dtype), tf.mul(graph, input_gate, cell_gate, prefix .. "/cell_" .. index,
+      dtype), prefix .. "/c_" .. index, dtype)
+    h = tf.mul(graph, output_gate, tf.nn.tanh(graph, c,
+      prefix .. "/hidden_tanh_" .. index, dtype), prefix .. "/h_" .. index, dtype)
+    outputs[index] = h
+  end
+  return {
+    output = pack_tensors(graph, outputs, 1, prefix .. "/output", dtype),
+    h = h, c = c, variables = variables, initializers = initializers,
+    units = hidden_size, dtype = dtype,
+  }
+end
+
+-- Unrolled GRU over a fixed time dimension.  Input is [batch, time, input].
+function Layers.gru(graph, input, hidden_state, options)
+  options = options or {}
+  local shape = options.input_shape
+  if type(shape) ~= "table" or #shape ~= 2 then
+    error("gru requires input_shape = { time, input }", 3)
+  end
+  local time, input_dim = shape[1], shape[2]
+  local hidden_size = options.units or options.hidden_size
+  if type(hidden_size) ~= "number" or hidden_size < 1 then
+    error("gru requires options.units", 3)
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "gru"
+  local tf = require("tensorflow")
+  local bound = 1 / math.sqrt(hidden_size)
+  local function random(rows, columns)
+    local values = {}
+    for r = 1, rows do
+      values[r] = {}
+      for c = 1, columns do values[r][c] = (math.random() * 2 - 1) * bound end
+    end
+    return values
+  end
+  local kernel = tf.variable(graph, random(input_dim, 3 * hidden_size),
+    prefix .. "/kernel", { dtype = dtype })
+  local recurrent = tf.variable(graph, random(hidden_size, 3 * hidden_size),
+    prefix .. "/recurrent", { dtype = dtype })
+  local zeros = {}
+  for i = 1, 3 * hidden_size do zeros[i] = 0 end
+  local bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+  local variables = { kernel, recurrent, bias }
+  local initializers = { kernel.initializer, recurrent.initializer,
+    bias.initializer }
+  local batch_size = batch_size_of(graph, input, prefix)
+  local h = hidden_state or dynamic_zeros(graph, batch_size, hidden_size, dtype,
+    prefix .. "/h0")
+  local outputs = {}
+  for index = 1, time do
+    local x = time_slice(graph, input, index - 1, input_dim, dtype,
+      prefix .. "/input_" .. index)
+    local projected = tf.add(graph, tf.matmul(graph, x, kernel.read,
+      prefix .. "/input_gates_" .. index, dtype), bias.read,
+      prefix .. "/input_bias_" .. index, dtype)
+    local previous = tf.matmul(graph, h, recurrent.read,
+      prefix .. "/recurrent_gates_" .. index, dtype)
+    local input_r = gate_slice(graph, projected, 0, hidden_size, dtype,
+      prefix .. "/input_r_" .. index)
+    local input_z = gate_slice(graph, projected, 1, hidden_size, dtype,
+      prefix .. "/input_z_" .. index)
+    local input_n = gate_slice(graph, projected, 2, hidden_size, dtype,
+      prefix .. "/input_n_" .. index)
+    local hidden_r = gate_slice(graph, previous, 0, hidden_size, dtype,
+      prefix .. "/hidden_r_" .. index)
+    local hidden_z = gate_slice(graph, previous, 1, hidden_size, dtype,
+      prefix .. "/hidden_z_" .. index)
+    local hidden_n = gate_slice(graph, previous, 2, hidden_size, dtype,
+      prefix .. "/hidden_n_" .. index)
+    local reset = tf.nn.sigmoid(graph, tf.add(graph, input_r, hidden_r,
+      prefix .. "/reset_sum_" .. index, dtype), prefix .. "/reset_" .. index,
+      dtype)
+    local update = tf.nn.sigmoid(graph, tf.add(graph, input_z, hidden_z,
+      prefix .. "/update_sum_" .. index, dtype), prefix .. "/update_" .. index,
+      dtype)
+    local candidate = tf.nn.tanh(graph, tf.add(graph, input_n,
+      tf.mul(graph, reset, hidden_n, prefix .. "/reset_hidden_" .. index,
+        dtype), prefix .. "/candidate_sum_" .. index, dtype),
+      prefix .. "/candidate_" .. index, dtype)
+    h = tf.add(graph, tf.mul(graph, tf.sub(graph, tf.constant(graph, 1,
+      prefix .. "/one_" .. index, dtype), update, prefix .. "/keep_" .. index,
+      dtype), candidate, prefix .. "/new_" .. index, dtype), tf.mul(graph,
+      update, h, prefix .. "/old_" .. index, dtype), prefix .. "/h_" .. index,
+      dtype)
+    outputs[index] = h
+  end
+  return {
+    output = pack_tensors(graph, outputs, 1, prefix .. "/output", dtype),
+    h = h, variables = variables, initializers = initializers,
+    units = hidden_size, dtype = dtype,
+  }
+end
+
 function Layers.activation(graph, input, activation, options)
   options = options or {}
   local tf = require("tensorflow")
