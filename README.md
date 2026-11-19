@@ -7,9 +7,9 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.10.0` alpha. Graph inference, construction, training, checkpoints, eager
-mode, Conv2D/BatchNorm layers, and a small Sequential model. The dependency-free
-suite currently contains 144 tests.
+`0.11.0` alpha. Graph inference, construction, training, checkpoints, eager
+mode, convolutional/recurrent primitives, a functional graph model, and a
+Sequential model. The dependency-free suite currently contains 157 tests.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -22,32 +22,39 @@ suite currently contains 144 tests.
   checkpoints;
 - typed ops for reshape, reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`);
-- compositional Dense, Conv1D, Conv2D, Conv2DTranspose, depthwise Conv2D,
-  pooling, BatchNormalization, Activation, Reshape, Permute, UpSampling2D,
-  ZeroPadding2D, Embedding, Flatten, and Dropout layers, including
-  Conv1D/Conv2D/Conv2DTranspose/pool stacks, resumable BatchNorm statistics,
-  and runtime train/eval normalization/dropout switching in Sequential;
+- compositional Dense, Conv1D, Conv2D, Conv2DTranspose, depthwise and
+  separable Conv2D, 1-D/2-D pooling, BatchNormalization, LayerNormalization,
+  Activation, Reshape, Permute, UpSampling2D, ZeroPadding2D, Embedding,
+  Flatten, and Dropout layers, including pooling stacks, resumable BatchNorm
+  statistics, and runtime train/eval normalization/dropout switching;
 - tested against libtensorflow 2.16.2 and 2.18.0 on Ubuntu 22.04/24.04;
-- loss helpers (MSE, MAE, binary/softmax/sparse-softmax cross-entropy),
-  binary/class accuracy, cast, concat, and OneHot;
+- loss helpers (MSE, MAE, Huber, hinge, categorical hinge,
+  binary/softmax/sparse-softmax cross-entropy), binary/class accuracy,
+  precision/recall/F1, cast, concat, and OneHot;
 - a minimal `tf.Sequential` model with fit/evaluate/predict/save/load,
   validation loss, ReduceLROnPlateau/EarlyStopping/ModelCheckpoint callbacks,
   accuracy and top-k metrics,
   sample-weighted dense and sparse losses, class-weighted and label-smoothed
   sparse losses,
   `predict_proba`/`predict_classes`, weight snapshots, Embedding/Flatten
-  stacks, runtime train/eval Dropout, resumable optimizer/epoch state,
-  architecture config save/load, GraphDef export, and portable/native
-  checkpoints;
+  stacks, tensor-backed mini-batch `fit_tensor`, runtime train/eval Dropout,
+  resumable optimizer/epoch state, architecture config save/load, GraphDef
+  export, and portable/native checkpoints;
 - create and inspect dense tensors;
 - run sessions with feeds, fetches, and target ops;
 - SavedModel loading with signature decoding and named signature execution;
 - clear TensorFlow status errors, `ffi.gc`-backed ownership, and explicit
   `Tensor:destroy` / `Graph:delete` / `Session:close` paths.
 
-Not yet implemented: official SavedModel export, GPU placement, and a full
-Keras-style model/training loop. Eager execution is available as an
-experimental `tf.eager` surface with basic arithmetic and activations.
+- `tf.Functional` for multi-input, multi-output graphs built from named
+  placeholders and arbitrary TensorFlow operations;
+- pure Lua exponential, cosine, polynomial, piecewise, and constant
+  learning-rate schedules.
+
+Not yet implemented: official SavedModel export, GPU placement, complete
+Keras-style functional layers, and graph-level gradient accumulation. Eager
+execution is available as an experimental `tf.eager` surface with basic
+arithmetic and activations.
 
 ## Requirements
 
@@ -65,11 +72,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.8.0/tensorflow-lua-0.8.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.11.0/tensorflow-lua-0.11.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-0.8.0-1.rockspec
-./scripts/package.sh tensorflow-lua-0.8.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-0.11.0-1.rockspec
+./scripts/package.sh tensorflow-lua-0.11.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -243,7 +250,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v0.8.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.8.0)
+[**v0.11.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.11.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).

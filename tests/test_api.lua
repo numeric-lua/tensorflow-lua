@@ -8,7 +8,8 @@ test("exposes the public API surface", function()
     "reduce_sum", "reduce_max", "reduce_min", "argmax", "one_hot", "exp",
     "log", "sqrt", "save_v2", "restore_v2", "save_checkpoint",
     "load_checkpoint", "load_saved_model", "version", "train", "nn", "layers",
-    "losses", "metrics", "callbacks", "data", "eager",
+    "losses", "metrics", "callbacks", "data", "eager", "schedules",
+    "Functional",
   }
   for _, name in ipairs(names) do
     assert_true(tf[name] ~= nil, "missing tf." .. name)
@@ -44,8 +45,16 @@ test("exposes the public API surface", function()
   assert_true(tf.layers.dense ~= nil and tf.layers.embedding ~= nil)
   assert_true(tf.layers.conv2d ~= nil and tf.layers.max_pool2d ~= nil)
   assert_true(tf.layers.conv2d_transpose ~= nil)
+  assert_true(tf.layers.max_pool1d ~= nil and tf.layers.avg_pool1d ~= nil)
+  assert_true(tf.layers.global_avg_pool1d ~= nil)
+  assert_true(tf.layers.separable_conv2d ~= nil)
+  assert_true(tf.layers.layer_normalization ~= nil)
   assert_true(tf.layers.batch_normalization ~= nil)
   assert_true(tf.losses.mean_squared_error ~= nil)
+  assert_true(tf.losses.huber ~= nil and tf.losses.hinge ~= nil)
+  assert_true(tf.losses.categorical_hinge ~= nil)
   assert_true(tf.metrics.binary_accuracy ~= nil)
-  assert_eq(tf.VERSION, "0.10.0")
+  assert_true(tf.metrics.precision ~= nil and tf.metrics.recall ~= nil)
+  assert_true(tf.metrics.f1 ~= nil)
+  assert_eq(tf.VERSION, "0.11.0")
 end)

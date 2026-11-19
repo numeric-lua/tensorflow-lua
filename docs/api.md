@@ -28,7 +28,7 @@ The module is available from LuaRocks as `tensorflow-lua` and has been tested
 with libtensorflow 2.16.2 and 2.18.0. It loads `libtensorflow.so` from `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`,
 `third_party/libtensorflow`, or the dynamic linker path.
 
-`tf.VERSION` is the binding version (`0.10.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`0.11.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -67,6 +67,12 @@ local b = tf.tensor({ 1, 2 }, { dtype = "int64" })
 
 Tensors own their output buffers through `ffi.gc` (which runs on LuaJIT) and
 also expose `t:destroy()` for deterministic cleanup.
+
+### `tensor:slice(start, stop)`
+
+Returns rows `start..stop` along the first dimension as a new contiguous tensor.
+The copy is byte-level and does not add a graph operation. `tensor:take_rows(indices)`
+selects an arbitrary 1-based row order.
 
 ## Graphs
 
@@ -259,6 +265,25 @@ Builds a numerically stable sigmoid binary cross-entropy mean using
 Builds a `SoftmaxCrossEntropyWithLogits` mean over the batch axis (default
 `axes = {0}`). Options: `axes`, `keep_dims`, `dtype`, `name`.
 
+### `tf.losses.huber(graph, predictions, targets[, opts])`
+
+Huber loss with `opts.delta` (default `1`). `opts.axes` defaults to `{ 0 }`.
+
+### `tf.losses.hinge(graph, predictions, targets[, opts])`
+
+Binary hinge loss for `-1`/`1` targets, with `opts.margin` (default `1`).
+
+### `tf.losses.categorical_hinge(graph, logits, targets[, opts])`
+
+Multi-class categorical hinge loss. Pass `per_example = true` to return the
+per-example vector instead of the mean.
+
+### `tf.losses.softmax_cross_entropy` class weights
+
+`softmax_cross_entropy` accepts `opts.class_weights`, a zero-based table of
+per-class multipliers. Weighted losses are normalized by the sum of the
+per-example weights.
+
 ## Data batching
 
 ```lua
@@ -313,6 +338,12 @@ Thresholds probability predictions (default `0.5`) and compares them with
 Compares integer class predictions to labels with `Equal`, casts to float32,
 and reduces the mean over the batch. Options: `dtype` (default `int32`), `axes`,
 `name`.
+
+### `tf.metrics.precision`, `recall`, `f1`
+
+Binary metrics over probabilities (thresholded by `opts.threshold`, default
+`0.5`). `opts.axes` defaults to `{ 0 }`; pass `{ 0, 1 }` for `[batch, 1]`
+outputs. These are not multi-class macro metrics and AUC is not yet exposed.
 
 ## Layers
 
@@ -411,6 +442,34 @@ Depthwise convolution with bias and optional activation. Options include
 
 Max-pools the time dimension of `[batch, steps, channels]`, returning
 `[batch, channels]`. Returns `{ output, variables = {}, initializers = {} }`.
+
+### `tf.layers.max_pool1d`, `avg_pool1d`
+
+Pool a rank-3 `[batch, steps, channels]` tensor. `opts.stride` defaults to the
+kernel size and `opts.padding` to `"VALID"`.
+
+### `tf.layers.global_avg_pool1d(graph, input[, opts])`
+
+Reduces a rank-3 `[batch, steps, channels]` tensor over the time axis.
+
+### `tf.layers.separable_conv2d(graph, input, filters, kernel_size[, opts])`
+
+Depthwise + pointwise convolution. Requires `opts.in_channels` and accepts
+`opts.depth_multiplier`, `opts.stride`, `opts.padding`, `opts.dilation`,
+`opts.use_bias`, and `opts.activation`. The implementation composes
+`DepthwiseConv2dNative` and `Conv2D` because the C library on the supported
+hosts does not register the fused `SeparableConv2D` op.
+
+### `tf.layers.layer_normalization(graph, input[, opts])`
+
+Normalizes the last dimensions named by `opts.normalized_shape` and learns
+`gamma`/`beta`. `opts.epsilon` defaults to `1e-5`.
+
+### `tf.layers.embedding` padding
+
+`opts.padding_idx` accepts a zero-based row index; that embedding row is
+initialized to zero. Indices remain zero-based because they feed `GatherV2`
+directly.
 
 ### `tf.layers.dense(graph, input, units, opts)`
 
@@ -527,6 +586,55 @@ model:close()
   `save_training`/`load_training` also persist optimizer slots and epoch
   metadata so training can resume (small floating-point drift is possible).
 - `export(path)` writes the graph as a GraphDef protobuf.
+
+### Tensor mini-batches
+
+`model:fit_tensor(x, y, { batch_size = 32, shuffle = true, seed = 7 })` slices
+the first dimension without converting tensors to Lua tables. `evaluate_tensor`
+accepts the same options. Row selection is byte-level, so the tensor data must
+be contiguous (the normal placeholder/feed path is).
+
+## Functional model
+
+`tf.Functional.new` builds a multi-input, multi-output graph from named inputs.
+The builder receives the input table and graph and returns an output table plus
+an optional variable list:
+
+```lua
+local model = tf.Functional.new({
+  inputs = {
+    { name = "left", shape = { 1 } },
+    { name = "right", shape = { 1 } },
+  },
+  targets = { sum = { shape = { 1 } } },
+  build = function(inputs, graph)
+    local scale = tf.variable(graph, 0.5, "scale")
+    local sum = tf.add(graph, inputs.left, inputs.right, "sum")
+    return { sum = tf.mul(graph, sum, scale.read, "output", "float32") },
+      { scale }
+  end,
+  optimizer = { type = "sgd", learning_rate = 0.01 },
+  -- optional loss = function(graph, outputs, targets) return scalar end
+})
+model:fit({ left = ..., right = ... }, { sum = ... }, { epochs = 10 })
+local outputs = model:predict({ left = ..., right = ... })
+```
+
+Without a custom loss, the default is the summed mean-squared error over every
+declared target. This is a graph-building API, not a Keras layer registry.
+
+## Learning-rate schedules
+
+`tf.schedules` returns pure Lua functions of the zero-based step:
+
+```lua
+local lr = tf.schedules.exponential_decay(0.1, 1000, 0.5)
+local cosine = tf.schedules.cosine_decay(0.1, 1000)
+local piecewise = tf.schedules.piecewise_constant(0.1, { 500 }, { 0.1, 0.01 })
+```
+
+`Sequential:compile({ optimizer = { learning_rate = schedule } })` calls the
+schedule once per epoch. Gradient accumulation is not implemented yet.
 
 ## Eager execution (experimental)
 

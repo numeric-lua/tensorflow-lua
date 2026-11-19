@@ -1,7 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 
+- tensor-backed mini-batch `fit_tensor`/`evaluate_tensor` with slicing and
+  shuffled row selection;
+- `tf.Functional` multi-input/multi-output graph model with custom losses and
+  optimizers;
+- MaxPool1D, AvgPool1D, GlobalAvgPool1D, SeparableConv2D,
+  LayerNormalization, and Embedding `padding_idx`;
+- Huber, hinge, and categorical hinge losses; dense class weights;
+- precision, recall, and F1 metrics;
+- exponential, cosine, polynomial, piecewise, and constant learning-rate
+  schedules;
 - Conv2DTranspose layer support in the layer API and Sequential models,
   including NHWC/NCHW graph construction, optional output shapes, training,
   and summaries.

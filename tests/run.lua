@@ -44,6 +44,8 @@ dofile(root .. "/tests/test_api.lua")
 
 current = "test_tensor.lua"
 dofile(root .. "/tests/test_tensor.lua")
+current = "test_tensor_extra.lua"
+dofile(root .. "/tests/test_tensor_extra.lua")
 
 current = "test_graph.lua"
 dofile(root .. "/tests/test_graph.lua")
@@ -69,9 +71,15 @@ dofile(root .. "/tests/test_data.lua")
 current = "test_callbacks.lua"
 dofile(root .. "/tests/test_callbacks.lua")
 
+current = "test_schedules.lua"
+dofile(root .. "/tests/test_schedules.lua")
+current = "test_functional.lua"
+dofile(root .. "/tests/test_functional.lua")
 current = "test_model.lua"
 dofile(root .. "/tests/test_model.lua")
 
+current = "test_losses_extra.lua"
+dofile(root .. "/tests/test_losses_extra.lua")
 current = "test_losses.lua"
 dofile(root .. "/tests/test_losses.lua")
 

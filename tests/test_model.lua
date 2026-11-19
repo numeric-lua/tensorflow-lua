@@ -825,3 +825,50 @@ test("trains from full-batch tensors", function()
   x:destroy(); y:destroy()
   model:close()
 end)
+
+test("fit_tensor supports mini-batches and shuffle", function()
+  math.randomseed(91)
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({ optimizer = { type = "sgd", learning_rate = 0.01 } })
+  local x = tf.tensor({ { 0 }, { 1 }, { 2 }, { 3 }, { 4 } })
+  local y = tf.tensor({ { 2 }, { 4 }, { 6 }, { 8 }, { 10 } })
+  local history = model:fit_tensor(x, y, {
+    epochs = 4, batch_size = 2, shuffle = true, seed = 7,
+  })
+  assert_eq(#history.loss, 4)
+  local loss = model:evaluate_tensor(x, y, { batch_size = 2 })
+  assert_true(loss >= 0)
+  x:destroy(); y:destroy(); model:close()
+end)
+
+test("Sequential stacks new pooling, separable, and layer-norm layers", function()
+  local model = tf.Sequential.new({ input_shape = { 4, 2 } })
+  model:add({ type = "max_pool1d", kernel_size = 2 })
+  model:add({ type = "avg_pool1d", kernel_size = 1 })
+  model:add({ type = "global_avg_pool1d" })
+  model:add({ type = "dense", units = 3 })
+  model:compile({ optimizer = { type = "sgd" }, loss = "mse" })
+  local x = tf.tensor({ { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } } })
+  local y = tf.tensor({ { 1, 0, 0 } })
+  local history = model:fit_tensor(x, y, { epochs = 2 })
+  assert_eq(#history.loss, 2)
+  x:destroy(); y:destroy(); model:close()
+end)
+
+test("Sequential trains with Huber and reports binary metrics", function()
+  local model = tf.Sequential.new({ input_shape = { 1 } })
+  model:add({ units = 1 })
+  model:compile({
+    optimizer = { type = "sgd", learning_rate = 0.01 },
+    loss = "huber", metrics = { "binary_accuracy", "precision", "recall", "f1" },
+  })
+  local x = tf.tensor({ { 0 }, { 1 }, { 2 }, { 3 } })
+  local y = tf.tensor({ { 0 }, { 0 }, { 1 }, { 1 } })
+  local history = model:fit_tensor(x, y, { epochs = 3, batch_size = 2 })
+  assert_eq(#history.loss, 3)
+  for _, name in ipairs({ "binary_accuracy", "precision", "recall", "f1" }) do
+    assert_eq(#history[name], 3)
+  end
+  x:destroy(); y:destroy(); model:close()
+end)

@@ -91,6 +91,22 @@ function Ops.div(graph, a, b, name, dtype)
   return desc:finish()
 end
 
+function Ops.maximum(graph, a, b, name, dtype)
+  local desc = graph:new_operation("Maximum", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype or "float32")
+  return desc:finish()
+end
+
+function Ops.minimum(graph, a, b, name, dtype)
+  local desc = graph:new_operation("Minimum", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype or "float32")
+  return desc:finish()
+end
+
 function Ops.clip_by_value(graph, input, minimum, maximum, name, dtype)
   local prefix = name or "clip_by_value"
   dtype = dtype_name(dtype)

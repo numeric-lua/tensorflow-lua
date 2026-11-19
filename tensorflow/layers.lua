@@ -650,6 +650,228 @@ function Layers.global_max_pool2d(graph, input, options)
   return { output = squeeze:finish(), variables = {}, initializers = {} }
 end
 
+function Layers.max_pool1d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel = kernel_size
+  if type(kernel) ~= "number" or kernel < 1 then
+    error("max_pool1d requires a positive kernel size", 3)
+  end
+  local stride = options.stride or kernel
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "max_pool1d"
+  local expand = graph:new_operation("ExpandDims", prefix .. "/expand")
+  expand:add_input(input)
+  expand:add_input(tf.constant(graph, 1, prefix .. "/axis", "int32"))
+  expand:set_type("T", dtype)
+  expand:set_type("Tdim", "int32")
+  local lifted = expand:finish()
+  local pool = graph:new_operation("MaxPool", prefix .. "/pool")
+  pool:add_input(lifted)
+  pool:set_int_list("ksize", { 1, 1, kernel, 1 })
+  pool:set_int_list("strides", { 1, 1, stride, 1 })
+  pool:set_string("padding", options.padding or "VALID")
+  pool:set_string("data_format", "NHWC")
+  local pooled = pool:finish()
+  local squeeze = graph:new_operation("Squeeze", prefix .. "/squeeze")
+  squeeze:add_input(pooled)
+  squeeze:set_type("T", dtype)
+  squeeze:set_int_list("squeeze_dims", { 1 })
+  return { output = squeeze:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.avg_pool1d(graph, input, kernel_size, options)
+  options = options or {}
+  local kernel = kernel_size
+  if type(kernel) ~= "number" or kernel < 1 then
+    error("avg_pool1d requires a positive kernel size", 3)
+  end
+  local stride = options.stride or kernel
+  local tf = require("tensorflow")
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "avg_pool1d"
+  local expand = graph:new_operation("ExpandDims", prefix .. "/expand")
+  expand:add_input(input)
+  expand:add_input(tf.constant(graph, 1, prefix .. "/axis", "int32"))
+  expand:set_type("T", dtype)
+  expand:set_type("Tdim", "int32")
+  local lifted = expand:finish()
+  local pool = graph:new_operation("AvgPool", prefix .. "/pool")
+  pool:add_input(lifted)
+  pool:set_int_list("ksize", { 1, 1, kernel, 1 })
+  pool:set_int_list("strides", { 1, 1, stride, 1 })
+  pool:set_string("padding", options.padding or "VALID")
+  pool:set_string("data_format", "NHWC")
+  local pooled = pool:finish()
+  local squeeze = graph:new_operation("Squeeze", prefix .. "/squeeze")
+  squeeze:add_input(pooled)
+  squeeze:set_type("T", dtype)
+  squeeze:set_int_list("squeeze_dims", { 1 })
+  return { output = squeeze:finish(), variables = {}, initializers = {} }
+end
+
+function Layers.global_avg_pool1d(graph, input, options)
+  options = options or {}
+  local tf = require("tensorflow")
+  local prefix = options.name or "global_avg_pool1d"
+  local pooled = tf.reduce_mean(graph, input, { 1 }, prefix .. "/mean",
+    options.dtype or "float32", false)
+  return { output = pooled, variables = {}, initializers = {} }
+end
+
+function Layers.separable_conv2d(graph, input, filters, kernel_size, options)
+  options = options or {}
+  if type(filters) ~= "number" or filters < 1 then
+    error("separable_conv2d requires positive filters", 3)
+  end
+  local in_channels = options.in_channels
+  if type(in_channels) ~= "number" or in_channels < 1 then
+    error("separable_conv2d requires options.in_channels", 3)
+  end
+  local multiplier = options.depth_multiplier or 1
+  if type(multiplier) ~= "number" or multiplier % 1 ~= 0 or multiplier < 1 then
+    error("separable_conv2d depth_multiplier must be a positive integer", 3)
+  end
+  local kernel_h, kernel_w = kernel_size, kernel_size
+  if type(kernel_size) == "table" then
+    kernel_h, kernel_w = kernel_size[1], kernel_size[2]
+  end
+  local stride_h, stride_w = options.stride or 1, options.stride or 1
+  if type(options.stride) == "table" then
+    stride_h, stride_w = options.stride[1], options.stride[2]
+  end
+  local dilation_h, dilation_w = options.dilation or 1, options.dilation or 1
+  if type(options.dilation) == "table" then
+    dilation_h, dilation_w = options.dilation[1], options.dilation[2]
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "separable_conv2d"
+  local tf = require("tensorflow")
+  local depth_bound = math.sqrt(6 / (kernel_h * kernel_w * in_channels))
+  local depth_values = {}
+  for y = 1, kernel_h do
+    depth_values[y] = {}
+    for x = 1, kernel_w do
+      depth_values[y][x] = {}
+      for c = 1, in_channels do
+        depth_values[y][x][c] = {}
+        for m = 1, multiplier do
+          depth_values[y][x][c][m] = (math.random() * 2 - 1) * depth_bound
+        end
+      end
+    end
+  end
+  local depthwise = tf.variable(graph, depth_values, prefix .. "/depthwise",
+    { dtype = dtype })
+  local point_bound = math.sqrt(6 / (in_channels * multiplier + filters))
+  local point_values = { { {} } }
+  point_values[1][1] = {}
+  for c = 1, in_channels * multiplier do
+    point_values[1][1][c] = {}
+    for f = 1, filters do
+      point_values[1][1][c][f] = (math.random() * 2 - 1) * point_bound
+    end
+  end
+  local pointwise = tf.variable(graph, point_values, prefix .. "/pointwise",
+    { dtype = dtype })
+  -- The TensorFlow C library on this host does not register the
+  -- SeparableConv2D fused op, so compose the portable depthwise + pointwise
+  -- pair explicitly.  Both operations are covered by TensorFlow gradients.
+  local depth_desc = graph:new_operation("DepthwiseConv2dNative",
+    prefix .. "/depthwise_conv")
+  depth_desc:add_input(input)
+  depth_desc:add_input(depthwise.read)
+  depth_desc:set_type("T", dtype)
+  depth_desc:set_int_list("strides", { 1, stride_h, stride_w, 1 })
+  depth_desc:set_string("padding", options.padding or "SAME")
+  depth_desc:set_string("data_format", "NHWC")
+  depth_desc:set_int_list("dilations", { 1, dilation_h, dilation_w, 1 })
+  local depth_output = depth_desc:finish()
+  local point_desc = graph:new_operation("Conv2D", prefix .. "/pointwise_conv")
+  point_desc:add_input(depth_output)
+  point_desc:add_input(pointwise.read)
+  point_desc:set_type("T", dtype)
+  point_desc:set_int_list("strides", { 1, 1, 1, 1 })
+  point_desc:set_string("padding", "SAME")
+  point_desc:set_string("data_format", "NHWC")
+  point_desc:set_int_list("dilations", { 1, 1, 1, 1 })
+  point_desc:set_bool("use_cudnn_on_gpu", false)
+  local output = point_desc:finish()
+  local variables = { depthwise, pointwise }
+  local initializers = { depthwise.initializer, pointwise.initializer }
+  local bias = nil
+  if options.use_bias ~= false then
+    local zeros = {}
+    for i = 1, filters do zeros[i] = 0 end
+    bias = tf.variable(graph, zeros, prefix .. "/bias", { dtype = dtype })
+    variables[#variables + 1] = bias
+    initializers[#initializers + 1] = bias.initializer
+    output = tf.add(graph, output, bias.read, prefix .. "/bias_add", dtype)
+  end
+  local activation = options.activation
+  if type(activation) == "string" then
+    local fn = tf.nn[activation]
+    if fn == nil then error("unknown activation '" .. activation .. "'", 3) end
+    output = fn(graph, output, prefix .. "/" .. activation, dtype)
+  elseif type(activation) == "function" then
+    output = activation(graph, output, prefix .. "/activation", dtype)
+  end
+  return {
+    output = output, depthwise = depthwise, pointwise = pointwise, bias = bias,
+    variables = variables, initializers = initializers, filters = filters,
+    kernel_size = { kernel_h, kernel_w }, dtype = dtype,
+  }
+end
+
+function Layers.layer_normalization(graph, input, options)
+  options = options or {}
+  local shape = options.normalized_shape or options.input_shape
+  if type(shape) ~= "table" or #shape == 0 then
+    error("layer_normalization requires options.normalized_shape", 3)
+  end
+  local dtype = options.dtype or "float32"
+  local prefix = options.name or "layer_normalization"
+  local tf = require("tensorflow")
+  local axes = {}
+  for index = 1, #shape do axes[index] = index - #shape - 1 end
+  local epsilon = options.epsilon or 1e-5
+  local mean = tf.reduce_mean(graph, input, axes, prefix .. "/mean", dtype, true)
+  local centered = tf.sub(graph, input, mean, prefix .. "/centered", dtype)
+  local variance = tf.reduce_mean(graph, tf.square(graph, centered,
+    prefix .. "/squared", dtype), axes, prefix .. "/variance", dtype, true)
+  local epsilon_op = tf.constant(graph, epsilon, prefix .. "/epsilon", dtype)
+  local safe_variance = tf.maximum(graph, variance, epsilon_op,
+    prefix .. "/safe_variance", dtype)
+  local denominator = tf.sqrt(graph, safe_variance, prefix .. "/denominator",
+    dtype)
+  local normalized = tf.div(graph, centered, denominator,
+    prefix .. "/normalized", dtype)
+  local gamma_values = {}
+  local beta_values = {}
+  local function build(dimension, target, value)
+    if dimension > #shape then return value end
+    local out = {}
+    for index = 1, shape[dimension] do
+      out[index] = build(dimension + 1, target, value)
+    end
+    return out
+  end
+  gamma_values = build(1, nil, 1)
+  beta_values = build(1, nil, 0)
+  local gamma = tf.variable(graph, gamma_values, prefix .. "/gamma",
+    { dtype = dtype })
+  local beta = tf.variable(graph, beta_values, prefix .. "/beta",
+    { dtype = dtype })
+  local output = tf.add(graph, tf.mul(graph, normalized, gamma.read,
+    prefix .. "/scaled", dtype), beta.read, prefix .. "/output", dtype)
+  return {
+    output = output, gamma = gamma, beta = beta,
+    variables = { gamma, beta },
+    initializers = { gamma.initializer, beta.initializer },
+    normalized_shape = shape, dtype = dtype,
+  }
+end
+
 function Layers.activation(graph, input, activation, options)
   options = options or {}
   local tf = require("tensorflow")
@@ -917,8 +1139,16 @@ function Layers.embedding(graph, input, input_dim, output_dim, options)
   local dtype = options.dtype or "float32"
   local indices_dtype = options.indices_dtype or "int32"
   local bound = 1 / math.sqrt(output_dim)
-  local weight = tf.variable(graph,
-    random_uniform(input_dim, output_dim, bound), prefix .. "/weight",
+  local values = random_uniform(input_dim, output_dim, bound)
+  if options.padding_idx ~= nil then
+    local padding = options.padding_idx
+    if type(padding) ~= "number" or padding % 1 ~= 0 or
+        padding < 0 or padding >= input_dim then
+      error("embedding padding_idx must be an integer in [0, input_dim)", 3)
+    end
+    for column = 1, output_dim do values[padding + 1][column] = 0 end
+  end
+  local weight = tf.variable(graph, values, prefix .. "/weight",
     { dtype = dtype })
   local axis = tf.constant(graph, 0, prefix .. "/axis", "int32")
   local desc = graph:new_operation("GatherV2", prefix .. "/gather")

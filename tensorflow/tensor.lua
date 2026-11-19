@@ -519,6 +519,53 @@ function Tensor:bytes()
   return ffi.string(data, count)
 end
 
+-- Return rows [start, stop] of the first dimension as a new contiguous tensor.
+-- This is a byte-level copy; it does not add a TensorFlow graph operation.
+function Tensor:slice(start, stop)
+  local shape = self:shape()
+  if #shape == 0 then
+    error("Tensor:slice requires at least one dimension", 3)
+  end
+  local count = shape[1]
+  if type(start) ~= "number" or start % 1 ~= 0 or start < 1 then
+    error("Tensor:slice start must be a positive integer", 3)
+  end
+  stop = stop or count
+  if type(stop) ~= "number" or stop % 1 ~= 0 or stop > count or stop < start then
+    error("Tensor:slice stop must be an integer in the first dimension", 3)
+  end
+  local row_bytes
+  if count == 0 then row_bytes = 0 else row_bytes = math.floor(self:nbytes() / count) end
+  local bytes = self:bytes()
+  local first = (start - 1) * row_bytes + 1
+  local last = stop * row_bytes
+  local result_shape = { stop - start + 1 }
+  for index = 2, #shape do result_shape[index] = shape[index] end
+  return Tensor.from_bytes(self:dtype(), result_shape, bytes:sub(first, last))
+end
+
+-- Select rows along the first dimension in the supplied 1-based order.
+function Tensor:take_rows(indices)
+  if type(indices) ~= "table" or #indices == 0 then
+    error("Tensor:take_rows expects a non-empty table of row indices", 3)
+  end
+  local shape = self:shape()
+  if #shape == 0 then error("Tensor:take_rows requires a first dimension", 3) end
+  local count = shape[1]
+  local row_bytes = count == 0 and 0 or math.floor(self:nbytes() / count)
+  local bytes = self:bytes()
+  local pieces = {}
+  for position, row in ipairs(indices) do
+    if type(row) ~= "number" or row % 1 ~= 0 or row < 1 or row > count then
+      error("Tensor:take_rows index " .. position .. " is out of range", 3)
+    end
+    pieces[position] = bytes:sub((row - 1) * row_bytes + 1, row * row_bytes)
+  end
+  local result_shape = { #indices }
+  for index = 2, #shape do result_shape[index] = shape[index] end
+  return Tensor.from_bytes(self:dtype(), result_shape, table.concat(pieces))
+end
+
 function Tensor.from_bytes(dtype, shape, bytes)
   local name, info = dtype_info(dtype)
   if name == "string" then

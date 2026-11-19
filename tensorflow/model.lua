@@ -79,6 +79,10 @@ function Sequential:add(options)
       options.type == "upsampling2d" or options.type == "zero_padding2d" or
       options.type == "depthwise_conv2d" or
       options.type == "global_max_pool1d" or
+      options.type == "max_pool1d" or options.type == "avg_pool1d" or
+      options.type == "global_avg_pool1d" or
+      options.type == "separable_conv2d" or
+      options.type == "layer_normalization" or
       options.type == "batchnorm" or
       options.type == "batch_normalization" then
     if options.type == "embedding" and #self._layers == 0 and
@@ -497,6 +501,105 @@ function Sequential:_build()
         units = spatial[3], kind = "avg_pool2d",
         kernel_size = { kernel_h, kernel_w } }
       output = layer.output
+    elseif definition.type == "max_pool1d" or definition.type == "avg_pool1d" then
+      if #spatial ~= 2 then
+        error(definition.type .. " layers require { steps, channels }", 3)
+      end
+      local kernel = definition.kernel_size or 2
+      local stride = definition.stride or kernel
+      local padding = string.upper(options.padding or definition.padding or
+        "VALID")
+      local function output_dim(size)
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - kernel) / stride) + 1
+      end
+      local layer
+      if definition.type == "max_pool1d" then
+        layer = tf.layers.max_pool1d(graph, output, kernel, {
+          stride = stride, padding = padding, name = options.name,
+        })
+      else
+        layer = tf.layers.avg_pool1d(graph, output, kernel, {
+          stride = stride, padding = padding, name = options.name,
+        })
+      end
+      spatial = { output_dim(spatial[1]), spatial[2] }
+      feature_size = spatial[1] * spatial[2]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[2], kind = definition.type, kernel_size = kernel }
+      output = layer.output
+    elseif definition.type == "global_avg_pool1d" then
+      if #spatial ~= 2 then
+        error("global_avg_pool1d layers require { steps, channels }", 3)
+      end
+      local layer = tf.layers.global_avg_pool1d(graph, output,
+        { name = options.name })
+      spatial = { spatial[2] }
+      feature_size = spatial[1]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = spatial[1], kind = "global_avg_pool1d" }
+      output = layer.output
+    elseif definition.type == "separable_conv2d" then
+      if #spatial ~= 3 then
+        error("separable_conv2d layers require an NHWC input", 3)
+      end
+      local multiplier = definition.depth_multiplier or 1
+      local kernel_h, kernel_w = definition.kernel_size,
+        definition.kernel_size
+      if type(definition.kernel_size) == "table" then
+        kernel_h, kernel_w = definition.kernel_size[1],
+          definition.kernel_size[2]
+      end
+      local stride_h, stride_w = definition.stride or 1,
+        definition.stride or 1
+      if type(definition.stride) == "table" then
+        stride_h, stride_w = definition.stride[1], definition.stride[2]
+      end
+      local dilation_h, dilation_w = 1, 1
+      if type(definition.dilation) == "table" then
+        dilation_h, dilation_w = definition.dilation[1], definition.dilation[2]
+      end
+      local padding = string.upper(options.padding or definition.padding or
+        "SAME")
+      local layer = tf.layers.separable_conv2d(graph, output,
+        definition.filters, { kernel_h, kernel_w }, {
+          in_channels = spatial[3], depth_multiplier = multiplier,
+          stride = { stride_h, stride_w }, padding = padding,
+          dilation = { dilation_h, dilation_w }, use_bias = options.use_bias,
+          activation = options.activation, dtype = options.dtype,
+          name = options.name,
+        })
+      local function output_dim(size, kernel, stride, dilation)
+        local effective = (kernel - 1) * dilation + 1
+        if padding == "SAME" then return math.ceil(size / stride) end
+        return math.floor((size - effective) / stride) + 1
+      end
+      spatial = { output_dim(spatial[1], kernel_h, stride_h, dilation_h),
+        output_dim(spatial[2], kernel_w, stride_w, dilation_w),
+        definition.filters }
+      feature_size = spatial[1] * spatial[2] * spatial[3]
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = definition.filters, kind = "separable_conv2d",
+        filters = definition.filters, kernel_size = { kernel_h, kernel_w },
+        depth_multiplier = multiplier }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
+    elseif definition.type == "layer_normalization" then
+      local normalized = definition.normalized_shape or definition.shape
+      local layer = tf.layers.layer_normalization(graph, output, {
+        normalized_shape = normalized, epsilon = definition.epsilon,
+        dtype = options.dtype, name = options.name,
+      })
+      layers[i] = { output = layer.output, input_size = feature_size,
+        units = feature_size, kind = "layer_normalization" }
+      for _, variable in ipairs(layer.variables) do
+        variables[#variables + 1] = variable
+      end
+      add_initializers(initializers, layer.initializers)
+      output = layer.output
     elseif definition.type == "global_avg_pool2d" then
       if #spatial ~= 3 then
         error("global_avg_pool2d layers require an NHWC input", 3)
@@ -613,8 +716,21 @@ function Sequential:_build()
     loss = weighted_mean(tf.losses.mean_squared_error(graph, output, target,
       { axes = { 1 } }))
   elseif loss_spec == "softmax_cross_entropy" or loss_spec == "cce" then
+    local options = { per_example = true }
+    if self._compiled.class_weight ~= nil then
+      options.class_weights = self._compiled.class_weight
+    end
     loss = weighted_mean(tf.losses.softmax_cross_entropy(graph, output, target,
-      { per_example = true }))
+      options))
+  elseif loss_spec == "huber" then
+    loss = weighted_mean(tf.losses.huber(graph, output, target,
+      { axes = { 1 }, delta = self._compiled.huber_delta }))
+  elseif loss_spec == "hinge" then
+    loss = weighted_mean(tf.losses.hinge(graph, output, target,
+      { axes = { 1 }, margin = self._compiled.hinge_margin }))
+  elseif loss_spec == "categorical_hinge" then
+    loss = weighted_mean(tf.losses.categorical_hinge(graph, output, target,
+      { per_example = true, margin = self._compiled.hinge_margin }))
   elseif loss_spec == "mae" or loss_spec == "mean_absolute_error" then
     loss = weighted_mean(tf.losses.mean_absolute_error(graph, output, target,
       { axes = { 1 } }))
@@ -736,6 +852,14 @@ function Sequential:_build()
       metric_outputs[i] = tf.metrics.binary_accuracy(graph, probabilities,
         target, { axes = { 0, 1 }, name = "metric/binary_accuracy" })
       metric_names[i] = "binary_accuracy"
+    elseif name == "precision" or name == "recall" or name == "f1" then
+      local probabilities = tf.nn.sigmoid(graph, output,
+        "metric/" .. name .. "_sigmoid")
+      local fn = tf.metrics[name]
+      metric_outputs[i] = fn(graph, probabilities, target, {
+        axes = { 0, 1 }, name = "metric/" .. name,
+      })
+      metric_names[i] = name
     else
       error("unsupported metric '" .. tostring(name) .. "'", 3)
     end
@@ -753,6 +877,8 @@ function Sequential:_build()
   }
   local learning_rate = optimizer.learning_rate or optimizer.lr or
     learning_rate_defaults[optimizer_type] or 0.001
+  local schedule = type(learning_rate) == "function" and learning_rate or nil
+  if schedule ~= nil then learning_rate = schedule(0) end
   local learning_rate_input = tf.placeholder(graph, "float32", { },
     "learning_rate")
   optimizer.learning_rate = learning_rate_input
@@ -806,6 +932,7 @@ function Sequential:_build()
   self._learning_rate = learning_rate_input
   self._initial_lr = learning_rate
   self._current_lr = learning_rate
+  self._lr_schedule = schedule
   self._updates, self._variables, self._initializers = targets, variables,
     initializers
   self._optimizer_state = type(state) == "table" and state or nil
@@ -914,6 +1041,9 @@ function Sequential:fit(x, y, options)
     end
   end
   for epoch = 1, epochs do
+    if self._lr_schedule ~= nil then
+      self._current_lr = self._lr_schedule(self._epoch or 0)
+    end
     local epoch_loss, batches = 0, 0
     local metric_sums = {}
     for first = 1, #x, batch_size do
@@ -1030,6 +1160,47 @@ function Sequential:predict(x)
   return self._session:run(feeds, { self._output })[1]
 end
 
+local function tensor_batches(count, options)
+  options = options or {}
+  local batch_size = options.batch_size or count
+  if type(batch_size) ~= "number" or batch_size % 1 ~= 0 or batch_size < 1 then
+    error("fit_tensor batch_size must be a positive integer", 3)
+  end
+  batch_size = math.min(batch_size, count)
+  local order = {}
+  for index = 1, count do order[index] = index end
+  if options.shuffle then
+    math.randomseed(options.seed or os.time())
+    for index = count, 2, -1 do
+      local swap = math.random(index)
+      order[index], order[swap] = order[swap], order[index]
+    end
+  end
+  local batches = {}
+  for first = 1, count, batch_size do
+    local indices = {}
+    for offset = 0, batch_size - 1 do
+      if first + offset <= count then
+        indices[#indices + 1] = order[first + offset]
+      end
+    end
+    batches[#batches + 1] = indices
+  end
+  return batches
+end
+
+local function batch_rows(tensor, indices)
+  if #indices == 1 and indices[1] == 1 then
+    return tensor:slice(1, 1)
+  end
+  local sequential = true
+  for position, index in ipairs(indices) do
+    if index ~= position then sequential = false; break end
+  end
+  if sequential then return tensor:slice(1, #indices) end
+  return tensor:take_rows(indices)
+end
+
 function Sequential:fit_tensor(x, y, options)
   options = options or {}
   local Tensor = require("tensorflow.tensor")
@@ -1038,13 +1209,12 @@ function Sequential:fit_tensor(x, y, options)
   end
   if self._session == nil then self._graph = nil end
   self:_build()
-  local batch = x:shape()[1]
-  if y:shape()[1] ~= batch then
+  local count = x:shape()[1]
+  if y:shape()[1] ~= count then
     error("fit_tensor input and target batch sizes differ", 2)
   end
-  local ones = {}
-  for index = 1, batch do ones[index] = 1 end
-  local sample_weight = require("tensorflow").tensor(ones)
+  if count == 0 then error("fit_tensor requires at least one sample", 2) end
+  local batches = tensor_batches(count, options)
   local callbacks = options.callbacks or {}
   local history = { loss = {} }
   for _, name in ipairs(self._metric_names or {}) do history[name] = {} end
@@ -1055,25 +1225,44 @@ function Sequential:fit_tensor(x, y, options)
     end
   end
   for epoch = 1, options.epochs or 1 do
-    local feeds = {
-      [self._input] = x, [self._target] = y, [self._sample_weight] = sample_weight,
-    }
-    if self._training ~= nil then feeds[self._training] = true end
-    feeds[self._learning_rate] = self._current_lr or self._initial_lr
-    if #(self._batchnorm_updates or {}) > 0 then
-      self._session:run(feeds, {}, self._batchnorm_updates)
+    if self._lr_schedule ~= nil then
+      self._current_lr = self._lr_schedule(self._epoch)
     end
-    local fetch = { self._loss }
-    for _, output in ipairs(self._metric_outputs or {}) do
-      fetch[#fetch + 1] = output
+    local epoch_loss, seen = 0, 0
+    local metric_sums = {}
+    for _, name in ipairs(self._metric_names or {}) do metric_sums[name] = 0 end
+    for _, indices in ipairs(batches) do
+      local xb = batch_rows(x, indices)
+      local yb = batch_rows(y, indices)
+      local ones = {}
+      for index = 1, #indices do ones[index] = 1 end
+      local sample_weight = require("tensorflow").tensor(ones)
+      local feeds = {
+        [self._input] = xb, [self._target] = yb,
+        [self._sample_weight] = sample_weight,
+      }
+      if self._training ~= nil then feeds[self._training] = true end
+      feeds[self._learning_rate] = self._current_lr or self._initial_lr
+      if #(self._batchnorm_updates or {}) > 0 then
+        self._session:run(feeds, {}, self._batchnorm_updates)
+      end
+      local fetch = { self._loss }
+      for _, output in ipairs(self._metric_outputs or {}) do
+        fetch[#fetch + 1] = output
+      end
+      local values = self._session:run(feeds, fetch, self._updates)
+      local loss = values[1]:totable()
+      epoch_loss = epoch_loss + loss * #indices
+      seen = seen + #indices
+      for index, name in ipairs(self._metric_names or {}) do
+        metric_sums[name] = metric_sums[name] + values[index + 1]:totable() * #indices
+      end
+      xb:destroy(); yb:destroy(); sample_weight:destroy()
     end
-    local values = self._session:run(feeds, fetch, self._updates)
-    local loss = values[1]:totable()
-    history.loss[#history.loss + 1] = loss
-    for index, name in ipairs(self._metric_names or {}) do
-      local metric = values[index + 1]:totable()
+    history.loss[#history.loss + 1] = epoch_loss / seen
+    for _, name in ipairs(self._metric_names or {}) do
       history[name] = history[name] or {}
-      history[name][#history[name] + 1] = metric
+      history[name][#history[name] + 1] = metric_sums[name] / seen
     end
     for _, callback in ipairs(callbacks) do
       if type(callback.on_epoch_end) == "function" then
@@ -1088,37 +1277,56 @@ function Sequential:fit_tensor(x, y, options)
       callback.on_train_end(history, self)
     end
   end
-  sample_weight:destroy()
   return history
 end
 
-function Sequential:evaluate_tensor(x, y, _)
+function Sequential:evaluate_tensor(x, y, options)
+  options = options or {}
   local Tensor = require("tensorflow.tensor")
   if getmetatable(x) ~= Tensor or getmetatable(y) ~= Tensor then
     error("evaluate_tensor expects Tensor inputs", 2)
   end
   if self._session == nil then self._graph = nil end
   self:_build()
-  local batch = x:shape()[1]
-  local ones = {}
-  for index = 1, batch do ones[index] = 1 end
-  local sample_weight = require("tensorflow").tensor(ones)
-  local fetch = { self._loss }
-  for _, output in ipairs(self._metric_outputs or {}) do
-    fetch[#fetch + 1] = output
+  local count = x:shape()[1]
+  if y:shape()[1] ~= count then
+    error("evaluate_tensor input and target batch sizes differ", 2)
   end
-  local feeds = {
-    [self._input] = x, [self._target] = y, [self._sample_weight] = sample_weight,
-  }
-  if self._training ~= nil then feeds[self._training] = false end
-  local values = self._session:run(feeds, fetch)
+  if count == 0 then error("evaluate_tensor requires at least one sample", 2) end
+  local batches = tensor_batches(count, options)
+  local epoch_loss, seen = 0, 0
+  local metric_sums = {}
+  for _, name in ipairs(self._metric_names or {}) do metric_sums[name] = 0 end
+  for _, indices in ipairs(batches) do
+    local xb = batch_rows(x, indices)
+    local yb = batch_rows(y, indices)
+    local ones = {}
+    for index = 1, #indices do ones[index] = 1 end
+    local sample_weight = require("tensorflow").tensor(ones)
+    local fetch = { self._loss }
+    for _, output in ipairs(self._metric_outputs or {}) do
+      fetch[#fetch + 1] = output
+    end
+    local feeds = {
+      [self._input] = xb, [self._target] = yb,
+      [self._sample_weight] = sample_weight,
+    }
+    if self._training ~= nil then feeds[self._training] = false end
+    local values = self._session:run(feeds, fetch)
+    local batch = #indices
+    epoch_loss = epoch_loss + values[1]:totable() * batch
+    seen = seen + batch
+    for index, name in ipairs(self._metric_names or {}) do
+      metric_sums[name] = metric_sums[name] + values[index + 1]:totable() * batch
+    end
+    xb:destroy(); yb:destroy(); sample_weight:destroy()
+  end
   local metrics = {}
-  for index, name in ipairs(self._metric_names or {}) do
-    metrics[name] = values[index + 1]:totable()
+  for _, name in ipairs(self._metric_names or {}) do
+    metrics[name] = metric_sums[name] / seen
   end
-  sample_weight:destroy()
-  if next(metrics) == nil then return values[1]:totable() end
-  return values[1]:totable(), metrics
+  if next(metrics) == nil then return epoch_loss / seen end
+  return epoch_loss / seen, metrics
 end
 
 function Sequential:evaluate(x, y, options)
@@ -1426,6 +1634,19 @@ function Sequential:summary()
     elseif layer.kind == "global_max_pool1d" then
       rows[#rows + 1] = string.format("  %d: GlobalMaxPool1D(%d)", i,
         layer.units)
+    elseif layer.kind == "max_pool1d" or layer.kind == "avg_pool1d" then
+      rows[#rows + 1] = string.format("  %d: %s(%d)", i,
+        layer.kind == "max_pool1d" and "MaxPool1D" or "AvgPool1D",
+        layer.kernel_size)
+    elseif layer.kind == "global_avg_pool1d" then
+      rows[#rows + 1] = string.format("  %d: GlobalAvgPool1D(%d)", i,
+        layer.units)
+    elseif layer.kind == "separable_conv2d" then
+      rows[#rows + 1] = string.format(
+        "  %d: SeparableConv2D(%dx%d, mult %d)", i, layer.kernel_size[1],
+        layer.kernel_size[2], layer.depth_multiplier)
+    elseif layer.kind == "layer_normalization" then
+      rows[#rows + 1] = string.format("  %d: LayerNormalization", i)
     elseif layer.kind == "activation" then
       rows[#rows + 1] = string.format("  %d: Activation", i)
     elseif layer.kind == "batchnorm" then

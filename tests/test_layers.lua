@@ -300,3 +300,66 @@ test("runs global max-pooling over time", function()
   assert_eq(flat[1][2], -1)
   session:close()
 end)
+
+test("runs 1-D pooling and global average pooling", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 4, 2 }, "pool1d")
+  local pooled = tf.layers.max_pool1d(graph, input, 2, { name = "max1" })
+  local average = tf.layers.avg_pool1d(graph, input, 2,
+    { name = "avg1" })
+  local global = tf.layers.global_avg_pool1d(graph, input,
+    { name = "global1" })
+  local session = tf.Session.new(graph)
+  local values = { { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } } }
+  local results = session:run({ [input] = values },
+    { pooled.output, average.output, global.output })
+  local first, second, third = results[1], results[2], results[3]
+  assert_eq(table.concat(first:shape(), ","), "1,2,2")
+  assert_eq(table.concat(second:shape(), ","), "1,2,2")
+  assert_eq(table.concat(third:shape(), ","), "1,2")
+  assert_eq(first:totable()[1][1][1], 3)
+  session:close()
+end)
+
+test("runs separable convolution and layer normalization", function()
+  local graph = tf.Graph.new()
+  local image = tf.placeholder(graph, "float32", { 1, 4, 4, 2 }, "sep_in")
+  local layer = tf.layers.separable_conv2d(graph, image, 3, 3, {
+    in_channels = 2, padding = "SAME", name = "sep",
+  })
+  local flat = tf.placeholder(graph, "float32", { 2, 4 }, "ln_in")
+  local norm = tf.layers.layer_normalization(graph, flat, {
+    normalized_shape = { 4 }, name = "ln",
+  })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  session:run({}, {}, norm.initializers)
+  local image_values = {}
+  for y = 1, 4 do
+    image_values[y] = {}
+    for x = 1, 4 do image_values[y][x] = { y, x } end
+  end
+  local output = session:run({ [image] = { image_values } },
+    { layer.output })[1]
+  assert_eq(table.concat(output:shape(), ","), "1,4,4,3")
+  local normalized = session:run({ [flat] = { { 1, 2, 3, 4 }, { 2, 4, 6, 8 } } },
+    { norm.output })[1]:totable()
+  local mean = (normalized[1][1] + normalized[1][2] + normalized[1][3] +
+    normalized[1][4]) / 4
+  assert_true(math.abs(mean) < 1e-5)
+  session:close()
+end)
+
+test("embedding padding_idx returns a zero row", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "int32", { 3 }, "embed_idx")
+  local layer = tf.layers.embedding(graph, input, 5, 4, {
+    padding_idx = 2, name = "embed",
+  })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, layer.initializers)
+  local output = session:run({ [input] = { 0, 2, 3 } },
+    { layer.output })[1]:totable()
+  for column = 1, 4 do assert_eq(output[2][column], 0) end
+  session:close()
+end)

@@ -1,39 +1,36 @@
-# tensorflow-lua 0.10.0
+# tensorflow-lua 0.11.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- `Sequential:fit_tensor(x, y, opts)` and `evaluate_tensor(x, y)` for
-  full-batch Tensor feeds;
-- avoids Lua-table conversion for large inputs;
-- retains callbacks, BatchNorm updates, metric history, and evaluation.
+- tensor-backed mini-batch `fit_tensor`/`evaluate_tensor` (no Lua table
+  conversion) with slicing, shuffle, and seed;
+- `tf.Functional` multi-input/multi-output graph models with custom losses and
+  optimizers;
+- MaxPool1D, AvgPool1D, GlobalAvgPool1D, SeparableConv2D,
+  LayerNormalization, and Embedding padding rows;
+- Huber, hinge, and categorical-hinge losses, dense class weights;
+- precision, recall, and F1 metrics;
+- exponential, cosine, polynomial, piecewise, and constant LR schedules;
+- 157 dependency-free tests.
 
-This is a full-batch path, not a mini-batch iterator. Table-based `fit` remains
-available for shuffled mini-batches.
+## Deliberately not included
 
-The 0.9 feature set remains:
-
-- architecture config save/load;
-- Reshape, Permute, UpSampling2D, ZeroPadding2D, DepthwiseConv2D,
-  GlobalMaxPool1D, Conv1D/Conv2D, pooling, BatchNorm, Activation, Embedding,
-  Flatten, and Dropout;
-- global-norm gradient clipping and model checkpoints;
-- libtensorflow 2.16.2/2.18.0 compatibility.
-
-## Requirements
-
-- LuaJIT 2.1
-- libtensorflow 2.16.2 or 2.18.0 CPU for Linux x86-64
+- SavedModel export (the TensorFlow C API lacks the MetaGraphDef writer);
+- GPU placement on this machine;
+- graph-level gradient accumulation;
+- AUC and full multi-class precision/recall/F1;
+- verified libtensorflow 2.19/2.20 compatibility.
 
 ## Install
 
 ```sh
-luarocks --lua-version=5.1 install tensorflow-lua
+./scripts/fetch_libtensorflow.sh
+./scripts/test.sh
+luarocks --lua-version=5.1 make tensorflow-lua-0.11.0-1.rockspec
 ```
 
-## Verification
-
-- 142 dependency-free tests;
-- luacheck clean;
-- CI Ubuntu 22.04/24.04 × libtensorflow 2.16.2/2.18.0.
+The binding requires LuaJIT 2.1 and libtensorflow 2.16.2 or 2.18.0 on Linux
+x86-64. Set `TENSORFLOW_ROOT` or `TENSORFLOW_LIB` when the library is not in
+`third_party/libtensorflow`.
