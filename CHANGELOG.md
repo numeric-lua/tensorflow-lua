@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0
+
+- public API stability policy and documented public surface;
+- semantic-versioning and deprecation rules;
+- platform limits documented explicitly;
+- 174 dependency-free tests.
+
 ## 0.20.0
 
 - unrolled LSTM and GRU layers for fixed-length `[batch, time, input]`

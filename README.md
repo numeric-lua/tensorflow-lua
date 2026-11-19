@@ -7,11 +7,11 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`0.20.0` alpha. Graph inference, construction, training, checkpoints, eager
-mode, trainable 2-D/3-D convolution/pooling/upsampling, attention/transformer
-layers, unrolled LSTM/GRU, tensor-backed datasets, a checkpointable functional
-graph model, and a Sequential model. The dependency-free suite currently
-contains 174 tests.
+`1.0.0`. Graph inference, construction, training, checkpoints, eager mode,
+trainable 2-D/3-D convolution/pooling/upsampling, attention/transformer layers,
+unrolled LSTM/GRU, tensor-backed datasets, a checkpointable functional graph
+model, and a Sequential model. The dependency-free suite currently contains
+174 tests. See [docs/stability.md](docs/stability.md) for the API policy.
 
 - load serialized `GraphDef` files;
 - build graphs from Lua with operations, inputs, and attributes;
@@ -89,11 +89,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v0.20.0/tensorflow-lua-0.20.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v1.0.0/tensorflow-lua-1.0.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-0.20.0-1.rockspec
-./scripts/package.sh tensorflow-lua-0.20.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-1.0.0-1.rockspec
+./scripts/package.sh tensorflow-lua-1.0.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -267,7 +267,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v0.20.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v0.20.0)
+[**v1.0.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v1.0.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
