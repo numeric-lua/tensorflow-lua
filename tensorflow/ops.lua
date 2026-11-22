@@ -152,6 +152,73 @@ function Ops.reshape(graph, input, shape, name, dtype)
   return desc:finish()
 end
 
+function Ops.transpose(graph, input, perm, name, dtype)
+  if type(perm) ~= "table" or #perm == 0 then
+    error("transpose expects a non-empty permutation table", 3)
+  end
+  name = name or "transpose"
+  local perm_op = constant(graph, perm, name .. "/perm", "int32")
+  local desc = graph:new_operation("Transpose", name)
+  desc:add_input(input)
+  desc:add_input(perm_op)
+  desc:set_type("T", dtype_name(dtype))
+  desc:set_type("Tperm", "int32")
+  return desc:finish()
+end
+
+function Ops.expand_dims(graph, input, axis, name, dtype)
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("expand_dims expects an integer axis", 3)
+  end
+  name = name or "expand_dims"
+  local axis_op = constant(graph, axis, name .. "/axis", "int32")
+  local desc = graph:new_operation("ExpandDims", name)
+  desc:add_input(input)
+  desc:add_input(axis_op)
+  desc:set_type("T", dtype_name(dtype))
+  desc:set_type("Tdim", "int32")
+  return desc:finish()
+end
+
+function Ops.squeeze(graph, input, axis, name, dtype)
+  if axis ~= nil and type(axis) ~= "number" and type(axis) ~= "table" then
+    error("squeeze expects an integer axis or table", 3)
+  end
+  if type(axis) == "number" then axis = { axis } end
+  axis = axis or {}
+  for _, dimension in ipairs(axis) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 then
+      error("squeeze axes must be integers", 3)
+    end
+  end
+  name = name or "squeeze"
+  local desc = graph:new_operation("Squeeze", name)
+  desc:add_input(input)
+  desc:set_type("T", dtype_name(dtype))
+  if #axis > 0 then desc:set_int_list("squeeze_dims", axis) end
+  return desc:finish()
+end
+
+function Ops.gather(graph, params, indices, axis, name, dtype, indices_dtype)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("gather expects an integer axis", 3)
+  end
+  name = name or "gather"
+  local axis_op = constant(graph, axis, name .. "/axis", "int32")
+  local index_dtype = dtype_name(indices_dtype or
+    (type(indices) == "table" and indices.dtype) or "int32")
+  local desc = graph:new_operation("GatherV2", name)
+  desc:add_input(params)
+  desc:add_input(indices)
+  desc:add_input(axis_op)
+  desc:set_type("Tparams", dtype_name(dtype))
+  desc:set_type("Tindices", index_dtype)
+  desc:set_type("Taxis", "int32")
+  desc:set_int("batch_dims", 0)
+  return desc:finish()
+end
+
 local function reduction(graph, op_type, input, axes, name, dtype, keep_dims)
   local axis_op = constant(graph, axes or {}, name .. "/axes", "int32")
   local desc = graph:new_operation(op_type, name)

@@ -91,3 +91,45 @@ test("clips values to a range", function()
   assert_eq(result[3], 1)
   session:close()
 end)
+
+test("transposes, expands, squeezes, and gathers graph outputs", function()
+  local graph = tf.Graph.new()
+  local matrix = tf.placeholder(graph, "float32", { 2, 3 }, "rank_matrix")
+  local transposed = tf.transpose(graph, matrix, { 1, 0 }, "rank_transpose")
+  local expanded = tf.expand_dims(graph, matrix, 0, "rank_expand")
+  local squeezed = tf.squeeze(graph, expanded, 0, "rank_squeeze")
+  local values = tf.placeholder(graph, "float32", { 4 }, "rank_values")
+  local indices = tf.placeholder(graph, "int32", { 2 }, "rank_indices")
+  local gathered = tf.gather(graph, values, indices, 0, "rank_gather")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [matrix] = { { 1, 2, 3 }, { 4, 5, 6 } },
+    [values] = { 10, 20, 30, 40 },
+    [indices] = { 3, 1 },
+  }, { transposed, expanded, squeezed, gathered })
+  assert_eq(table.concat(result[1]:shape(), ","), "3,2")
+  assert_eq(result[1]:totable()[1][2], 4)
+  assert_eq(table.concat(result[2]:shape(), ","), "1,2,3")
+  assert_eq(table.concat(result[3]:shape(), ","), "2,3")
+  assert_eq(result[3]:totable()[2][3], 6)
+  assert_eq(table.concat(result[4]:shape(), ","), "2")
+  assert_eq(result[4]:totable()[1], 40)
+  assert_eq(result[4]:totable()[2], 20)
+  session:close()
+end)
+
+test("squeezes all singleton dimensions and validates axes", function()
+  local graph = tf.Graph.new()
+  local value = tf.constant(graph, { { { 1 }, { 2 }, { 3 } } }, "squeeze_value",
+    "float32")
+  local squeezed = tf.squeeze(graph, value, nil, "squeeze_all")
+  local session = tf.Session.new(graph)
+  local result = session:run({}, { squeezed })[1]
+  assert_eq(table.concat(result:shape(), ","), "3")
+  assert_eq(result:totable()[3], 3)
+  assert_error(function() tf.squeeze(graph, value, 0.5, "bad_squeeze") end,
+    "axes")
+  assert_error(function() tf.transpose(graph, value, nil, "bad_transpose") end,
+    "permutation")
+  session:close()
+end)
