@@ -49,30 +49,44 @@ function Graph:new_operation(op_type, name)
   return require("tensorflow.graph_builder").new_operation(self, op_type, name)
 end
 
-function Graph:import_graph_def(data)
+function Graph:import_graph_def(data, options)
   if type(data) ~= "string" then
     error("import_graph_def expects serialized GraphDef bytes", 2)
   end
+  if options ~= nil and type(options) ~= "table" then
+    error("import_graph_def options must be a table", 2)
+  end
+  local prefix = options and options.prefix
+  if prefix ~= nil and type(prefix) ~= "string" then
+    error("GraphDef import prefix must be a string", 2)
+  end
   local lib = capi.load()
-  local buffer = capi.require(lib.TF_NewBufferFromString(data, #data),
-    "TF_NewBufferFromString")
-  local options = capi.require(lib.TF_NewImportGraphDefOptions(),
-    "TF_NewImportGraphDefOptions")
+  local buffer = ffi.gc(capi.require(
+    lib.TF_NewBufferFromString(data, #data), "TF_NewBufferFromString"),
+    function(value) lib.TF_DeleteBuffer(value) end)
+  local import_options = ffi.gc(capi.require(
+    lib.TF_NewImportGraphDefOptions(), "TF_NewImportGraphDefOptions"),
+    function(value) lib.TF_DeleteImportGraphDefOptions(value) end)
+  if prefix ~= nil then
+    lib.TF_ImportGraphDefOptionsSetPrefix(import_options, prefix)
+  end
   local status = capi.status()
-  lib.TF_GraphImportGraphDef(self:handle(), buffer, options, status)
+  lib.TF_GraphImportGraphDef(self:handle(), buffer, import_options, status)
   local ok, err = pcall(capi.check, status, "GraphDef import")
-  lib.TF_DeleteImportGraphDefOptions(options)
+  ffi.gc(buffer, nil)
   lib.TF_DeleteBuffer(buffer)
+  ffi.gc(import_options, nil)
+  lib.TF_DeleteImportGraphDefOptions(import_options)
   if not ok then error(err, 2) end
   return self
 end
 
-function Graph:import_file(path)
+function Graph:import_file(path, options)
   local file, err = io.open(path, "rb")
   if file == nil then error("cannot open GraphDef '" .. path .. "': " .. tostring(err), 2) end
   local data = file:read("*a")
   file:close()
-  return self:import_graph_def(data)
+  return self:import_graph_def(data, options)
 end
 
 function Graph:graph_def()

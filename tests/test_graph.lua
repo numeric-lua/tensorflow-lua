@@ -52,6 +52,33 @@ test("imports a hand-built GraphDef and runs feeds/fetches", function()
   session:close()
 end)
 
+test("imports prefixed GraphDefs into one graph", function()
+  local graph = tf.Graph.new()
+  graph:import_graph_def(graph_def, { prefix = "left" })
+  graph:import_graph_def(graph_def, { prefix = "right" })
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    ["left/x"] = { 1, 2 },
+    ["left/y"] = { 3, 4 },
+    ["right/x"] = { 10, 20 },
+    ["right/y"] = { 5, 6 },
+  }, { left = "left/z:0", right = "right/z:0" })
+  assert_eq(result.left:totable()[1], 4)
+  assert_eq(result.right:totable()[2], 26)
+  session:close()
+end)
+
+test("rejects bad GraphDef import options", function()
+  local graph = tf.Graph.new()
+  graph:import_graph_def(graph_def, { prefix = "dup" })
+  assert_error(function()
+    graph:import_graph_def(graph_def, { prefix = 42 })
+  end, "prefix")
+  assert_error(function()
+    graph:import_graph_def(graph_def, true)
+  end, "options")
+end)
+
 test("supports named fetch maps and graph export", function()
   local graph = tf.Graph.new():import_graph_def(graph_def)
   local session = tf.Session.new(graph)
