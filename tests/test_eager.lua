@@ -51,3 +51,41 @@ test("releases many eager handles", function()
   for _ = 1, 3 do collectgarbage("collect") end
   context:close()
 end)
+
+test("destroys eager tensors explicitly and rejects reuse", function()
+  local capi = require("tensorflow.capi")
+  local before = capi.released.eager_tensors
+  local context = tf.eager.Context.new()
+  local value = context:constant({ 3, 4 })
+  value:destroy()
+  value:destroy()
+  assert_error(function() value:totable() end, "released")
+  context:close()
+  assert_true(capi.released.eager_tensors >= before + 1)
+end)
+
+test("defers context deletion until live eager tensors are released", function()
+  local context = tf.eager.Context.new()
+  local value = context:constant({ 7, 8 })
+  context:close()
+  assert_true(not context._state.deleted)
+  assert_eq(value:totable()[2], 8)
+  value:destroy()
+  assert_true(context._state.deleted)
+end)
+
+test("finalizes unclosed eager contexts and handles", function()
+  local capi = require("tensorflow.capi")
+  local before_contexts = capi.released.contexts
+  local before_tensors = capi.released.eager_tensors
+  do
+    local context = tf.eager.Context.new()
+    for i = 1, 10 do
+      local value = context:constant({ i })
+      assert_eq(value:totable()[1], i)
+    end
+  end
+  for _ = 1, 5 do collectgarbage("collect") end
+  assert_true(capi.released.contexts >= before_contexts + 1)
+  assert_true(capi.released.eager_tensors >= before_tensors + 10)
+end)

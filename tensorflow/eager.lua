@@ -20,6 +20,7 @@ local function wrap_handle(handle, context)
   local owner = ffi.gc(handle, function(value)
     local _ = keepalive
     capi.load().TFE_DeleteTensorHandle(value)
+    capi.released.eager_tensors = capi.released.eager_tensors + 1
     context:_release()
   end)
   return setmetatable({ _handle = owner, _context = context }, Eager.Tensor)
@@ -32,6 +33,18 @@ Eager.Tensor = ETensor
 function ETensor:handle()
   if self._handle == nil then error("eager tensor has been released", 2) end
   return self._handle
+end
+
+function ETensor:destroy()
+  if self._handle == nil then return end
+  local handle = self._handle
+  local context = self._context
+  self._handle = nil
+  self._source = nil
+  ffi.gc(handle, nil)
+  capi.load().TFE_DeleteTensorHandle(handle)
+  capi.released.eager_tensors = capi.released.eager_tensors + 1
+  if context ~= nil then context:_release() end
 end
 
 function ETensor:dtype()
@@ -87,19 +100,21 @@ function Context.new(options)
   lib.TFE_ContextOptionsSetAsync(opts, options.async and 1 or 0)
   local status = capi.status()
   local pointer = lib.TFE_NewContext(opts, status)
-  capi.check(status, "eager context")
+  local ok, err = pcall(capi.check, status, "eager context")
   lib.TFE_DeleteContextOptions(opts)
-  if pointer == nil then error("TFE_NewContext failed", 2) end
-  local self = setmetatable({ _refs = 0, _closed = false,
-    _state = { deleted = false } }, Context)
+  if not ok or pointer == nil then
+    error(err or "TFE_NewContext failed", 2)
+  end
+  local state = { deleted = false }
   local handle = ffi.gc(pointer, function(value)
-    if not self._state.deleted then
-      self._state.deleted = true
+    if not state.deleted then
+      state.deleted = true
       capi.load().TFE_DeleteContext(value)
+      capi.released.contexts = capi.released.contexts + 1
     end
   end)
-  self._handle = handle
-  return self
+  return setmetatable({ _refs = 0, _closed = false, _state = state,
+    _handle = handle }, Context)
 end
 
 function Context:handle()
@@ -114,6 +129,7 @@ function Context:_destroy()
     ffi.gc(handle, nil)
     self._state.deleted = true
     capi.load().TFE_DeleteContext(handle)
+    capi.released.contexts = capi.released.contexts + 1
   end
 end
 

@@ -158,7 +158,8 @@ size_t TF_DataTypeSize(TF_DataType);
 ]]
 
 local capi = { ffi = ffi,
-  released = { tensors = 0, graphs = 0, sessions = 0, readers = 0 } }
+  released = { tensors = 0, graphs = 0, sessions = 0, readers = 0,
+    eager_tensors = 0, contexts = 0 } }
 
 local function candidates()
   local result = {}
