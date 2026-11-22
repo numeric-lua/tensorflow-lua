@@ -26,8 +26,9 @@ an `ffi.gc` cdata finalizer:
   idempotent. The finalizer closure retains the graph handle so a graph cannot
   be deleted under a live session.
 - `TF_CheckpointReader` and `TFE_Context`/`TFE_TensorHandle` follow the same
-  rule. Eager contexts are reference-counted by live tensor handles and delete
-  only after the last one drains.
+  rule. Eager tensors expose idempotent `destroy()`, and eager contexts are
+  reference-counted by live tensor handles and delete only after the last one
+  drains.
 
 C API calls return status through `TF_Status`. `capi.check` reads the message,
 deletes the status, and raises a Lua error. Never reuse a status after checking
@@ -52,5 +53,5 @@ Two formats are supported:
 ## Eager mode
 
 `tf.eager` is experimental and uses the `TFE_*` C API. It supports constants,
-generic `execute`, arithmetic, activations, and reshape. It intentionally does
-not provide autograd.
+generic `execute`, arithmetic, casts, rank/shape transforms, reductions,
+argmax, activations, and reshape. It intentionally does not provide autograd.

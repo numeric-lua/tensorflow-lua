@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.0.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.1.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -82,13 +82,22 @@ selects an arbitrary 1-based row order.
 
 Creates a TF_Graph.
 
-### `graph:import_graph_def(bytes)`
+### `graph:import_graph_def(bytes[, opts])`
 
-Imports a serialized `GraphDef` protobuf from a Lua string.
+Imports a serialized `GraphDef` protobuf from a Lua string. `opts.prefix`
+places every imported operation in a namespace, so the same GraphDef can be
+imported more than once into one graph:
 
-### `graph:import_file(path)`
+```lua
+graph:import_graph_def(bytes, { prefix = "left" })
+graph:import_graph_def(bytes, { prefix = "right" })
+local z = session:run({ ["left/x"] = 1, ["left/y"] = 2 }, "left/z:0")
+```
 
-Reads and imports a `.pb` file.
+### `graph:import_file(path[, opts])`
+
+Reads and imports a `.pb` file, accepting the same options as
+`import_graph_def`.
 
 ### `graph:new_operation(op_type, name)`
 
@@ -132,12 +141,14 @@ Creates a `VariableV2`, its `Assign` initializer, and an `Identity` read output.
 Returns a table with `ref`, `read`, `initializer`, `dtype`, and `shape`.
 Supported options: `dtype`, `container`, `shared_name`.
 
-### `tf.train.gradient_descent(graph, loss, variables, lr[, name])`
+### `tf.train.gradient_descent(graph, loss, variables, lr[, name[, opts]])`
 
 Adds `ApplyGradientDescent` targets for the variables and returns
 `targets, gradients, learning_rate`. Initialize variables first with
 `session:run({}, {}, { variable.initializer })`, then run the target list once
-per training step.
+per training step. Options: `clipnorm` limits the global gradient norm,
+`clipvalue` limits each gradient element, and `gradients` supplies precomputed
+gradients instead of calling `tf.gradients`. Clipping bounds must be positive.
 
 ### `tf.train.adam(graph, loss, variables[, opts])`
 
@@ -746,10 +757,15 @@ context:close()            -- deferred until live tensors are released
 `Context:execute(op_type, inputs, { attrs = ... })` runs an arbitrary eager
 op. Type-string attributes (`T`, `dtype`, ...), booleans, numbers, and shape
 tables are supported. Attribute values may be booleans, numbers (float), dtype strings, shape arrays,
-or typed tables such as `{ int = 0 }`, `{ float = 0.5 }`,
-`{ bool = true }`, `{ type = "float32" }`, and `{ shape = { 2, 3 } }`.
-Convenience methods: `add`, `sub`, `mul`, `matmul`, `relu`, `sigmoid`,
-`square`, and `reshape`.
+or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
+`{ float = 0.5 }`, `{ bool = true }`, `{ type = "float32" }`, and
+`{ shape = { 2, 3 } }`. Convenience methods: `add`, `sub`, `mul`, `div`,
+`matmul`, `cast`, `transpose`, `expand_dims`, `squeeze`, `reduce_sum`,
+`argmax`, `relu`, `sigmoid`, `square`, and `reshape`.
+
+`ETensor:destroy()` releases a tensor handle immediately; destroying is
+idempotent. `Context:close()` marks the context closed and defers its deletion
+until every live eager tensor has been released.
 
 ## Training examples
 
@@ -770,6 +786,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
 | `tf.exp`, `tf.log`, `tf.sqrt` | elementwise unary ops |
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
+| `tf.transpose(graph, x, perm[, name[, dtype]])` | Transpose |
+| `tf.expand_dims(graph, x, axis[, name[, dtype]])` | ExpandDims |
+| `tf.squeeze(graph, x[, axis[, name[, dtype]]])` | Squeeze |
+| `tf.gather(graph, params, indices[, axis[, name[, dtype[, indices_dtype]]]])` | GatherV2 |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |

@@ -1,7 +1,18 @@
 # Changelog
 
-## Unreleased
+## 2.1.0
 
+- prefix-aware `Graph:import_graph_def`/`import_file` options for importing a
+  GraphDef into a namespace more than once;
+- eager tensor `destroy()`, finalizer release counters, and context deletion
+  deferred until all live eager handles drain;
+- eager `div`, `cast`, `transpose`, `expand_dims`, `squeeze`, `reduce_sum`,
+  and `argmax`, plus integer-list attributes;
+- `tf.train.gradient_descent` exposes `clipnorm`, `clipvalue`, and precomputed
+  gradients through an options table;
+- graph `tf.transpose`, `tf.expand_dims`, `tf.squeeze`, and `tf.gather` ops;
+- include `tensorflow.bundle` in the SCM and versioned rockspecs so installed
+  packages load successfully;
 - verify the full suite against libtensorflow 2.16.2, 2.18.0, and 2.18.1;
 - pin Linux x86-64 archive checksums for 2.16.2 and 2.18.1 and reject a
   destination containing a different libtensorflow version;
@@ -9,7 +20,8 @@
   instead of attempting archives that Google never published;
 - add a compatibility matrix with operation coverage for separable
   convolution, pooling, and checkpoints;
-- extend CI to 2.18.1 and add fetch-script version regression tests.
+- extend CI to 2.18.1 and add fetch-script version regression tests;
+- 187 dependency-free tests.
 
 ## 2.0.0
 

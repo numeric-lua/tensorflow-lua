@@ -20,6 +20,7 @@ build = {
   type = "builtin",
   modules = {
     tensorflow = "tensorflow/init.lua",
+    ["tensorflow.bundle"] = "tensorflow/bundle.lua",
     ["tensorflow.capi"] = "tensorflow/capi.lua",
     ["tensorflow.tensor"] = "tensorflow/tensor.lua",
     ["tensorflow.graph"] = "tensorflow/graph.lua",
