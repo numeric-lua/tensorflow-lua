@@ -180,6 +180,10 @@ function Context:execute(op_type, inputs, options)
         elseif value.type ~= nil then
           local _, info = Tensor.dtype_info(value.type)
           lib.TFE_OpSetAttrType(op, name, info.code)
+        elseif value.ints ~= nil then
+          local ints = ffi.new("int64_t[?]", #value.ints)
+          for i, integer in ipairs(value.ints) do ints[i - 1] = integer end
+          lib.TFE_OpSetAttrIntList(op, name, ints, #value.ints)
         elseif value.shape ~= nil then
           local dims = ffi.new("int64_t[?]", #value.shape)
           for i, dimension in ipairs(value.shape) do dims[i - 1] = dimension end
@@ -226,6 +230,67 @@ end
 function Context:matmul(a, b)
   return self:execute("MatMul", { a, b },
     { attrs = { T = a:dtype(), transpose_a = false, transpose_b = false } })[1]
+end
+
+function Context:div(a, b)
+  return self:execute("RealDiv", { a, b }, { attrs = { T = a:dtype() } })[1]
+end
+
+function Context:cast(a, dst_dtype)
+  local dtype = Tensor.dtype_info(dst_dtype)
+  return self:execute("Cast", { a },
+    { attrs = { SrcT = a:dtype(), DstT = dtype } })[1]
+end
+
+function Context:transpose(a, perm)
+  if type(perm) ~= "table" or #perm == 0 then
+    error("eager transpose expects a non-empty permutation table", 2)
+  end
+  local permutation = self:constant(perm, "int32")
+  return self:execute("Transpose", { a, permutation },
+    { attrs = { T = a:dtype(), Tperm = "int32" } })[1]
+end
+
+function Context:expand_dims(a, axis)
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("eager expand_dims expects an integer axis", 2)
+  end
+  local dimension = self:constant(axis, "int32")
+  return self:execute("ExpandDims", { a, dimension },
+    { attrs = { T = a:dtype(), Tdim = "int32" } })[1]
+end
+
+function Context:squeeze(a, axis)
+  local attrs = { T = a:dtype() }
+  if axis ~= nil then
+    if type(axis) == "number" then axis = { axis } end
+    if type(axis) ~= "table" then
+      error("eager squeeze expects an integer axis or table", 2)
+    end
+    attrs.squeeze_dims = { ints = axis }
+  end
+  return self:execute("Squeeze", { a }, { attrs = attrs })[1]
+end
+
+function Context:reduce_sum(a, axes, keep_dims)
+  if type(axes) ~= "table" then
+    error("eager reduce_sum expects an axes table", 2)
+  end
+  local axis_tensor = self:constant(axes, "int32")
+  return self:execute("Sum", { a, axis_tensor },
+    { attrs = { T = a:dtype(), Tidx = "int32",
+      keep_dims = keep_dims and true or false } })[1]
+end
+
+function Context:argmax(a, axis, output_dtype)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("eager argmax expects an integer axis", 2)
+  end
+  local dtype = Tensor.dtype_info(output_dtype or "int64")
+  local dimension = self:constant(axis, "int32")
+  return self:execute("ArgMax", { a, dimension },
+    { attrs = { T = a:dtype(), Tidx = "int32", output_type = dtype } })[1]
 end
 
 function Context:relu(a)

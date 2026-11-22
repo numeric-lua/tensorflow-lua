@@ -141,6 +141,7 @@ void TFE_OpSetAttrInt(TFE_Op*, const char*, int64_t);
 void TFE_OpSetAttrFloat(TFE_Op*, const char*, float);
 void TFE_OpSetAttrBool(TFE_Op*, const char*, unsigned char);
 void TFE_OpSetAttrType(TFE_Op*, const char*, TF_DataType);
+void TFE_OpSetAttrIntList(TFE_Op*, const char*, const int64_t*, int);
 void TFE_OpSetAttrShape(TFE_Op*, const char*, const int64_t*, int, TF_Status*);
 void TFE_Execute(TFE_Op*, TFE_TensorHandle**, int*, TF_Status*);
 
