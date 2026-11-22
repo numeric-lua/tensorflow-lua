@@ -118,7 +118,6 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
     options)
   name = name or "GradientDescent"
   options = options or {}
-  options.gradients = options.gradients
   if type(variables) ~= "table" or #variables == 0 then
     error("gradient_descent expects a non-empty variable list", 3)
   end
@@ -126,7 +125,20 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
   for i, variable in ipairs(variables) do
     refs[i] = variable.ref or variable
   end
-  local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
+  local gradients = options.gradients or train_gradients(graph, loss, refs,
+    options, name)
+  local clipvalue = options.clipvalue or options.clip_value
+  if clipvalue ~= nil then
+    if type(clipvalue) ~= "number" or clipvalue <= 0 then
+      error("clipvalue must be a positive number", 3)
+    end
+    local tf = require("tensorflow")
+    for i, gradient in ipairs(gradients) do
+      local dtype = variables[i].dtype or "float32"
+      gradients[i] = tf.clip_by_value(graph, gradient, -clipvalue, clipvalue,
+        name .. "/clipvalue_" .. i, dtype)
+    end
+  end
   local lr_dtype = variables[1].dtype or variables[1].ref.dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     lr_dtype)

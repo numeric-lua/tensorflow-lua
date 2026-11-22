@@ -63,8 +63,8 @@ end
 
 tf.train = {
   Saver = Saver,
-  gradient_descent = function(graph, loss, variables, lr, name)
-    return Train.gradient_descent(graph, loss, variables, lr, name)
+  gradient_descent = function(graph, loss, variables, lr, name, options)
+    return Train.gradient_descent(graph, loss, variables, lr, name, options)
   end,
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
