@@ -183,6 +183,97 @@ test("evaluates eager math and activation ops", function()
   context:close()
 end)
 
+test("concatenates, gathers, slices, and reverses eager tensors", function()
+  local context = tf.eager.Context.new()
+  local a = context:constant({ { 1, 2 }, { 3, 4 } })
+  local b = context:constant({ { 5, 6 } })
+  local rows = context:concat({ a, b }, 0)
+  assert_eq(table.concat(rows:shape(), ","), "3,2")
+  assert_eq(rows:totable()[3][1], 5)
+  assert_eq(rows:totable()[3][2], 6)
+
+  local columns = context:concat({ a, context:constant({ { 7 }, { 8 } }) }, 1)
+  assert_eq(table.concat(columns:shape(), ","), "2,3")
+  assert_eq(columns:totable()[1][3], 7)
+  assert_eq(columns:totable()[2][3], 8)
+
+  local values = context:constant({ 10, 20, 30, 40 })
+  local indices = context:constant({ 3, 1 }, "int32")
+  local gathered = context:gather(values, indices, 0)
+  assert_eq(gathered:totable()[1], 40)
+  assert_eq(gathered:totable()[2], 20)
+
+  local matrix = context:constant({ { 1, 2, 3 }, { 4, 5, 6 } })
+  local sliced = context:slice(matrix, { 0, 1 }, { 2, 2 })
+  assert_eq(table.concat(sliced:shape(), ","), "2,2")
+  assert_eq(sliced:totable()[1][1], 2)
+  assert_eq(sliced:totable()[2][2], 6)
+  local tail = context:slice(context:constant({ 1, 2, 3 }), { 1 }, { -1 })
+  assert_eq(table.concat(tail:totable(), ","), "2,3")
+
+  local reversed = context:reverse(matrix, { 1 })
+  assert_eq(reversed:totable()[1][1], 3)
+  assert_eq(reversed:totable()[2][3], 4)
+
+  assert_error(function() context:concat({ a }, 0) end, "two inputs")
+  assert_error(function() context:gather(values, indices, 0.5) end, "axis")
+  assert_error(function() context:slice(matrix, { 0 }, { 1, 1 }) end,
+    "matching")
+  assert_error(function() context:slice(matrix, { 0, 0 }, { -2, 1 }) end,
+    ">= -1")
+  assert_error(function() context:reverse(matrix, {}) end, "axis")
+  context:close()
+end)
+
+test("pads, tiles, selects, and splits eager tensors", function()
+  local context = tf.eager.Context.new()
+  local matrix = context:constant({ { 1, 2 }, { 3, 4 } })
+  local padded = context:pad(matrix, { { 1, 0 }, { 0, 1 } }, "CONSTANT")
+  assert_eq(table.concat(padded:shape(), ","), "3,3")
+  assert_eq(padded:totable()[1][1], 0)
+  assert_eq(padded:totable()[2][1], 1)
+  assert_eq(padded:totable()[2][3], 0)
+  assert_eq(padded:totable()[3][2], 4)
+
+  local reflected = context:pad(matrix, { { 1, 1 }, { 1, 1 } }, "REFLECT")
+  assert_eq(table.concat(reflected:shape(), ","), "4,4")
+
+  local vector = context:constant({ 5, 6 })
+  local tiled = context:tile(vector, { 3 })
+  assert_eq(table.concat(tiled:shape(), ","), "6")
+  assert_eq(tiled:totable()[3], 5)
+  assert_eq(tiled:totable()[4], 6)
+
+  local condition = context:constant({ true, false, true })
+  local selected = context:where(condition, context:constant({ 1, 2, 3 }),
+    context:constant({ 10, 20, 30 }))
+  assert_eq(selected:totable()[1], 1)
+  assert_eq(selected:totable()[2], 20)
+  assert_eq(selected:totable()[3], 3)
+
+  local equal = context:split(context:constant({ 1, 2, 3, 4, 5, 6 }), 3, 0)
+  assert_eq(#equal, 3)
+  assert_eq(table.concat(equal[1]:shape(), ","), "2")
+  assert_eq(equal[1]:totable()[1], 1)
+  assert_eq(equal[3]:totable()[2], 6)
+  local uneven = context:split(context:constant({ 1, 2, 3, 4, 5, 6 }),
+    { 1, 2, 3 }, 0)
+  assert_eq(#uneven, 3)
+  assert_eq(table.concat(uneven[1]:shape(), ","), "1")
+  assert_eq(table.concat(uneven[3]:shape(), ","), "3")
+  assert_eq(uneven[3]:totable()[3], 6)
+
+  assert_error(function() context:pad(matrix, { { 1 } }) end, "pairs")
+  assert_error(function()
+    context:pad(matrix, { { 1, 1 }, { 1, 1 } }, "WRAP")
+  end, "mode")
+  assert_error(function() context:tile(vector, { -1 }) end, "non-negative")
+  assert_error(function() context:split(vector, 0, 0) end, "positive")
+  assert_error(function() context:split(vector, { 1, -1 }, 0) end,
+    "non-negative")
+  context:close()
+end)
+
 test("finalizes unclosed eager contexts and handles", function()
   local capi = require("tensorflow.capi")
   local before_contexts = capi.released.contexts

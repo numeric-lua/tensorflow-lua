@@ -95,6 +95,55 @@ function Graph:shape(value)
   return shape
 end
 
+function Graph:consumers(value)
+  local lib = capi.load()
+  local operation, index = resolve_operation(self, value)
+  if index >= lib.TF_OperationNumOutputs(operation) then
+    error("operation has no output at index " .. tostring(index), 3)
+  end
+  local output = ffi.new("TF_Output", { oper = operation, index = index })
+  local count = lib.TF_OperationOutputNumConsumers(output)
+  local consumers = {}
+  if count > 0 then
+    local array = ffi.new("TF_Input[?]", count)
+    local actual = lib.TF_OperationOutputConsumers(output, array, count)
+    for i = 1, actual do
+      consumers[i] = {
+        name = ffi.string(lib.TF_OperationName(array[i - 1].oper)),
+        input = array[i - 1].index,
+      }
+    end
+  end
+  return consumers
+end
+
+local function control_operations(lib, operation, count, getter)
+  local names = {}
+  if count > 0 then
+    local array = ffi.new("TF_Operation*[?]", count)
+    local actual = getter(operation, array, count)
+    for i = 1, actual do
+      names[i] = ffi.string(lib.TF_OperationName(array[i - 1]))
+    end
+  end
+  return names
+end
+
+function Graph:control_inputs(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  return control_operations(lib, operation,
+    lib.TF_OperationNumControlInputs(operation), lib.TF_OperationGetControlInputs)
+end
+
+function Graph:control_outputs(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  return control_operations(lib, operation,
+    lib.TF_OperationNumControlOutputs(operation),
+    lib.TF_OperationGetControlOutputs)
+end
+
 function Graph:operation_info(value)
   local lib = capi.load()
   local operation, index = resolve_operation(self, value)
@@ -120,6 +169,7 @@ function Graph:operation_info(value)
       dtype = dtype_name(lib.TF_OperationOutputType(output)),
       shape = self:shape({ oper = operation, index = i }),
       consumers = lib.TF_OperationOutputNumConsumers(output),
+      consumer_ops = self:consumers({ oper = operation, index = i }),
     }
   end
   return {
@@ -128,10 +178,12 @@ function Graph:operation_info(value)
     index = index,
     inputs = inputs,
     outputs = outputs,
+    control_inputs = self:control_inputs({ oper = operation, index = index }),
+    control_outputs = self:control_outputs({ oper = operation, index = index }),
   }
 end
 
-function Graph:output_spec(output)
+function Graph.output_spec(_, output)
   local lib = capi.load()
   local operation = output.oper or output
   return ffi.string(lib.TF_OperationName(operation)) .. ":" ..
@@ -156,6 +208,18 @@ function Graph:import_graph_def(data, options)
   local input_map = options and options.input_map
   if input_map ~= nil and type(input_map) ~= "table" then
     error("GraphDef import input_map must be a table", 2)
+  end
+  local return_elements = options and options.return_elements
+  if return_elements ~= nil then
+    if type(return_elements) ~= "table" then
+      error("GraphDef import return_elements must be a table", 2)
+    end
+    for i, spec in ipairs(return_elements) do
+      if type(spec) ~= "string" then
+        error("GraphDef import return_elements[" .. i ..
+          "] must be a string", 2)
+      end
+    end
   end
   local mappings = {}
   if input_map ~= nil then
@@ -204,6 +268,26 @@ function Graph:import_graph_def(data, options)
   ffi.gc(import_options, nil)
   lib.TF_DeleteImportGraphDefOptions(import_options)
   if not ok then error(err, 2) end
+  if return_elements ~= nil then
+    local outputs = {}
+    for i, spec in ipairs(return_elements) do
+      local operation, index = resolve_operation(self, spec)
+      if index >= lib.TF_OperationNumOutputs(operation) then
+        error("operation has no output at index " .. tostring(index), 2)
+      end
+      local base = spec:match("^(.-):(%d+)$")
+      local name = (base or spec) .. ":" .. tostring(index)
+      local output = ffi.new("TF_Output", { oper = operation, index = index })
+      outputs[i] = {
+        oper = operation,
+        index = index,
+        name = name,
+        dtype = dtype_name(lib.TF_OperationOutputType(output)),
+        shape = self:shape({ oper = operation, index = index }),
+      }
+    end
+    return outputs
+  end
   return self
 end
 

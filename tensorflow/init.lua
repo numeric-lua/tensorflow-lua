@@ -23,7 +23,7 @@ local Data = require("tensorflow.data")
 local Callbacks = require("tensorflow.callbacks")
 
 local tf = {
-  VERSION = "2.2.0",
+  VERSION = "2.3.0",
   Tensor = Tensor,
   Graph = Graph,
   Session = Session,
@@ -71,6 +71,9 @@ tf.train = {
   end,
   adamw = function(graph, loss, variables, options)
     return Train.adamw(graph, loss, variables, options)
+  end,
+  adamax = function(graph, loss, variables, options)
+    return Train.adamax(graph, loss, variables, options)
   end,
   rmsprop = function(graph, loss, variables, options)
     return Train.rmsprop(graph, loss, variables, options)
@@ -148,6 +151,10 @@ tf.split = Ops.split
 tf.pad = Ops.pad
 tf.tile = Ops.tile
 tf.where = Ops.where
+tf.stack = Ops.stack
+tf.unstack = Ops.unstack
+tf.slice = Ops.slice
+tf.reverse = Ops.reverse
 tf.gather = Ops.gather
 tf.cast = Ops.cast
 tf.clip_by_value = Ops.clip_by_value

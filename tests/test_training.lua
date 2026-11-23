@@ -454,3 +454,33 @@ test("supplies custom upstream gradients", function()
     tf.gradients(graph, squared, { x })
   end, "lists")
 end)
+
+test("trains linear regression with AdaMax", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.adamax(graph, loss, { w, b },
+    { learning_rate = 0.1 })
+  assert_true(state.beta1_power ~= nil)
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+  session:run({}, {}, init)
+  for _ = 1, 400 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.25,
+    tostring(result[1]:totable()))
+  assert_true(math.abs(result[2]:totable() - 1) < 0.3,
+    tostring(result[2]:totable()))
+  session:close()
+end)
+
+test("rejects invalid AdaMax inputs and clipping", function()
+  local graph, _, _, w, b, loss = linear_problem()
+  assert_error(function()
+    tf.train.adamax(graph, loss, {})
+  end, "non-empty")
+  assert_error(function()
+    tf.train.adamax(graph, loss, { w, b }, { clipvalue = 0 })
+  end, "clipvalue")
+end)

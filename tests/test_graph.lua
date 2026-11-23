@@ -92,6 +92,100 @@ test("remaps GraphDef inputs to existing graph outputs", function()
   session2:close()
 end)
 
+test("returns selected outputs from GraphDef imports", function()
+  local graph = tf.Graph.new()
+  local returned = graph:import_graph_def(graph_def, {
+    return_elements = { "z:0", "z:0" },
+  })
+  assert_eq(#returned, 2)
+  assert_eq(returned[1].name, "z:0")
+  assert_eq(returned[1].dtype, "float32")
+  local session = tf.Session.new(graph)
+  local result = session:run({ x = { 1, 2 }, y = { 10, 20 } }, returned)
+  assert_eq(result[1]:totable()[1], 11)
+  assert_eq(result[2]:totable()[2], 22)
+  session:close()
+
+  local prefixed = tf.Graph.new()
+  local outputs = prefixed:import_graph_def(graph_def, {
+    prefix = "selected",
+    return_elements = { "selected/z:0" },
+  })
+  assert_eq(outputs[1].name, "selected/z:0")
+  local prefixed_session = tf.Session.new(prefixed)
+  assert_eq(prefixed_session:run({ ["selected/x"] = { 4 },
+    ["selected/y"] = { 5 } }, outputs)[1]:totable()[1], 9)
+  prefixed_session:close()
+
+  local mapped = tf.Graph.new()
+  tf.constant(mapped, { 3, 4 }, "mapped_input")
+  local mapped_outputs = mapped:import_graph_def(graph_def, {
+    input_map = { x = "mapped_input:0" },
+    return_elements = { "z:0" },
+  })
+  local mapped_session = tf.Session.new(mapped)
+  assert_eq(mapped_session:run({ y = { 1, 2 } }, mapped_outputs)[1]
+    :totable()[2], 6)
+  mapped_session:close()
+
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, { return_elements = 42 })
+  end, "return_elements")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, { return_elements = { 1 } })
+  end, "must be a string")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, {
+      return_elements = { "missing:0" },
+    })
+  end, "no operation")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, {
+      return_elements = { "z:5" },
+    })
+  end, "no output")
+end)
+
+test("reports consumers and control edges", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 2 }, "ctx")
+  local y = tf.square(graph, x, "cty")
+  local first = graph:new_operation("Identity", "cfirst")
+  first:add_input(y)
+  first:set_type("T", "float32")
+  local first_output = first:finish()
+  local second = graph:new_operation("Identity", "csecond")
+  second:add_input(y)
+  second:set_type("T", "float32")
+  second:finish()
+  local sink = graph:new_operation("Identity", "csink")
+  sink:add_input(x)
+  sink:add_control_input(first_output)
+  sink:set_type("T", "float32")
+  sink:finish()
+
+  local consumers = graph:consumers("cty")
+  assert_eq(#consumers, 2)
+  local names = { consumers[1].name, consumers[2].name }
+  table.sort(names)
+  assert_eq(names[1], "cfirst")
+  assert_eq(names[2], "csecond")
+  assert_eq(consumers[1].input, 0)
+  assert_eq(#graph:consumers("ctx"), 2)
+  assert_eq(table.concat(graph:control_inputs("csink"), ","), "cfirst")
+  assert_eq(table.concat(graph:control_outputs("cfirst"), ","), "csink")
+
+  local info = graph:operation_info("cty")
+  assert_eq(info.outputs[1].consumers, 2)
+  assert_eq(#info.outputs[1].consumer_ops, 2)
+  assert_eq(#info.control_inputs, 0)
+  local first_info = graph:operation_info("cfirst")
+  assert_eq(#first_info.control_inputs, 0)
+  assert_eq(table.concat(first_info.control_outputs, ","), "csink")
+  assert_error(function() graph:consumers("cty:5") end, "no output")
+  assert_error(function() graph:control_inputs("missing") end, "no operation")
+end)
+
 test("rejects invalid GraphDef input mappings", function()
   local graph = tf.Graph.new()
   local replacement = tf.constant(graph, { 1 }, "replacement")

@@ -5,7 +5,7 @@ test("exposes the public API surface", function()
     "VERSION", "Tensor", "Graph", "Session", "CheckpointReader",
     "Sequential", "tensor", "complex", "placeholder", "constant", "variable",
     "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
-    "pad", "tile", "where", "gather",
+    "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
     "cast", "concat", "clip_by_value", "reduce_mean",
     "reduce_sum", "reduce_max", "reduce_min", "argmax", "one_hot", "exp",
     "log", "sqrt", "save_v2", "restore_v2", "save_checkpoint",
@@ -17,7 +17,7 @@ test("exposes the public API surface", function()
     assert_true(tf[name] ~= nil, "missing tf." .. name)
   end
   local train_functions = {
-    "gradient_descent", "adam", "adamw", "rmsprop", "centered_rmsprop",
+    "gradient_descent", "adam", "adamw", "adamax", "rmsprop", "centered_rmsprop",
     "adagrad", "adadelta",
     "ftrl", "proximal_adagrad", "momentum", "Saver",
   }
@@ -69,5 +69,5 @@ test("exposes the public API surface", function()
   assert_true(tf.metrics.precision ~= nil and tf.metrics.recall ~= nil)
   assert_true(tf.metrics.f1 ~= nil)
   assert_true(tf.metrics.auc ~= nil and tf.metrics.multiclass_prf ~= nil)
-  assert_eq(tf.VERSION, "2.2.0")
+  assert_eq(tf.VERSION, "2.3.0")
 end)

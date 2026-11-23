@@ -276,6 +276,105 @@ function Ops.where(graph, condition, x, y, name, dtype)
   return output
 end
 
+function Ops.stack(graph, inputs, axis, name, dtype)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("stack expects a non-empty input list", 3)
+  end
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("stack expects an integer axis", 3)
+  end
+  name = name or "stack"
+  local value_dtype = input_dtype(inputs[1], dtype)
+  local desc = graph:new_operation("Pack", name)
+  desc:add_inputs(inputs)
+  desc:set_type("T", value_dtype)
+  desc:set_int("N", #inputs)
+  desc:set_int("axis", axis)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.unstack(graph, input, num, axis, name, dtype)
+  if type(num) ~= "number" or num % 1 ~= 0 or num < 1 then
+    error("unstack expects a positive integer count", 3)
+  end
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("unstack expects an integer axis", 3)
+  end
+  name = name or "unstack"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("Unpack", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_int("num", num)
+  desc:set_int("axis", axis)
+  local result = desc:finish()
+  local outputs = {}
+  for i = 1, num do
+    outputs[i] = {
+      oper = result.oper,
+      index = i - 1,
+      name = name .. ":" .. (i - 1),
+      dtype = value_dtype,
+    }
+  end
+  return outputs
+end
+
+function Ops.slice(graph, input, begin, size, name, dtype)
+  if type(begin) ~= "table" or #begin == 0 or type(size) ~= "table" or
+      #size ~= #begin then
+    error("slice expects matching non-empty begin and size tables", 3)
+  end
+  for i = 1, #begin do
+    if type(begin[i]) ~= "number" or begin[i] % 1 ~= 0 then
+      error("slice begin values must be integers", 3)
+    end
+    if type(size[i]) ~= "number" or size[i] % 1 ~= 0 or size[i] < -1 then
+      error("slice size values must be integers greater than or equal to -1", 3)
+    end
+  end
+  name = name or "slice"
+  local value_dtype = input_dtype(input, dtype)
+  local begin_op = constant(graph, begin, name .. "/begin", "int32")
+  local size_op = constant(graph, size, name .. "/size", "int32")
+  local desc = graph:new_operation("Slice", name)
+  desc:add_input(input)
+  desc:add_input(begin_op)
+  desc:add_input(size_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Index", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.reverse(graph, input, axis, name, dtype)
+  if type(axis) == "number" then axis = { axis } end
+  if type(axis) ~= "table" or #axis == 0 then
+    error("reverse expects an integer axis or non-empty axis table", 3)
+  end
+  for _, dimension in ipairs(axis) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 then
+      error("reverse axes must be integers", 3)
+    end
+  end
+  name = name or "reverse"
+  local value_dtype = input_dtype(input, dtype)
+  local axis_op = constant(graph, axis, name .. "/axis", "int32")
+  local desc = graph:new_operation("ReverseV2", name)
+  desc:add_input(input)
+  desc:add_input(axis_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tidx", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.reshape(graph, input, shape, name, dtype)
   if type(shape) ~= "table" then
     error("reshape expects a shape table", 3)

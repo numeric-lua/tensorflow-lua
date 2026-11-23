@@ -207,3 +207,72 @@ test("squeezes all singleton dimensions and validates axes", function()
     "permutation")
   session:close()
 end)
+
+test("stacks, unstacks, slices, and reverses graph tensors", function()
+  local graph = tf.Graph.new()
+  local a = tf.placeholder(graph, "float32", { 2 }, "st_a")
+  local b = tf.placeholder(graph, "float32", { 2 }, "st_b")
+  local rows = tf.stack(graph, { a, b }, 0, "st_rows")
+  local columns = tf.stack(graph, { a, b }, 1, "st_columns")
+  local matrix = tf.placeholder(graph, "float32", { 2, 3 }, "st_matrix")
+  local row_parts = tf.unstack(graph, matrix, 2, 0, "st_row_parts")
+  local column_parts = tf.unstack(graph, matrix, 3, 1, "st_column_parts")
+  local sliced = tf.slice(graph, matrix, { 1, 1 }, { 1, 2 }, "st_slice")
+  local vector = tf.placeholder(graph, "float32", { 4 }, "st_vector")
+  local reversed = tf.reverse(graph, vector, { 0 }, "st_reverse")
+  local row_reversed = tf.reverse(graph, matrix, { 1 }, "st_row_reverse")
+
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [a] = { 1, 2 },
+    [b] = { 10, 20 },
+    [matrix] = { { 1, 2, 3 }, { 4, 5, 6 } },
+    [vector] = { 1, 2, 3, 4 },
+  }, { rows, columns, row_parts[1], row_parts[2], column_parts[1],
+    column_parts[2], column_parts[3], sliced, reversed, row_reversed })
+
+  assert_eq(table.concat(result[1]:shape(), ","), "2,2")
+  assert_eq(result[1]:totable()[1][1], 1)
+  assert_eq(result[1]:totable()[2][2], 20)
+  assert_eq(table.concat(result[2]:shape(), ","), "2,2")
+  assert_eq(result[2]:totable()[1][1], 1)
+  assert_eq(result[2]:totable()[1][2], 10)
+  assert_eq(result[2]:totable()[2][1], 2)
+  assert_eq(table.concat(result[3]:shape(), ","), "3")
+  assert_eq(result[3]:totable()[1], 1)
+  assert_eq(result[4]:totable()[3], 6)
+  assert_eq(table.concat(result[5]:shape(), ","), "2")
+  assert_eq(result[5]:totable()[1], 1)
+  assert_eq(result[5]:totable()[2], 4)
+  assert_eq(result[6]:totable()[1], 2)
+  assert_eq(result[6]:totable()[2], 5)
+  assert_eq(result[7]:totable()[2], 6)
+  assert_eq(table.concat(result[8]:shape(), ","), "1,2")
+  assert_eq(result[8]:totable()[1][1], 5)
+  assert_eq(result[8]:totable()[1][2], 6)
+  assert_eq(table.concat(result[9]:totable(), ","), "4,3,2,1")
+  assert_eq(result[10]:totable()[1][1], 3)
+  assert_eq(result[10]:totable()[2][3], 4)
+
+  assert_error(function() tf.stack(graph, {}, 0, "bad_stack_empty") end,
+    "non-empty")
+  assert_error(function() tf.stack(graph, { a }, 0.5, "bad_stack_axis") end,
+    "axis")
+  assert_error(function() tf.unstack(graph, matrix, 0, 0, "bad_unstack") end,
+    "positive")
+  assert_error(function()
+    tf.slice(graph, matrix, {}, { 1, 1 }, "bad_slice_begin")
+  end, "matching")
+  assert_error(function()
+    tf.slice(graph, matrix, { 0, 0 }, { 1 }, "bad_slice_size")
+  end, "matching")
+  assert_error(function()
+    tf.slice(graph, matrix, { 0, 0 }, { -2, 1 }, "bad_slice_negative")
+  end, "greater")
+  assert_error(function() tf.reverse(graph, vector, {}, "bad_reverse") end,
+    "axis")
+  assert_error(function()
+    tf.reverse(graph, vector, { 0.5 }, "bad_reverse_axis")
+  end, "integers")
+  session:close()
+end)

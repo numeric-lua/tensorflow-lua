@@ -151,6 +151,10 @@ end
 
 function Context:execute(op_type, inputs, options)
   options = options or {}
+  local capacity = options.num_outputs or 8
+  if type(capacity) ~= "number" or capacity % 1 ~= 0 or capacity < 1 then
+    error("eager num_outputs must be a positive integer", 2)
+  end
   local lib = capi.load()
   local status = capi.status()
   local op = lib.TFE_NewOp(self:handle(), op_type, status)
@@ -171,7 +175,12 @@ function Context:execute(op_type, inputs, options)
         local _, info = Tensor.dtype_info(value)
         lib.TFE_OpSetAttrType(op, name, info.code)
       elseif type(value) == "table" then
-        if value.int ~= nil then
+        if value.string ~= nil then
+          if type(value.string) ~= "string" then
+            error("eager string attribute " .. name .. " must be a string", 2)
+          end
+          lib.TFE_OpSetAttrString(op, name, value.string, #value.string)
+        elseif value.int ~= nil then
           lib.TFE_OpSetAttrInt(op, name, value.int)
         elseif value.float ~= nil then
           lib.TFE_OpSetAttrFloat(op, name, value.float)
@@ -197,11 +206,15 @@ function Context:execute(op_type, inputs, options)
         error("unsupported eager attribute " .. name, 2)
       end
     end
-    local outputs = ffi.new("TFE_TensorHandle*[8]")
-    local count = ffi.new("int[1]", 8)
+    local outputs = ffi.new("TFE_TensorHandle*[?]", capacity)
+    local count = ffi.new("int[1]", capacity)
     local execute_status = capi.status()
     lib.TFE_Execute(op, outputs, count, execute_status)
     capi.check(execute_status, "eager execute: " .. op_type)
+    if count[0] > capacity then
+      error("eager op " .. op_type .. " returned " .. tostring(count[0]) ..
+        " outputs, expected at most " .. tostring(capacity), 2)
+    end
     local result = {}
     for i = 1, count[0] do result[i] = wrap_handle(outputs[i - 1], self) end
     return result
@@ -376,6 +389,144 @@ function Context:reshape(a, shape)
   local shape_tensor = self:constant(shape, "int32")
   return self:execute("Reshape", { a, shape_tensor },
     { attrs = { T = a:dtype(), Tshape = "int32" } })[1]
+end
+
+local function integer_axis(axis, label)
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("eager " .. label .. " expects an integer axis", 3)
+  end
+  return axis
+end
+
+local function integer_table(value, label)
+  if type(value) ~= "table" or #value == 0 then
+    error("eager " .. label .. " expects a non-empty integer table", 3)
+  end
+  for _, entry in ipairs(value) do
+    if type(entry) ~= "number" or entry % 1 ~= 0 then
+      error("eager " .. label .. " values must be integers", 3)
+    end
+  end
+  return value
+end
+
+function Context:concat(inputs, axis)
+  if type(inputs) ~= "table" or #inputs < 2 then
+    error("eager concat expects at least two inputs", 2)
+  end
+  axis = integer_axis(axis or 0, "concat")
+  local axis_tensor = self:constant(axis, "int32")
+  local arguments = {}
+  for i, input in ipairs(inputs) do arguments[i] = input end
+  arguments[#arguments + 1] = axis_tensor
+  return self:execute("ConcatV2", arguments,
+    { attrs = { T = inputs[1]:dtype(), Tidx = "int32",
+      N = { int = #inputs } } })[1]
+end
+
+function Context:gather(params, indices, axis)
+  axis = integer_axis(axis or 0, "gather")
+  local axis_tensor = self:constant(axis, "int32")
+  return self:execute("GatherV2", { params, indices, axis_tensor },
+    { attrs = { Tparams = params:dtype(), Tindices = indices:dtype(),
+      Taxis = "int32", batch_dims = { int = 0 } } })[1]
+end
+
+function Context:slice(a, begin, size)
+  begin = integer_table(begin, "slice begin")
+  if type(size) ~= "table" or #size ~= #begin then
+    error("eager slice expects matching begin and size tables", 2)
+  end
+  for _, value in ipairs(size) do
+    if type(value) ~= "number" or value % 1 ~= 0 or value < -1 then
+      error("eager slice size values must be integers >= -1", 2)
+    end
+  end
+  local begin_tensor = self:constant(begin, "int32")
+  local size_tensor = self:constant(size, "int32")
+  return self:execute("Slice", { a, begin_tensor, size_tensor },
+    { attrs = { T = a:dtype(), Index = "int32" } })[1]
+end
+
+function Context:pad(a, paddings, mode)
+  if type(paddings) ~= "table" or #paddings == 0 then
+    error("eager pad expects a non-empty paddings table", 2)
+  end
+  for _, row in ipairs(paddings) do
+    if type(row) ~= "table" or #row ~= 2 then
+      error("eager pad paddings must be pairs of integers", 2)
+    end
+    for _, amount in ipairs(row) do
+      if type(amount) ~= "number" or amount % 1 ~= 0 or amount < 0 then
+        error("eager pad amounts must be non-negative integers", 2)
+      end
+    end
+  end
+  mode = string.upper(mode or "CONSTANT")
+  if mode ~= "CONSTANT" and mode ~= "REFLECT" and mode ~= "SYMMETRIC" then
+    error("eager pad mode must be CONSTANT, REFLECT, or SYMMETRIC", 2)
+  end
+  local padding_tensor = self:constant(paddings, "int32")
+  local attrs = { T = a:dtype(), Tpaddings = "int32" }
+  local op_type = "Pad"
+  if mode ~= "CONSTANT" then
+    op_type = "MirrorPad"
+    attrs.mode = { string = mode }
+  end
+  return self:execute(op_type, { a, padding_tensor }, { attrs = attrs })[1]
+end
+
+function Context:tile(a, multiples)
+  multiples = integer_table(multiples, "tile multiples")
+  for _, value in ipairs(multiples) do
+    if value < 0 then
+      error("eager tile multiples must be non-negative integers", 2)
+    end
+  end
+  local multiples_tensor = self:constant(multiples, "int32")
+  return self:execute("Tile", { a, multiples_tensor },
+    { attrs = { T = a:dtype(), Tmultiples = "int32" } })[1]
+end
+
+function Context:where(condition, x, y)
+  return self:execute("SelectV2", { condition, x, y },
+    { attrs = { T = x:dtype() } })[1]
+end
+
+function Context:reverse(a, axis)
+  if type(axis) == "number" then axis = { axis } end
+  axis = integer_table(axis, "reverse axis")
+  local axis_tensor = self:constant(axis, "int32")
+  return self:execute("ReverseV2", { a, axis_tensor },
+    { attrs = { T = a:dtype(), Tidx = "int32" } })[1]
+end
+
+function Context:split(a, num_or_size_splits, axis)
+  axis = integer_axis(axis or 0, "split")
+  local axis_tensor = self:constant(axis, "int32")
+  if type(num_or_size_splits) == "number" then
+    if num_or_size_splits % 1 ~= 0 or num_or_size_splits < 1 then
+      error("eager split expects a positive integer split count", 2)
+    end
+    return self:execute("Split", { axis_tensor, a },
+      { attrs = { T = a:dtype(), num_split = { int = num_or_size_splits } },
+        num_outputs = num_or_size_splits })
+  elseif type(num_or_size_splits) == "table" then
+    if #num_or_size_splits == 0 then
+      error("eager split expects a non-empty size table", 2)
+    end
+    for _, size in ipairs(num_or_size_splits) do
+      if type(size) ~= "number" or size % 1 ~= 0 or size < 0 then
+        error("eager split sizes must be non-negative integers", 2)
+      end
+    end
+    local sizes = self:constant(num_or_size_splits, "int64")
+    return self:execute("SplitV", { a, sizes, axis_tensor },
+      { attrs = { T = a:dtype(), Tlen = "int64", Tidx = "int32",
+        num_split = { int = #num_or_size_splits } },
+        num_outputs = #num_or_size_splits })
+  end
+  error("eager split expects a split count or size table", 2)
 end
 
 function Context:close()
