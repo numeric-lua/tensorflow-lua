@@ -455,6 +455,81 @@ function Ops.gather(graph, params, indices, axis, name, dtype, indices_dtype)
   return desc:finish()
 end
 
+local function comparison(graph, op_type, a, b, name, dtype)
+  local value_dtype = input_dtype(a, dtype)
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = "bool"
+  return output
+end
+
+function Ops.equal(graph, a, b, name, dtype)
+  return comparison(graph, "Equal", a, b, name, dtype)
+end
+
+function Ops.not_equal(graph, a, b, name, dtype)
+  return comparison(graph, "NotEqual", a, b, name, dtype)
+end
+
+function Ops.greater(graph, a, b, name, dtype)
+  return comparison(graph, "Greater", a, b, name, dtype)
+end
+
+function Ops.greater_equal(graph, a, b, name, dtype)
+  return comparison(graph, "GreaterEqual", a, b, name, dtype)
+end
+
+function Ops.less(graph, a, b, name, dtype)
+  return comparison(graph, "Less", a, b, name, dtype)
+end
+
+function Ops.less_equal(graph, a, b, name, dtype)
+  return comparison(graph, "LessEqual", a, b, name, dtype)
+end
+
+local function logical_binary(graph, op_type, a, b, name)
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(a)
+  desc:add_input(b)
+  local output = desc:finish()
+  output.dtype = "bool"
+  return output
+end
+
+function Ops.logical_and(graph, a, b, name)
+  return logical_binary(graph, "LogicalAnd", a, b, name)
+end
+
+function Ops.logical_or(graph, a, b, name)
+  return logical_binary(graph, "LogicalOr", a, b, name)
+end
+
+function Ops.logical_xor(graph, a, b, name)
+  return comparison(graph, "NotEqual", a, b, name)
+end
+
+function Ops.logical_not(graph, input, name)
+  local desc = graph:new_operation("LogicalNot", name)
+  desc:add_input(input)
+  local output = desc:finish()
+  output.dtype = "bool"
+  return output
+end
+
+function Ops.squared_difference(graph, a, b, name, dtype)
+  local value_dtype = input_dtype(a, dtype)
+  local desc = graph:new_operation("SquaredDifference", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 local function reduction(graph, op_type, input, axes, name, dtype, keep_dims)
   local axis_op = constant(graph, axes or {}, name .. "/axes", "int32")
   local desc = graph:new_operation(op_type, name)
@@ -466,6 +541,22 @@ local function reduction(graph, op_type, input, axes, name, dtype, keep_dims)
   return desc:finish()
 end
 
+local function bool_reduction(graph, op_type, input, axes, name, dtype,
+    keep_dims)
+  local value_dtype = dtype and dtype_name(dtype) or
+    (type(input) == "table" and input.dtype) or "bool"
+  local axis_op = constant(graph, axes or {}, name .. "/axes", "int32")
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:add_input(axis_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tidx", "int32")
+  desc:set_bool("keep_dims", keep_dims and true or false)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.reduce_mean(graph, input, axes, name, dtype, keep_dims)
   return reduction(graph, "Mean", input, axes, name, dtype, keep_dims)
 end
@@ -474,12 +565,24 @@ function Ops.reduce_sum(graph, input, axes, name, dtype, keep_dims)
   return reduction(graph, "Sum", input, axes, name, dtype, keep_dims)
 end
 
+function Ops.reduce_prod(graph, input, axes, name, dtype, keep_dims)
+  return reduction(graph, "Prod", input, axes, name, dtype, keep_dims)
+end
+
 function Ops.reduce_max(graph, input, axes, name, dtype, keep_dims)
   return reduction(graph, "Max", input, axes, name, dtype, keep_dims)
 end
 
 function Ops.reduce_min(graph, input, axes, name, dtype, keep_dims)
   return reduction(graph, "Min", input, axes, name, dtype, keep_dims)
+end
+
+function Ops.reduce_all(graph, input, axes, name, dtype, keep_dims)
+  return bool_reduction(graph, "All", input, axes, name, dtype, keep_dims)
+end
+
+function Ops.reduce_any(graph, input, axes, name, dtype, keep_dims)
+  return bool_reduction(graph, "Any", input, axes, name, dtype, keep_dims)
 end
 
 function Ops.one_hot(graph, indices, depth, options)

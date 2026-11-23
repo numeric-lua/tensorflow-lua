@@ -276,3 +276,77 @@ test("stacks, unstacks, slices, and reverses graph tensors", function()
   end, "integers")
   session:close()
 end)
+
+test("compares values and evaluates logical graph ops", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "int32", { 3 }, "cmp_x")
+  local y = tf.placeholder(graph, "int32", { 3 }, "cmp_y")
+  local equal = tf.equal(graph, x, y, "cmp_equal")
+  local not_equal = tf.not_equal(graph, x, y, "cmp_not_equal")
+  local greater = tf.greater(graph, x, y, "cmp_greater")
+  local greater_equal = tf.greater_equal(graph, x, y, "cmp_greater_equal")
+  local less = tf.less(graph, x, y, "cmp_less")
+  local less_equal = tf.less_equal(graph, x, y, "cmp_less_equal")
+  local a = tf.placeholder(graph, "bool", { 3 }, "logic_a")
+  local b = tf.placeholder(graph, "bool", { 3 }, "logic_b")
+  local conjunction = tf.logical_and(graph, a, b, "logic_and")
+  local disjunction = tf.logical_or(graph, a, b, "logic_or")
+  local exclusive = tf.logical_xor(graph, a, b, "logic_xor")
+  local negation = tf.logical_not(graph, a, "logic_not")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [x] = { 1, 2, 3 },
+    [y] = { 2, 2, 2 },
+    [a] = { true, true, false },
+    [b] = { true, false, false },
+  }, { equal, not_equal, greater, greater_equal, less, less_equal,
+    conjunction, disjunction, exclusive, negation })
+
+  local function bits(values)
+    local result = {}
+    for i, value in ipairs(values) do result[i] = tostring(value) end
+    return table.concat(result, ",")
+  end
+  assert_eq(result[1]:dtype(), "bool")
+  assert_eq(bits(result[1]:totable()), "false,true,false")
+  assert_eq(bits(result[2]:totable()), "true,false,true")
+  assert_eq(bits(result[3]:totable()), "false,false,true")
+  assert_eq(bits(result[4]:totable()), "false,true,true")
+  assert_eq(bits(result[5]:totable()), "true,false,false")
+  assert_eq(bits(result[6]:totable()), "true,true,false")
+  assert_eq(bits(result[7]:totable()), "true,false,false")
+  assert_eq(bits(result[8]:totable()), "true,true,false")
+  assert_eq(bits(result[9]:totable()), "false,true,false")
+  assert_eq(bits(result[10]:totable()), "false,false,true")
+  session:close()
+end)
+
+test("reduces products and boolean tensors and squares differences", function()
+  local graph = tf.Graph.new()
+  local values = tf.placeholder(graph, "float32", { 2, 3 }, "ext_values")
+  local product = tf.reduce_prod(graph, values, { 1 }, "ext_product")
+  local expected = tf.placeholder(graph, "float32", { 2, 3 }, "ext_expected")
+  local difference = tf.squared_difference(graph, values, expected,
+    "ext_difference")
+  local flags = tf.placeholder(graph, "bool", { 2, 3 }, "ext_flags")
+  local all_rows = tf.reduce_all(graph, flags, { 1 }, "ext_all_rows")
+  local any_rows = tf.reduce_any(graph, flags, { 1 }, "ext_any_rows")
+  local all_values = tf.reduce_all(graph, flags, { 0, 1 }, "ext_all_values")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [values] = { { 1, 2, 3 }, { 4, 5, 6 } },
+    [expected] = { { 1, 1, 1 }, { 4, 4, 4 } },
+    [flags] = { { true, true, false }, { true, true, true } },
+  }, { product, difference, all_rows, any_rows, all_values })
+
+  assert_eq(table.concat(result[1]:totable(), ","), "6,120")
+  assert_eq(result[2]:totable()[1][3], 4)
+  assert_eq(result[2]:totable()[2][3], 4)
+  assert_eq(result[3]:dtype(), "bool")
+  assert_eq(result[3]:totable()[1], false)
+  assert_eq(result[3]:totable()[2], true)
+  assert_eq(result[4]:totable()[1], true)
+  assert_eq(result[4]:totable()[2], true)
+  assert_eq(result[5]:totable(), false)
+  session:close()
+end)
