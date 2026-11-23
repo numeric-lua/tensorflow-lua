@@ -18,6 +18,10 @@ local function resolve_output(graph, value)
   error("operation input must be 'op:index' or a graph output", 3)
 end
 
+function GraphBuilder.resolve_output(graph, value)
+  return resolve_output(graph, value)
+end
+
 local Description = {}
 Description.__index = Description
 

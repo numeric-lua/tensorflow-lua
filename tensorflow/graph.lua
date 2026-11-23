@@ -60,6 +60,35 @@ function Graph:import_graph_def(data, options)
   if prefix ~= nil and type(prefix) ~= "string" then
     error("GraphDef import prefix must be a string", 2)
   end
+  local input_map = options and options.input_map
+  if input_map ~= nil and type(input_map) ~= "table" then
+    error("GraphDef import input_map must be a table", 2)
+  end
+  local mappings = {}
+  if input_map ~= nil then
+    local resolve_output = require("tensorflow.graph_builder").resolve_output
+    for source, destination in pairs(input_map) do
+      if type(source) ~= "string" then
+        error("GraphDef import input_map keys must be strings", 2)
+      end
+      local name, index = source:match("^(.-):(%d+)$")
+      name = name or source
+      index = index and tonumber(index) or 0
+      if name == "" then
+        error("GraphDef import input_map source name must not be empty", 2)
+      end
+      local output = resolve_output(self, destination)
+      mappings[#mappings + 1] = {
+        source = source,
+        name = name,
+        index = index,
+        output = ffi.new("TF_Output", {
+          oper = output.oper, index = output.index,
+        }),
+      }
+    end
+    table.sort(mappings, function(a, b) return a.source < b.source end)
+  end
   local lib = capi.load()
   local buffer = ffi.gc(capi.require(
     lib.TF_NewBufferFromString(data, #data), "TF_NewBufferFromString"),
@@ -69,6 +98,10 @@ function Graph:import_graph_def(data, options)
     function(value) lib.TF_DeleteImportGraphDefOptions(value) end)
   if prefix ~= nil then
     lib.TF_ImportGraphDefOptionsSetPrefix(import_options, prefix)
+  end
+  for _, mapping in ipairs(mappings) do
+    lib.TF_ImportGraphDefOptionsAddInputMapping(import_options, mapping.name,
+      mapping.index, mapping.output)
   end
   local status = capi.status()
   lib.TF_GraphImportGraphDef(self:handle(), buffer, import_options, status)

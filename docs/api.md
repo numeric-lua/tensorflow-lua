@@ -94,6 +94,16 @@ graph:import_graph_def(bytes, { prefix = "right" })
 local z = session:run({ ["left/x"] = 1, ["left/y"] = 2 }, "left/z:0")
 ```
 
+`opts.input_map` maps imported GraphDef input names (`"x"` or `"x:0"`) to
+existing graph outputs (a graph output table or an `"op:index"` string):
+
+```lua
+local replacement = tf.constant(graph, { 1, 2 }, "replacement")
+graph:import_graph_def(bytes, { input_map = { x = replacement } })
+```
+
+The imported graph then uses `replacement` instead of a placeholder for `x`.
+
 ### `graph:import_file(path[, opts])`
 
 Reads and imports a `.pb` file, accepting the same options as

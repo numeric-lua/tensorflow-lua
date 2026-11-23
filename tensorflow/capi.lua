@@ -82,6 +82,8 @@ TF_ImportGraphDefOptions* TF_NewImportGraphDefOptions(void);
 void TF_DeleteImportGraphDefOptions(TF_ImportGraphDefOptions*);
 void TF_ImportGraphDefOptionsSetPrefix(TF_ImportGraphDefOptions*,
   const char*);
+void TF_ImportGraphDefOptionsAddInputMapping(TF_ImportGraphDefOptions*,
+  const char*, int, TF_Output);
 
 TF_Buffer* TF_NewBuffer(void);
 TF_Buffer* TF_NewBufferFromString(const void*, size_t);
