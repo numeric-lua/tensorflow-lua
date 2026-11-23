@@ -82,6 +82,22 @@ selects an arbitrary 1-based row order.
 
 Creates a TF_Graph.
 
+### `graph:operations()`
+
+Returns the graph's operation names in TensorFlow's iteration order.
+
+### `graph:shape(output)`
+
+Returns the inferred shape of an output (a graph output table, `"op"`, or
+`"op:index"`), or `nil` when the rank is unknown. Unknown dimensions are `-1`.
+Invalid output indices raise a Lua error before reaching TensorFlow.
+
+### `graph:operation_info(output)`
+
+Returns `{ name, op_type, inputs, outputs }` for an operation or output.
+Each input has `input`, `name`, `output`, and `dtype`; each output has `name`,
+`index`, `dtype`, `shape` (as returned by `graph:shape`), and `consumers`.
+
 ### `graph:import_graph_def(bytes[, opts])`
 
 Imports a serialized `GraphDef` protobuf from a Lua string. `opts.prefix`
