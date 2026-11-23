@@ -786,8 +786,11 @@ tables are supported. Attribute values may be booleans, numbers (float), dtype s
 or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ float = 0.5 }`, `{ bool = true }`, `{ type = "float32" }`, and
 `{ shape = { 2, 3 } }`. Convenience methods: `add`, `sub`, `mul`, `div`,
-`matmul`, `cast`, `transpose`, `expand_dims`, `squeeze`, `reduce_sum`,
-`argmax`, `relu`, `sigmoid`, `square`, and `reshape`.
+`matmul`, `cast`, `transpose`, `expand_dims`, `squeeze`,
+`reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`, `argmax`,
+`relu`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`, `softplus`, `exp`,
+`log`, `sqrt`, `abs`, `square`, and `reshape`. Reduction methods accept an
+integer axes table and an optional `keep_dims` boolean.
 
 `ETensor:destroy()` releases a tensor handle immediately; destroying is
 idempotent. `Context:close()` marks the context closed and defers its deletion

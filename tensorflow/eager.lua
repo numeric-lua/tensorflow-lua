@@ -272,14 +272,39 @@ function Context:squeeze(a, axis)
   return self:execute("Squeeze", { a }, { attrs = attrs })[1]
 end
 
-function Context:reduce_sum(a, axes, keep_dims)
+local function reduction(context, op_type, input, axes, keep_dims)
   if type(axes) ~= "table" then
-    error("eager reduce_sum expects an axes table", 2)
+    error("eager " .. op_type:lower() .. " expects an axes table", 3)
   end
-  local axis_tensor = self:constant(axes, "int32")
-  return self:execute("Sum", { a, axis_tensor },
-    { attrs = { T = a:dtype(), Tidx = "int32",
+  for _, axis in ipairs(axes) do
+    if type(axis) ~= "number" or axis % 1 ~= 0 then
+      error("eager reduction axes must be integers", 3)
+    end
+  end
+  local axis_tensor = context:constant(axes, "int32")
+  return context:execute(op_type, { input, axis_tensor },
+    { attrs = { T = input:dtype(), Tidx = "int32",
       keep_dims = keep_dims and true or false } })[1]
+end
+
+function Context:reduce_sum(a, axes, keep_dims)
+  return reduction(self, "Sum", a, axes, keep_dims)
+end
+
+function Context:reduce_mean(a, axes, keep_dims)
+  return reduction(self, "Mean", a, axes, keep_dims)
+end
+
+function Context:reduce_max(a, axes, keep_dims)
+  return reduction(self, "Max", a, axes, keep_dims)
+end
+
+function Context:reduce_min(a, axes, keep_dims)
+  return reduction(self, "Min", a, axes, keep_dims)
+end
+
+function Context:reduce_prod(a, axes, keep_dims)
+  return reduction(self, "Prod", a, axes, keep_dims)
 end
 
 function Context:argmax(a, axis, output_dtype)
@@ -303,6 +328,47 @@ end
 
 function Context:square(a)
   return unary(self, "Square", a)
+end
+
+function Context:exp(a)
+  return unary(self, "Exp", a)
+end
+
+function Context:log(a)
+  return unary(self, "Log", a)
+end
+
+function Context:sqrt(a)
+  return unary(self, "Sqrt", a)
+end
+
+function Context:abs(a)
+  return unary(self, "Abs", a)
+end
+
+function Context:tanh(a)
+  return unary(self, "Tanh", a)
+end
+
+function Context:softplus(a)
+  return unary(self, "Softplus", a)
+end
+
+function Context:softmax(a)
+  return unary(self, "Softmax", a)
+end
+
+function Context:elu(a)
+  return unary(self, "Elu", a)
+end
+
+function Context:leaky_relu(a, alpha)
+  alpha = alpha or 0.2
+  if type(alpha) ~= "number" then
+    error("eager leaky_relu alpha must be a number", 2)
+  end
+  return self:execute("LeakyRelu", { a },
+    { attrs = { T = a:dtype(), alpha = alpha } })[1]
 end
 
 function Context:reshape(a, shape)

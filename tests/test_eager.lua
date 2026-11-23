@@ -118,6 +118,71 @@ test("defers context deletion until live eager tensors are released", function()
   assert_true(context._state.deleted)
 end)
 
+test("reduces eager tensors across axes", function()
+  local context = tf.eager.Context.new()
+  local value = context:constant({ { 1, 2, 3 }, { 4, 5, 6 } })
+  local mean = context:reduce_mean(value, { 0 })
+  assert_eq(table.concat(mean:shape(), ","), "3")
+  assert_true(math.abs(mean:totable()[1] - 2.5) < 1e-6)
+
+  local maximum = context:reduce_max(value, { 1 }, true)
+  assert_eq(table.concat(maximum:shape(), ","), "2,1")
+  assert_eq(maximum:totable()[1][1], 3)
+  assert_eq(maximum:totable()[2][1], 6)
+
+  local minimum = context:reduce_min(value, { 1 })
+  assert_eq(minimum:totable()[1], 1)
+  assert_eq(minimum:totable()[2], 4)
+
+  local product = context:reduce_prod(value, { 1 })
+  assert_eq(product:totable()[1], 6)
+  assert_eq(product:totable()[2], 120)
+
+  local total = context:reduce_sum(value, { 0, 1 })
+  assert_eq(#total:shape(), 0)
+  assert_eq(total:totable(), 21)
+
+  assert_error(function() context:reduce_mean(value, 0) end, "axes")
+  assert_error(function() context:reduce_sum(value, { 0.5 }) end, "integers")
+  context:close()
+end)
+
+test("evaluates eager math and activation ops", function()
+  local context = tf.eager.Context.new()
+  local value = context:constant({ -1, 0, 2 })
+  local absolute = context:abs(value)
+  assert_eq(absolute:totable()[1], 1)
+  assert_eq(absolute:totable()[3], 2)
+
+  local exponential = context:exp(context:constant({ 0, 1 }))
+  assert_eq(exponential:totable()[1], 1)
+  assert_true(math.abs(exponential:totable()[2] - math.exp(1)) < 1e-6)
+
+  local logarithm = context:log(context:constant({ 1, math.exp(1) }))
+  assert_true(math.abs(logarithm:totable()[2] - 1) < 1e-6)
+
+  local root = context:sqrt(context:constant({ 4, 9 }))
+  assert_eq(root:totable()[1], 2)
+  assert_eq(root:totable()[2], 3)
+
+  local hyperbolic = context:tanh(value)
+  assert_true(hyperbolic:totable()[1] < 0)
+  local softplus = context:softplus(context:constant({ 0 }))
+  assert_true(math.abs(softplus:totable()[1] - math.log(2)) < 1e-6)
+  local elu = context:elu(context:constant({ -1 }))
+  assert_true(math.abs(elu:totable()[1] - (math.exp(-1) - 1)) < 1e-6)
+  local leaky = context:leaky_relu(context:constant({ -2, 3 }), 0.1)
+  assert_true(math.abs(leaky:totable()[1] + 0.2) < 1e-6)
+  assert_eq(leaky:totable()[2], 3)
+
+  local probabilities = context:softmax(context:constant({ 1, 2, 3 })):totable()
+  assert_true(math.abs(probabilities[1] + probabilities[2] + probabilities[3] -
+    1) < 1e-6)
+  assert_true(probabilities[3] > probabilities[2])
+  assert_error(function() context:leaky_relu(value, "bad") end, "alpha")
+  context:close()
+end)
+
 test("finalizes unclosed eager contexts and handles", function()
   local capi = require("tensorflow.capi")
   local before_contexts = capi.released.contexts
