@@ -53,5 +53,6 @@ Two formats are supported:
 ## Eager mode
 
 `tf.eager` is experimental and uses the `TFE_*` C API. It supports constants,
-generic `execute`, arithmetic, casts, rank/shape transforms, reductions,
+generic `execute`, arithmetic, casts, rank/shape transforms, concatenation,
+gathering, slicing, padding, tiling, selection, reversal, split, reductions,
 argmax, activations, and reshape. It intentionally does not provide autograd.

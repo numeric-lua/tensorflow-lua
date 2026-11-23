@@ -7,28 +7,32 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`2.2.0`. Graph inference, construction, training, checkpoints, eager mode,
+`2.3.0`. Graph inference, construction, training, checkpoints, eager mode,
 trainable 2-D/3-D convolution/pooling/upsampling, attention/transformer layers,
 unrolled LSTM/GRU, tensor-backed datasets, portable deployment bundles, a
 checkpointable functional graph model, and a Sequential model. The
-dependency-free suite currently contains 196 tests. See
+dependency-free suite currently contains 203 tests. See
 [docs/stability.md](docs/stability.md) for the API policy.
 
-- load serialized `GraphDef` files into a namespace or with remapped inputs;
-- inspect graph operations, inputs/outputs, consumers, and inferred shapes;
+- load serialized `GraphDef` files into a namespace, with remapped inputs, or
+  with selected outputs returned directly;
+- inspect graph operations, inputs/outputs, consumers, control edges, and
+  inferred shapes;
 - build graphs from Lua with operations, inputs, and attributes;
 - add symbolic gradients with custom upstream seeds, variables,
   gradient-descent updates, and Adam;
-- train with gradient descent, Adam/AdamW, RMSProp/CenteredRMSProp, Adagrad,
-  Adadelta, Ftrl, ProximalAdagrad, or momentum SGD, with global-norm and
-  gradient-value clipping;
+- train with gradient descent, Adam/AdamW/AdaMax, RMSProp/CenteredRMSProp,
+  Adagrad, Adadelta, Ftrl, ProximalAdagrad, or momentum SGD, with global-norm
+  and gradient-value clipping;
 - write native TensorFlow V2 checkpoints (`SaveV2`/`RestoreV2`);
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;
-- typed ops for reshape, transpose, expand/squeeze, split, pad, tile, where,
-  gather, reductions, argmax, and common activations;
+- typed ops for reshape, transpose, expand/squeeze, split, stack, unstack,
+  slice, reverse, pad, tile, where, gather, reductions, argmax, and common
+  activations;
 - experimental eager execution (`tf.eager.Context`) with explicit tensor
-  release, arithmetic, cast, transpose, reshape, reductions, argmax, and common
+  release, arithmetic, cast, transpose, reshape, concatenation, gather, slice,
+  pad, tile, where, reverse, split, reductions, argmax, and common
   math/activation ops;
 - compositional Dense, Conv1D, Conv2D, Conv2DTranspose, depthwise and
   separable Conv2D, 1-D/2-D pooling, BatchNormalization, LayerNormalization,
@@ -100,11 +104,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.2.0/tensorflow-lua-2.2.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.3.0/tensorflow-lua-2.3.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-2.2.0-1.rockspec
-./scripts/package.sh tensorflow-lua-2.2.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.3.0-1.rockspec
+./scripts/package.sh tensorflow-lua-2.3.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -279,7 +283,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v2.2.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.2.0)
+[**v2.3.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.3.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).

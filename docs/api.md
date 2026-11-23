@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.2.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.3.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -94,9 +94,22 @@ Invalid output indices raise a Lua error before reaching TensorFlow.
 
 ### `graph:operation_info(output)`
 
-Returns `{ name, op_type, inputs, outputs }` for an operation or output.
-Each input has `input`, `name`, `output`, and `dtype`; each output has `name`,
-`index`, `dtype`, `shape` (as returned by `graph:shape`), and `consumers`.
+Returns `{ name, op_type, inputs, outputs, control_inputs, control_outputs }`
+for an operation or output. Each input has `input`, `name`, `output`, and
+`dtype`; each output has `name`, `index`, `dtype`, `shape` (as returned by
+`graph:shape`), `consumers` (a count), and `consumer_ops` (operation names).
+`control_inputs` and `control_outputs` list the control-edge operation names.
+
+### `graph:consumers(output)`
+
+Returns the operations that consume an output as a list of
+`{ name, input }`, where `input` is the consumer's input index. Invalid output
+indices raise a Lua error.
+
+### `graph:control_inputs(operation)` / `graph:control_outputs(operation)`
+
+Return sorted-by-graph-order lists of operation names connected by control
+edges. The argument may be an operation name, `"op:index"`, or a graph output.
 
 ### `graph:import_graph_def(bytes[, opts])`
 
@@ -119,6 +132,20 @@ graph:import_graph_def(bytes, { input_map = { x = replacement } })
 ```
 
 The imported graph then uses `replacement` instead of a placeholder for `x`.
+
+`opts.return_elements` selects outputs from the imported graph and returns them
+as graph outputs instead of the graph itself. Names are resolved after import,
+so include any `prefix`:
+
+```lua
+local outputs = graph:import_graph_def(bytes, {
+  prefix = "left",
+  return_elements = { "left/z:0" },
+})
+local value = session:run({ ["left/x"] = 1, ["left/y"] = 2 }, outputs)[1]
+```
+
+Each returned entry has `oper`, `index`, `name`, `dtype`, and `shape`.
 
 ### `graph:import_file(path[, opts])`
 
@@ -189,6 +216,14 @@ training.
 
 Adam with decoupled weight decay; defaults `weight_decay = 0.01`. Accepts the
 same options and returns the same triple as `tf.train.adam`.
+
+### `tf.train.adamax(graph, loss, variables[, opts])`
+
+Adds `ApplyAdaMax` updates with first-moment, infinity-norm, and
+`beta1_power` state. Options: `learning_rate`/`lr` (default `0.001`), `beta1`
+(0.9), `beta2` (0.999), `epsilon` (1e-8), `clipvalue`, and `name`. Returns
+`targets, gradients, state`; initialize every `state.initializers` entry
+before training. The state table also exposes `state.beta1_power`.
 
 ### `tf.train.rmsprop(graph, loss, variables[, opts])`
 
@@ -784,13 +819,17 @@ context:close()            -- deferred until live tensors are released
 op. Type-string attributes (`T`, `dtype`, ...), booleans, numbers, and shape
 tables are supported. Attribute values may be booleans, numbers (float), dtype strings, shape arrays,
 or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
-`{ float = 0.5 }`, `{ bool = true }`, `{ type = "float32" }`, and
-`{ shape = { 2, 3 } }`. Convenience methods: `add`, `sub`, `mul`, `div`,
-`matmul`, `cast`, `transpose`, `expand_dims`, `squeeze`,
-`reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`, `argmax`,
-`relu`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`, `softplus`, `exp`,
-`log`, `sqrt`, `abs`, `square`, and `reshape`. Reduction methods accept an
-integer axes table and an optional `keep_dims` boolean.
+`{ float = 0.5 }`, `{ bool = true }`, `{ type = "float32" }`,
+`{ string = "CONSTANT" }`, and `{ shape = { 2, 3 } }`. Multi-output ops accept
+`{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
+methods: `add`, `sub`, `mul`, `div`, `matmul`, `cast`, `transpose`,
+`expand_dims`, `squeeze`, `concat`, `gather`, `slice`, `pad`, `tile`, `where`,
+`reverse`, `split`, `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/
+`reduce_prod`, `argmax`, `relu`, `leaky_relu`, `elu`, `sigmoid`, `tanh`,
+`softmax`, `softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and `reshape`.
+Reduction methods accept an integer axes table and an optional `keep_dims`
+boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
+positive split count or a size table and returns an output list.
 
 `ETensor:destroy()` releases a tensor handle immediately; destroying is
 idempotent. `Context:close()` marks the context closed and defers its deletion
@@ -832,11 +871,18 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.pad(graph, x, paddings[, mode[, name[, dtype]]])` | Pad/MirrorPad |
 | `tf.tile(graph, x, multiples[, name[, dtype]])` | Tile |
 | `tf.where(graph, condition, x, y[, name[, dtype]])` | SelectV2 |
+| `tf.stack(graph, inputs[, axis[, name[, dtype]]])` | Pack |
+| `tf.unstack(graph, x, num[, axis[, name[, dtype]]])` | Unpack |
+| `tf.slice(graph, x, begin, size[, name[, dtype]])` | Slice |
+| `tf.reverse(graph, x, axis[, name[, dtype]])` | ReverseV2 |
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 
-`tf.split` returns a list of outputs; a numeric split count uses `Split` and a
-size table uses `SplitV`. `tf.pad` accepts `CONSTANT` (zero padding), `REFLECT`,
-or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
+`tf.split` and `tf.unstack` return lists of outputs; a numeric split count uses
+`Split` and a size table uses `SplitV`. `tf.pad` accepts `CONSTANT` (zero
+padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
+`tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
+selects all remaining elements in that dimension. `tf.reverse` accepts an
+integer axis or a table of axes.
 
 ### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 

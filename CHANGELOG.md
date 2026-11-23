@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.0
+
+- add `return_elements` to `Graph:import_graph_def`/`import_file`, returning
+  selected imported outputs with dtype and inferred shape;
+- add `Graph:consumers`, `Graph:control_inputs`, and `Graph:control_outputs`,
+  and expose consumer operations plus control edges in `operation_info`;
+- expand eager execution with `concat`, `gather`, `slice`, `pad`, `tile`,
+  `where`, `reverse`, and `split`, including string and multi-output op
+  attributes;
+- add the `tf.train.adamax` optimizer with first-moment, infinity-norm, and
+  beta1-power state;
+- add graph `tf.stack`, `tf.unstack`, `tf.slice`, and `tf.reverse` ops;
+- 203 dependency-free tests.
+
 ## 2.2.0
 
 - map imported GraphDef inputs to existing graph outputs through
