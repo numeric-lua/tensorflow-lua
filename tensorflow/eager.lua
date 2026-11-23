@@ -529,6 +529,49 @@ function Context:split(a, num_or_size_splits, axis)
   error("eager split expects a split count or size table", 2)
 end
 
+function Context:stack(inputs, axis)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("eager stack expects a non-empty input list", 2)
+  end
+  axis = integer_axis(axis or 0, "stack")
+  return self:execute("Pack", inputs,
+    { attrs = { T = inputs[1]:dtype(), N = { int = #inputs },
+      axis = { int = axis } } })[1]
+end
+
+function Context:unstack(a, num, axis)
+  if type(num) ~= "number" or num % 1 ~= 0 or num < 1 then
+    error("eager unstack expects a positive integer count", 2)
+  end
+  axis = integer_axis(axis or 0, "unstack")
+  return self:execute("Unpack", { a },
+    { attrs = { T = a:dtype(), num = { int = num }, axis = { int = axis } },
+      num_outputs = num })
+end
+
+function Context:one_hot(indices, depth, options)
+  options = options or {}
+  if type(depth) ~= "number" or depth % 1 ~= 0 or depth < 1 then
+    error("eager one_hot expects a positive integer depth", 2)
+  end
+  local dtype = Tensor.dtype_info(options.dtype or "float32")
+  local depth_tensor = self:constant(depth, "int32")
+  local on = self:constant(options.on_value or 1, dtype)
+  local off = self:constant(options.off_value or 0, dtype)
+  return self:execute("OneHot", { indices, depth_tensor, on, off },
+    { attrs = { T = dtype, TI = indices:dtype(),
+      axis = { int = options.axis or -1 } } })[1]
+end
+
+function Context:clip_by_value(a, minimum, maximum)
+  if type(minimum) ~= "number" or type(maximum) ~= "number" then
+    error("eager clip_by_value expects numeric minimum and maximum", 2)
+  end
+  local dtype = a:dtype()
+  return self:execute("ClipByValue", { a, self:constant(minimum, dtype),
+    self:constant(maximum, dtype) }, { attrs = { T = dtype } })[1]
+end
+
 function Context:close()
   if self._closed then return end
   self._closed = true
