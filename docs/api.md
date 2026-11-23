@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.3.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.4.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -99,6 +99,22 @@ for an operation or output. Each input has `input`, `name`, `output`, and
 `dtype`; each output has `name`, `index`, `dtype`, `shape` (as returned by
 `graph:shape`), `consumers` (a count), and `consumer_ops` (operation names).
 `control_inputs` and `control_outputs` list the control-edge operation names.
+
+### `graph:attribute_info(output, name)` / `graph:attribute(output, name)`
+
+Reads a named operation attribute directly from a `TF_Operation`.
+`attribute_info` returns `{ name, operation, kind, is_list, list_size,
+total_size }`, where `kind` is one of `string`, `int`, `float`, `bool`, `type`,
+`shape`, `tensor`, `placeholder`, or `func`. `attribute` decodes scalar and
+list values for all kinds except `tensor`, `placeholder`, and `func`; dtype
+attributes are returned as documented dtype names and shape attributes as
+tables of dimensions.
+
+```lua
+local info = graph:attribute_info("logits", "T")   -- kind = "type"
+local dtype = graph:attribute("logits", "T")      -- "float32"
+local dims = graph:attribute("images", "shape")    -- { 2, 3 }
+```
 
 ### `graph:consumers(output)`
 
@@ -202,6 +218,17 @@ Adds `ApplyGradientDescent` targets for the variables and returns
 per training step. Options: `clipnorm` limits the global gradient norm,
 `clipvalue` limits each gradient element, and `gradients` supplies precomputed
 gradients instead of calling `tf.gradients`. Clipping bounds must be positive.
+
+### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
+
+Returns `clipped_gradient, gradient_norm`, scaling a single graph-output
+gradient so its L2 norm is at most `clip_norm`. `clip_norm` must be positive.
+
+### `tf.train.clip_by_global_norm(graph, gradients, clip_norm[, name[, dtype]])`
+
+Returns `clipped_gradients, global_norm` for a non-empty list of graph-output
+gradients, scaling all gradients by the same factor when their combined L2 norm
+exceeds `clip_norm`. The returned norm is the pre-clipping norm.
 
 ### `tf.train.adam(graph, loss, variables[, opts])`
 
@@ -822,14 +849,21 @@ or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ float = 0.5 }`, `{ bool = true }`, `{ type = "float32" }`,
 `{ string = "CONSTANT" }`, and `{ shape = { 2, 3 } }`. Multi-output ops accept
 `{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
-methods: `add`, `sub`, `mul`, `div`, `matmul`, `cast`, `transpose`,
-`expand_dims`, `squeeze`, `concat`, `gather`, `slice`, `pad`, `tile`, `where`,
-`reverse`, `split`, `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/
-`reduce_prod`, `argmax`, `relu`, `leaky_relu`, `elu`, `sigmoid`, `tanh`,
-`softmax`, `softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and `reshape`.
+methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
+`clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
+`concat`, `gather`, `slice`, `pad`, `tile`, `where`, `reverse`, `split`,
+`one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
+`logical_and`/`logical_or`/`logical_xor`/`logical_not`,
+`reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
+`reduce_all`/`reduce_any`, `argmax`, `relu`, `leaky_relu`, `elu`, `sigmoid`,
+`tanh`, `softmax`, `softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and
+`reshape`.
 Reduction methods accept an integer axes table and an optional `keep_dims`
 boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
-positive split count or a size table and returns an output list.
+positive split count or a size table and returns an output list. `stack`,
+`unstack`, `one_hot`, and comparisons mirror their graph-mode counterparts;
+`clip_by_value` accepts numeric bounds. `logical_xor` uses `NotEqual` because
+`LogicalXor` is not registered in the supported C libraries.
 
 `ETensor:destroy()` releases a tensor handle immediately; destroying is
 idempotent. `Context:close()` marks the context closed and defers its deletion
@@ -860,6 +894,11 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.gather(graph, params, indices[, axis[, name[, dtype[, indices_dtype]]]])` | GatherV2 |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
+| `tf.reduce_prod(graph, x, axes[, name[, dtype[, keep_dims]]])` | Prod |
+| `tf.reduce_all`, `tf.reduce_any` | All/Any boolean reductions |
+| `tf.equal`, `tf.not_equal`, `tf.greater`, `tf.greater_equal`, `tf.less`, `tf.less_equal` | elementwise comparisons returning bool |
+| `tf.logical_and`, `tf.logical_or`, `tf.logical_xor`, `tf.logical_not` | boolean logic |
+| `tf.squared_difference(graph, a, b[, name[, dtype]])` | SquaredDifference |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
@@ -882,7 +921,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
-integer axis or a table of axes.
+integer axis or a table of axes. `tf.logical_xor` is built from `NotEqual`
+because the `LogicalXor` op is not registered in the supported C libraries;
+comparison and logical ops return `bool` outputs.
 
 ### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 

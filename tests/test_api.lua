@@ -7,7 +7,10 @@ test("exposes the public API surface", function()
     "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
     "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
     "cast", "concat", "clip_by_value", "reduce_mean",
-    "reduce_sum", "reduce_max", "reduce_min", "argmax", "one_hot", "exp",
+    "reduce_sum", "reduce_prod", "reduce_max", "reduce_min", "reduce_all",
+    "reduce_any", "argmax", "one_hot", "exp", "equal", "not_equal", "greater",
+    "greater_equal", "less", "less_equal", "logical_and", "logical_or",
+    "logical_xor", "logical_not", "squared_difference",
     "log", "sqrt", "save_v2", "restore_v2", "save_checkpoint",
     "load_checkpoint", "load_saved_model", "version", "train", "nn", "layers",
     "losses", "metrics", "callbacks", "data", "eager", "schedules",
@@ -18,7 +21,7 @@ test("exposes the public API surface", function()
   end
   local train_functions = {
     "gradient_descent", "adam", "adamw", "adamax", "rmsprop", "centered_rmsprop",
-    "adagrad", "adadelta",
+    "adagrad", "adadelta", "clip_by_norm", "clip_by_global_norm",
     "ftrl", "proximal_adagrad", "momentum", "Saver",
   }
   for _, name in ipairs(train_functions) do
@@ -46,6 +49,16 @@ test("exposes the public API surface", function()
       "missing Sequential." .. name)
   end
   assert_true(tf.eager.Context ~= nil)
+  local eager_methods = {
+    "stack", "unstack", "one_hot", "clip_by_value", "equal", "not_equal",
+    "greater", "greater_equal", "less", "less_equal", "logical_and",
+    "logical_or", "logical_xor", "logical_not", "reduce_all", "reduce_any",
+    "maximum", "minimum",
+  }
+  for _, name in ipairs(eager_methods) do
+    assert_true(type(tf.eager.Context[name]) == "function",
+      "missing eager Context." .. name)
+  end
   assert_true(tf.layers.dense ~= nil and tf.layers.embedding ~= nil)
   assert_true(tf.layers.conv2d ~= nil and tf.layers.max_pool2d ~= nil)
   assert_true(tf.layers.conv2d_transpose ~= nil)
@@ -69,5 +82,5 @@ test("exposes the public API surface", function()
   assert_true(tf.metrics.precision ~= nil and tf.metrics.recall ~= nil)
   assert_true(tf.metrics.f1 ~= nil)
   assert_true(tf.metrics.auc ~= nil and tf.metrics.multiclass_prf ~= nil)
-  assert_eq(tf.VERSION, "2.3.0")
+  assert_eq(tf.VERSION, "2.4.0")
 end)

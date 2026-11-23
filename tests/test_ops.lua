@@ -303,9 +303,9 @@ test("compares values and evaluates logical graph ops", function()
     conjunction, disjunction, exclusive, negation })
 
   local function bits(values)
-    local result = {}
-    for i, value in ipairs(values) do result[i] = tostring(value) end
-    return table.concat(result, ",")
+    local text = {}
+    for i, value in ipairs(values) do text[i] = tostring(value) end
+    return table.concat(text, ",")
   end
   assert_eq(result[1]:dtype(), "bool")
   assert_eq(bits(result[1]:totable()), "false,true,false")

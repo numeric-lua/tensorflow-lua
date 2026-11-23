@@ -7,32 +7,35 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`2.3.0`. Graph inference, construction, training, checkpoints, eager mode,
+`2.4.0`. Graph inference, construction, training, checkpoints, eager mode,
 trainable 2-D/3-D convolution/pooling/upsampling, attention/transformer layers,
 unrolled LSTM/GRU, tensor-backed datasets, portable deployment bundles, a
 checkpointable functional graph model, and a Sequential model. The
-dependency-free suite currently contains 203 tests. See
+dependency-free suite currently contains 209 tests. See
 [docs/stability.md](docs/stability.md) for the API policy.
 
 - load serialized `GraphDef` files into a namespace, with remapped inputs, or
   with selected outputs returned directly;
-- inspect graph operations, inputs/outputs, consumers, control edges, and
-  inferred shapes;
+- inspect graph operations, inputs/outputs, consumers, control edges, inferred
+  shapes, and operation attributes;
 - build graphs from Lua with operations, inputs, and attributes;
 - add symbolic gradients with custom upstream seeds, variables,
   gradient-descent updates, and Adam;
 - train with gradient descent, Adam/AdamW/AdaMax, RMSProp/CenteredRMSProp,
   Adagrad, Adadelta, Ftrl, ProximalAdagrad, or momentum SGD, with global-norm
   and gradient-value clipping;
+- apply standalone gradient norm clipping through
+  `tf.train.clip_by_norm`/`clip_by_global_norm`;
 - write native TensorFlow V2 checkpoints (`SaveV2`/`RestoreV2`);
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
   checkpoints;
 - typed ops for reshape, transpose, expand/squeeze, split, stack, unstack,
-  slice, reverse, pad, tile, where, gather, reductions, argmax, and common
-  activations;
+  slice, reverse, pad, tile, where, gather, comparisons, logical operations,
+  reductions, argmax, and common activations;
 - experimental eager execution (`tf.eager.Context`) with explicit tensor
   release, arithmetic, cast, transpose, reshape, concatenation, gather, slice,
-  pad, tile, where, reverse, split, reductions, argmax, and common
+  pad, tile, where, reverse, split, stack/unstack, one-hot encoding, value
+  clipping, comparisons, logical operations, reductions, argmax, and common
   math/activation ops;
 - compositional Dense, Conv1D, Conv2D, Conv2DTranspose, depthwise and
   separable Conv2D, 1-D/2-D pooling, BatchNormalization, LayerNormalization,
@@ -104,11 +107,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.3.0/tensorflow-lua-2.3.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.4.0/tensorflow-lua-2.4.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-2.3.0-1.rockspec
-./scripts/package.sh tensorflow-lua-2.3.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.4.0-1.rockspec
+./scripts/package.sh tensorflow-lua-2.4.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -283,7 +286,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v2.3.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.3.0)
+[**v2.4.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.4.0)
 ships the versioned rockspec and source rock. It is also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
 notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).

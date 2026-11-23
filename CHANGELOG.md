@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0
+
+- add `Graph:attribute_info` and `Graph:attribute` for typed operation
+  attribute metadata and scalar/list values, including string, int, float,
+  bool, type, and shape attributes;
+- add graph `tf.equal`/`not_equal`/`greater`/`greater_equal`/`less`/
+  `less_equal`, `tf.logical_and`/`logical_or`/`logical_xor`/`logical_not`,
+  `tf.squared_difference`, `tf.reduce_prod`, and `tf.reduce_all`/`reduce_any`;
+- add eager `stack`, `unstack`, `one_hot`, `clip_by_value`, comparisons,
+  logical operations, boolean reductions, and `maximum`/`minimum`;
+- add reusable `tf.train.clip_by_norm` and `tf.train.clip_by_global_norm`
+  gradient clipping helpers, and route optimizer `clipnorm` through them;
+- 209 dependency-free tests.
+
 ## 2.3.0
 
 - add `return_elements` to `Graph:import_graph_def`/`import_file`, returning
