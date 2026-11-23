@@ -23,7 +23,7 @@ local Data = require("tensorflow.data")
 local Callbacks = require("tensorflow.callbacks")
 
 local tf = {
-  VERSION = "2.1.0",
+  VERSION = "2.2.0",
   Tensor = Tensor,
   Graph = Graph,
   Session = Session,

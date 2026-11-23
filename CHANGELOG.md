@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.2.0
+
+- map imported GraphDef inputs to existing graph outputs through
+  `Graph:import_graph_def`/`import_file` `input_map` options;
+- add `Graph:operations`, `Graph:shape`, and `Graph:operation_info` for
+  operation, consumer, dtype, and inferred-shape introspection;
+- expand eager execution with mean/max/min/prod reductions, keep-dims support,
+  `exp`, `log`, `sqrt`, `abs`, `tanh`, `softplus`, `softmax`, `elu`, and
+  `leaky_relu`;
+- add graph `tf.split` (Split/SplitV), `tf.pad` (Pad/MirrorPad), `tf.tile`, and
+  `tf.where` (SelectV2) ops;
+- support custom upstream seeds through `tf.gradients(..., grad_ys)` and sum
+  gradients from multiple outputs;
+- 196 dependency-free tests.
+
 ## 2.1.0
 
 - prefix-aware `Graph:import_graph_def`/`import_file` options for importing a

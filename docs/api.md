@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.1.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.2.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
