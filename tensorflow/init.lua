@@ -95,8 +95,8 @@ tf.train = {
   end,
 }
 
-function tf.gradients(graph, outputs, inputs)
-  return GraphBuilder.gradients(graph, outputs, inputs)
+function tf.gradients(graph, outputs, inputs, grad_ys)
+  return GraphBuilder.gradients(graph, outputs, inputs, grad_ys)
 end
 
 function tf.add(graph, a, b, name, dtype)

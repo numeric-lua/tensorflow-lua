@@ -160,8 +160,12 @@ function GraphBuilder.placeholder(graph, dtype, shape, name)
   return output
 end
 
-function GraphBuilder.gradients(graph, outputs, inputs)
+function GraphBuilder.gradients(graph, outputs, inputs, grad_ys)
   local lib = capi.load()
+  if type(outputs) ~= "table" or outputs.oper ~= nil or
+      type(inputs) ~= "table" or inputs.oper ~= nil then
+    error("gradients expects output and input lists", 3)
+  end
   local function array(values)
     local result = ffi.new("TF_Output[?]", #values)
     for i, value in ipairs(values) do
@@ -174,11 +178,16 @@ function GraphBuilder.gradients(graph, outputs, inputs)
   if #outputs == 0 or #inputs == 0 then
     error("gradients expects at least one output and one input", 3)
   end
+  if grad_ys ~= nil and
+      (type(grad_ys) ~= "table" or #grad_ys ~= #outputs) then
+    error("grad_ys must supply one gradient per output", 3)
+  end
   local y = array(outputs)
   local x = array(inputs)
+  local dx = grad_ys ~= nil and array(grad_ys) or nil
   local dy = ffi.new("TF_Output[?]", #inputs)
   local status = capi.status()
-  lib.TF_AddGradients(graph:handle(), y, #outputs, x, #inputs, nil, status, dy)
+  lib.TF_AddGradients(graph:handle(), y, #outputs, x, #inputs, dx, status, dy)
   capi.check(status, "gradients")
   local result = {}
   for i = 1, #inputs do

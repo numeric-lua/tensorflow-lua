@@ -403,3 +403,54 @@ test("rejects invalid gradient descent clipping options", function()
   expect_error({ clipnorm = 0 }, "clipnorm")
   expect_error({ clipvalue = -1 }, "clipvalue")
 end)
+
+test("combines gradients from multiple outputs", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 1 }, "multi_x")
+  local squared = tf.square(graph, x, "multi_square")
+  local scaled = tf.mul(graph, x, tf.constant(graph, 3, "multi_three",
+    "float32"), "multi_scaled")
+  local gradient = tf.gradients(graph, { squared, scaled }, { x })[1]
+  local session = tf.Session.new(graph)
+  local value = session:run({ [x] = { 2 } }, { gradient })[1]:totable()[1]
+  assert_true(math.abs(value - 7) < 1e-6, tostring(value))
+  session:close()
+end)
+
+test("supplies custom upstream gradients", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 1 }, "up_x")
+  local squared = tf.square(graph, x, "up_square")
+  local upstream = tf.constant(graph, { 2 }, "up_dy", "float32")
+  local gradient = tf.gradients(graph, { squared }, { x }, { upstream })[1]
+  local session = tf.Session.new(graph)
+  local value = session:run({ [x] = { 3 } }, { gradient })[1]:totable()[1]
+  assert_true(math.abs(value - 12) < 1e-6, tostring(value))
+  session:close()
+
+  local graph2 = tf.Graph.new()
+  local y = tf.placeholder(graph2, "float32", { 1 }, "up2_x")
+  local y2 = tf.square(graph2, y, "up2_square")
+  local y3 = tf.mul(graph2, y, tf.constant(graph2, 3, "up2_three",
+    "float32"), "up2_scaled")
+  local dy1 = tf.constant(graph2, { 1 }, "up2_dy1", "float32")
+  local dy2 = tf.constant(graph2, { 2 }, "up2_dy2", "float32")
+  local combined = tf.gradients(graph2, { y2, y3 }, { y },
+    { dy1, dy2 })[1]
+  local session2 = tf.Session.new(graph2)
+  local combined_value = session2:run({ [y] = { 2 } },
+    { combined })[1]:totable()[1]
+  assert_true(math.abs(combined_value - 10) < 1e-6,
+    tostring(combined_value))
+  session2:close()
+
+  assert_error(function()
+    tf.gradients(graph, { squared }, { x }, {})
+  end, "grad_ys")
+  assert_error(function()
+    tf.gradients(graph, { squared }, { x }, { upstream, upstream })
+  end, "grad_ys")
+  assert_error(function()
+    tf.gradients(graph, squared, { x })
+  end, "lists")
+end)

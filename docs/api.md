@@ -838,12 +838,14 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 size table uses `SplitV`. `tf.pad` accepts `CONSTANT` (zero padding), `REFLECT`,
 or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 
-### `tf.gradients(graph, outputs, inputs)`
+### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 
 Adds TensorFlow gradient operations for a list of output graph outputs with
-respect to a list of input outputs. Returns one graph output per input. This
-wraps `TF_AddGradients`; TensorFlow's C API gradient coverage is more limited
-than Python's.
+respect to a list of input outputs. Returns one graph output per input. When
+`grad_ys` is supplied, it must contain one upstream gradient output per entry
+in `outputs`; otherwise TensorFlow uses an `OnesLike` seed for each output.
+This wraps `TF_AddGradients`; TensorFlow's C API gradient coverage is more
+limited than Python's.
 
 ### `graph:operation(name)`
 
