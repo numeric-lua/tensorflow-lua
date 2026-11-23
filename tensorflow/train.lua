@@ -2,6 +2,7 @@
 -- Graph-mode variables and basic training helpers.
 --
 local Tensor = require("tensorflow.tensor")
+local Ops = require("tensorflow.ops")
 
 local Train = {}
 
@@ -76,40 +77,118 @@ local function maximum(graph, a, b, name, dtype)
   return desc:finish()
 end
 
+local function multiply(graph, a, b, name, dtype)
+  local desc = graph:new_operation("Mul", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
+local function add(graph, a, b, name, dtype)
+  local desc = graph:new_operation("AddV2", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
+local function check_clip_norm(clip_norm)
+  if type(clip_norm) ~= "number" or clip_norm <= 0 then
+    error("clipnorm/clip_norm must be a positive number", 3)
+  end
+end
+
+local function square(graph, input, name, dtype)
+  local desc = graph:new_operation("Square", name)
+  desc:add_input(input)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
+local function gradient_list(gradients, label)
+  if type(gradients) ~= "table" or #gradients == 0 then
+    error(label .. " expects a non-empty gradient list", 3)
+  end
+  for index, gradient in ipairs(gradients) do
+    if type(gradient) ~= "table" or gradient.oper == nil then
+      error(label .. " gradient " .. tostring(index) ..
+        " must be a graph output", 3)
+    end
+  end
+end
+
+local function gradient_dtype(gradients, dtype)
+  if dtype ~= nil then return dtype_name(dtype) end
+  for _, gradient in ipairs(gradients) do
+    if type(gradient.dtype) == "string" then return gradient.dtype end
+  end
+  return "float32"
+end
+
+local function squared_norm(graph, gradient, name, dtype)
+  local flat = Ops.reshape(graph, gradient, { -1 }, name .. "/flatten", dtype)
+  local squared = square(graph, flat, name .. "/square", dtype)
+  return Ops.reduce_sum(graph, squared, { 0 }, name .. "/sum", dtype)
+end
+
+function Train.clip_by_norm(graph, gradient, clip_norm, name, dtype)
+  check_clip_norm(clip_norm)
+  gradient_list({ gradient }, "clip_by_norm")
+  name = name or "clip_by_norm"
+  local value_dtype = gradient_dtype({ gradient }, dtype)
+  local norm = Ops.sqrt(graph, squared_norm(graph, gradient, name, value_dtype),
+    name .. "/norm", value_dtype)
+  local limit = Train.constant(graph, clip_norm, name .. "/limit", value_dtype)
+  local denominator = maximum(graph, norm, limit, name .. "/denominator",
+    value_dtype)
+  local scale = Ops.div(graph, limit, denominator, name .. "/scale", value_dtype)
+  return multiply(graph, gradient, scale, name .. "/clipped", value_dtype), norm
+end
+
+function Train.clip_by_global_norm(graph, gradients, clip_norm, name, dtype)
+  check_clip_norm(clip_norm)
+  gradient_list(gradients, "clip_by_global_norm")
+  name = name or "clip_by_global_norm"
+  local value_dtype = gradient_dtype(gradients, dtype)
+  local total
+  for index, gradient in ipairs(gradients) do
+    local sum = squared_norm(graph, gradient, name .. "/grad_" .. index,
+      value_dtype)
+    if total == nil then
+      total = sum
+    else
+      total = add(graph, total, sum, name .. "/total_" .. index, value_dtype)
+    end
+  end
+  local norm = Ops.sqrt(graph, total, name .. "/norm", value_dtype)
+  local limit = Train.constant(graph, clip_norm, name .. "/limit", value_dtype)
+  local denominator = maximum(graph, norm, limit, name .. "/denominator",
+    value_dtype)
+  local scale = Ops.div(graph, limit, denominator, name .. "/scale", value_dtype)
+  local clipped = {}
+  for index, gradient in ipairs(gradients) do
+    clipped[index] = multiply(graph, gradient, scale,
+      name .. "/clipped_" .. index, value_dtype)
+  end
+  return clipped, norm
+end
+
 local function train_gradients(graph, loss, refs, options, name)
   local tf = require("tensorflow")
   local gradients = tf.gradients(graph, { loss }, refs)
   local clipnorm = options and (options.clipnorm or options.clip_norm)
   if clipnorm ~= nil then
-    if type(clipnorm) ~= "number" or clipnorm <= 0 then
-      error("clipnorm must be a positive number", 3)
-    end
     local dtype = refs[1].dtype or "float32"
     if type(dtype) ~= "string" then dtype = "float32" end
-    local sums = {}
-    for index, gradient in ipairs(gradients) do
-      local flat = tf.reshape(graph, gradient, { -1 },
-        name .. "/norm_flat_" .. index, dtype)
-      local squared = tf.square(graph, flat, name .. "/norm_square_" .. index,
-        dtype)
-      sums[#sums + 1] = tf.reduce_sum(graph, squared, { 0 },
-        name .. "/norm_sum_" .. index, dtype)
-    end
-    local total = sums[1]
-    for index = 2, #sums do
-      total = tf.add(graph, total, sums[index], name .. "/norm_total_" .. index,
-        dtype)
-    end
-    local norm = tf.sqrt(graph, total, name .. "/norm", dtype)
-    local limit = Train.constant(graph, clipnorm, name .. "/clipnorm", dtype)
-    local denominator = maximum(graph, norm, limit, name .. "/clip_denominator",
-      dtype)
-    local scale = tf.div(graph, limit, denominator, name .. "/clip_scale",
-      dtype)
-    for index, gradient in ipairs(gradients) do
-      gradients[index] = tf.mul(graph, gradient, scale,
-        name .. "/clipped_" .. index, dtype)
-    end
+    gradients = Train.clip_by_global_norm(graph, gradients, clipnorm,
+      name .. "/clipnorm", dtype)
   end
   return gradients
 end

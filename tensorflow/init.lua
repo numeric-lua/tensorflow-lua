@@ -96,6 +96,12 @@ tf.train = {
   momentum = function(graph, loss, variables, options)
     return Train.momentum(graph, loss, variables, options)
   end,
+  clip_by_norm = function(graph, gradient, clip_norm, name, dtype)
+    return Train.clip_by_norm(graph, gradient, clip_norm, name, dtype)
+  end,
+  clip_by_global_norm = function(graph, gradients, clip_norm, name, dtype)
+    return Train.clip_by_global_norm(graph, gradients, clip_norm, name, dtype)
+  end,
 }
 
 function tf.gradients(graph, outputs, inputs, grad_ys)
