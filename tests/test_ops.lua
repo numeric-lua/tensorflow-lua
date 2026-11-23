@@ -118,6 +118,80 @@ test("transposes, expands, squeezes, and gathers graph outputs", function()
   session:close()
 end)
 
+test("splits tensors into equal and explicit parts", function()
+  local graph = tf.Graph.new()
+  local value = tf.placeholder(graph, "float32", { 6 }, "split_value")
+  local equal = tf.split(graph, value, 3, 0, "split_equal")
+  local uneven = tf.split(graph, value, { 1, 2, 3 }, 0, "split_sizes")
+  assert_eq(#equal, 3)
+  assert_eq(#uneven, 3)
+  local session = tf.Session.new(graph)
+  local parts = session:run({ [value] = { 1, 2, 3, 4, 5, 6 } },
+    { equal[1], equal[2], equal[3], uneven[1], uneven[2], uneven[3] })
+  assert_eq(table.concat(parts[1]:shape(), ","), "2")
+  assert_eq(parts[1]:totable()[1], 1)
+  assert_eq(parts[2]:totable()[2], 4)
+  assert_eq(parts[3]:totable()[1], 5)
+  assert_eq(table.concat(parts[4]:shape(), ","), "1")
+  assert_eq(table.concat(parts[5]:shape(), ","), "2")
+  assert_eq(table.concat(parts[6]:shape(), ","), "3")
+  assert_eq(parts[6]:totable()[3], 6)
+  assert_error(function() tf.split(graph, value, 0, 0, "bad_count") end,
+    "positive")
+  assert_error(function() tf.split(graph, value, { 1, -1 }, 0, "bad_size") end,
+    "non-negative")
+  assert_error(function() tf.split(graph, value, 1.5, 0, "bad_split") end,
+    "split")
+  session:close()
+end)
+
+test("pads, tiles, and selects graph tensors", function()
+  local graph = tf.Graph.new()
+  local matrix = tf.placeholder(graph, "float32", { 2, 2 }, "pad_matrix")
+  local padded = tf.pad(graph, matrix, { { 1, 1 }, { 0, 1 } }, "CONSTANT",
+    "pad_constant")
+  local reflected = tf.pad(graph, matrix, { { 1, 1 }, { 1, 1 } }, "REFLECT",
+    "pad_reflect")
+  local vector = tf.placeholder(graph, "float32", { 2 }, "tile_vector")
+  local tiled = tf.tile(graph, vector, { 3 }, "tile_value")
+  local condition = tf.placeholder(graph, "bool", { 3 }, "where_condition")
+  local choices = tf.placeholder(graph, "float32", { 3 }, "where_choices")
+  local other = tf.constant(graph, { 10, 20, 30 }, "where_other")
+  local selected = tf.where(graph, condition, choices, other, "where_value")
+
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [matrix] = { { 1, 2 }, { 3, 4 } },
+    [vector] = { 5, 6 },
+    [condition] = { true, false, true },
+    [choices] = { 1, 2, 3 },
+  }, { padded, reflected, tiled, selected })
+  assert_eq(table.concat(result[1]:shape(), ","), "4,3")
+  assert_eq(result[1]:totable()[1][1], 0)
+  assert_eq(result[1]:totable()[2][1], 1)
+  assert_eq(result[1]:totable()[2][3], 0)
+  assert_eq(result[1]:totable()[3][2], 4)
+  assert_eq(table.concat(result[2]:shape(), ","), "4,4")
+  assert_eq(table.concat(result[3]:shape(), ","), "6")
+  assert_eq(result[3]:totable()[3], 5)
+  assert_eq(result[3]:totable()[4], 6)
+  assert_eq(result[4]:totable()[1], 1)
+  assert_eq(result[4]:totable()[2], 20)
+  assert_eq(result[4]:totable()[3], 3)
+
+  assert_error(function()
+    tf.pad(graph, matrix, { { 1 } }, "CONSTANT", "bad_pad")
+  end, "pairs")
+  assert_error(function()
+    tf.pad(graph, matrix, { { 1, 1 }, { 1, 1 } }, "WRAP", "bad_mode")
+  end, "mode")
+  assert_error(function() tf.tile(graph, vector, {}, "bad_tile") end,
+    "multiples")
+  assert_error(function() tf.tile(graph, vector, { 1.5 }, "bad_multiple") end,
+    "integers")
+  session:close()
+end)
+
 test("squeezes all singleton dimensions and validates axes", function()
   local graph = tf.Graph.new()
   local value = tf.constant(graph, { { { 1 }, { 2 }, { 3 } } }, "squeeze_value",

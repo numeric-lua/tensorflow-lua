@@ -828,7 +828,15 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.shape(graph, x[, name[, dtype]])` | Shape |
 | `tf.div(graph, a, b[, name[, dtype]])` | RealDiv |
 | `tf.concat(graph, {a, b}, axis[, name[, dtype]])` | ConcatV2 |
+| `tf.split(graph, x, count_or_sizes[, axis[, name[, dtype]]])` | Split/SplitV |
+| `tf.pad(graph, x, paddings[, mode[, name[, dtype]]])` | Pad/MirrorPad |
+| `tf.tile(graph, x, multiples[, name[, dtype]])` | Tile |
+| `tf.where(graph, condition, x, y[, name[, dtype]])` | SelectV2 |
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
+
+`tf.split` returns a list of outputs; a numeric split count uses `Split` and a
+size table uses `SplitV`. `tf.pad` accepts `CONSTANT` (zero padding), `REFLECT`,
+or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 
 ### `tf.gradients(graph, outputs, inputs)`
 

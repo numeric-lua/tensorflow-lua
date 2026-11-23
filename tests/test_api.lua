@@ -4,7 +4,8 @@ test("exposes the public API surface", function()
   local names = {
     "VERSION", "Tensor", "Graph", "Session", "CheckpointReader",
     "Sequential", "tensor", "complex", "placeholder", "constant", "variable",
-    "gradients", "reshape", "transpose", "expand_dims", "squeeze", "gather",
+    "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
+    "pad", "tile", "where", "gather",
     "cast", "concat", "clip_by_value", "reduce_mean",
     "reduce_sum", "reduce_max", "reduce_min", "argmax", "one_hot", "exp",
     "log", "sqrt", "save_v2", "restore_v2", "save_checkpoint",

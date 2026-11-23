@@ -10,6 +10,14 @@ local function dtype_name(value)
   return value or "float32"
 end
 
+local function input_dtype(input, dtype)
+  if dtype ~= nil then return dtype_name(dtype) end
+  if type(input) == "table" and input.dtype ~= nil then
+    return dtype_name(input.dtype)
+  end
+  return "float32"
+end
+
 local function constant(graph, value, name, dtype)
   dtype = dtype_name(dtype)
   local tensor = getmetatable(value) == Tensor and value or
@@ -137,6 +145,135 @@ function Ops.concat(graph, inputs, axis, name, dtype)
   desc:set_type("Tidx", "int32")
   desc:set_int("N", #inputs)
   return desc:finish()
+end
+
+function Ops.split(graph, input, num_or_size_splits, axis, name, dtype)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("split expects an integer axis", 3)
+  end
+  name = name or "split"
+  local value_dtype = input_dtype(input, dtype)
+  local desc
+  local count
+  if type(num_or_size_splits) == "number" then
+    if num_or_size_splits % 1 ~= 0 or num_or_size_splits < 1 then
+      error("split expects a positive integer split count", 3)
+    end
+    count = num_or_size_splits
+    local axis_op = constant(graph, axis, name .. "/axis", "int32")
+    desc = graph:new_operation("Split", name)
+    desc:add_input(axis_op)
+    desc:add_input(input)
+    desc:set_type("T", value_dtype)
+    desc:set_int("num_split", count)
+  elseif type(num_or_size_splits) == "table" then
+    if #num_or_size_splits == 0 then
+      error("split expects a non-empty size table", 3)
+    end
+    for _, size in ipairs(num_or_size_splits) do
+      if type(size) ~= "number" or size % 1 ~= 0 or size < 0 then
+        error("split sizes must be non-negative integers", 3)
+      end
+    end
+    count = #num_or_size_splits
+    local sizes = constant(graph, num_or_size_splits,
+      name .. "/sizes", "int64")
+    local axis_op = constant(graph, axis, name .. "/axis", "int32")
+    desc = graph:new_operation("SplitV", name)
+    desc:add_input(input)
+    desc:add_input(sizes)
+    desc:add_input(axis_op)
+    desc:set_type("T", value_dtype)
+    desc:set_type("Tlen", "int64")
+    desc:set_int("num_split", count)
+  else
+    error("split expects a split count or size table", 3)
+  end
+  local result = desc:finish()
+  local outputs = {}
+  for i = 1, count do
+    outputs[i] = {
+      oper = result.oper,
+      index = i - 1,
+      name = name .. ":" .. (i - 1),
+      dtype = value_dtype,
+    }
+  end
+  return outputs
+end
+
+function Ops.pad(graph, input, paddings, mode, name, dtype)
+  if type(paddings) ~= "table" or #paddings == 0 then
+    error("pad expects a non-empty paddings table", 3)
+  end
+  for _, row in ipairs(paddings) do
+    if type(row) ~= "table" or #row ~= 2 then
+      error("pad paddings must be pairs of integers", 3)
+    end
+    for _, amount in ipairs(row) do
+      if type(amount) ~= "number" or amount % 1 ~= 0 or amount < 0 then
+        error("pad amounts must be non-negative integers", 3)
+      end
+    end
+  end
+  mode = string.upper(mode or "CONSTANT")
+  if mode ~= "CONSTANT" and mode ~= "REFLECT" and mode ~= "SYMMETRIC" then
+    error("pad mode must be CONSTANT, REFLECT, or SYMMETRIC", 3)
+  end
+  name = name or "pad"
+  local value_dtype = input_dtype(input, dtype)
+  local padding_op = constant(graph, paddings, name .. "/paddings", "int32")
+  local desc
+  if mode == "CONSTANT" then
+    desc = graph:new_operation("Pad", name)
+  else
+    desc = graph:new_operation("MirrorPad", name)
+    desc:set_string("mode", mode)
+  end
+  desc:add_input(input)
+  desc:add_input(padding_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tpaddings", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.tile(graph, input, multiples, name, dtype)
+  if type(multiples) ~= "table" or #multiples == 0 then
+    error("tile expects a non-empty multiples table", 3)
+  end
+  for _, multiple in ipairs(multiples) do
+    if type(multiple) ~= "number" or multiple % 1 ~= 0 or multiple < 0 then
+      error("tile multiples must be non-negative integers", 3)
+    end
+  end
+  name = name or "tile"
+  local value_dtype = input_dtype(input, dtype)
+  local multiples_op = constant(graph, multiples, name .. "/multiples",
+    "int32")
+  local desc = graph:new_operation("Tile", name)
+  desc:add_input(input)
+  desc:add_input(multiples_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tmultiples", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.where(graph, condition, x, y, name, dtype)
+  name = name or "where"
+  local value_dtype = input_dtype(x, dtype)
+  local desc = graph:new_operation("SelectV2", name)
+  desc:add_input(condition)
+  desc:add_input(x)
+  desc:add_input(y)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
 end
 
 function Ops.reshape(graph, input, shape, name, dtype)
