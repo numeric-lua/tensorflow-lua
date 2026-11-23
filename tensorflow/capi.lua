@@ -47,6 +47,17 @@ typedef enum TF_DataType {
   TF_HALF = 19, TF_RESOURCE = 20, TF_VARIANT = 21, TF_UINT32 = 22,
   TF_UINT64 = 23
 } TF_DataType;
+typedef enum TF_AttrType {
+  TF_ATTR_STRING = 0, TF_ATTR_INT = 1, TF_ATTR_FLOAT = 2, TF_ATTR_BOOL = 3,
+  TF_ATTR_TYPE = 4, TF_ATTR_SHAPE = 5, TF_ATTR_TENSOR = 6,
+  TF_ATTR_PLACEHOLDER = 7, TF_ATTR_FUNC = 8
+} TF_AttrType;
+typedef struct TF_AttrMetadata {
+  unsigned char is_list;
+  int64_t list_size;
+  TF_AttrType type;
+  int64_t total_size;
+} TF_AttrMetadata;
 
 const char* TF_Version(void);
 TF_Status* TF_NewStatus(void);
@@ -73,6 +84,30 @@ int TF_OperationNumControlInputs(TF_Operation*);
 int TF_OperationGetControlInputs(TF_Operation*, TF_Operation**, int);
 int TF_OperationNumControlOutputs(TF_Operation*);
 int TF_OperationGetControlOutputs(TF_Operation*, TF_Operation**, int);
+TF_AttrMetadata TF_OperationGetAttrMetadata(TF_Operation*, const char*,
+  TF_Status*);
+void TF_OperationGetAttrString(TF_Operation*, const char*, void*, size_t,
+  TF_Status*);
+void TF_OperationGetAttrStringList(TF_Operation*, const char*, void**,
+  size_t*, int, void*, size_t, TF_Status*);
+void TF_OperationGetAttrInt(TF_Operation*, const char*, int64_t*, TF_Status*);
+void TF_OperationGetAttrIntList(TF_Operation*, const char*, int64_t*, int,
+  TF_Status*);
+void TF_OperationGetAttrFloat(TF_Operation*, const char*, float*, TF_Status*);
+void TF_OperationGetAttrFloatList(TF_Operation*, const char*, float*, int,
+  TF_Status*);
+void TF_OperationGetAttrBool(TF_Operation*, const char*, unsigned char*,
+  TF_Status*);
+void TF_OperationGetAttrBoolList(TF_Operation*, const char*, unsigned char*,
+  int, TF_Status*);
+void TF_OperationGetAttrType(TF_Operation*, const char*, TF_DataType*,
+  TF_Status*);
+void TF_OperationGetAttrTypeList(TF_Operation*, const char*, TF_DataType*, int,
+  TF_Status*);
+void TF_OperationGetAttrShape(TF_Operation*, const char*, int64_t*, int,
+  TF_Status*);
+void TF_OperationGetAttrShapeList(TF_Operation*, const char*, int64_t**, int*,
+  int, int64_t*, int, TF_Status*);
 TF_OperationDescription* TF_NewOperation(TF_Graph*, const char*, const char*);
 void TF_AddInput(TF_OperationDescription*, TF_Output);
 void TF_AddInputList(TF_OperationDescription*, const TF_Output*, int);

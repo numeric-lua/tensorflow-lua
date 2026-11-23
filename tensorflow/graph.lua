@@ -144,6 +144,199 @@ function Graph:control_outputs(value)
     lib.TF_OperationGetControlOutputs)
 end
 
+local attr_kinds = {
+  [0] = "string", [1] = "int", [2] = "float", [3] = "bool", [4] = "type",
+  [5] = "shape", [6] = "tensor", [7] = "placeholder", [8] = "func",
+}
+
+local function attribute_metadata(graph, value, name)
+  if type(name) ~= "string" or name == "" then
+    error("attribute name must be a non-empty string", 3)
+  end
+  local lib = capi.load()
+  local operation = resolve_operation(graph, value)
+  local status = capi.status()
+  local metadata = lib.TF_OperationGetAttrMetadata(operation, name, status)
+  capi.check(status, "graph attribute metadata")
+  local kind = attr_kinds[tonumber(metadata.type)]
+  if kind == nil then
+    error("unknown attribute type " .. tostring(metadata.type), 3)
+  end
+  return metadata, kind, operation
+end
+
+local function attr_string(lib, operation, name, metadata)
+  local length = tonumber(metadata.total_size)
+  local capacity = math.max(length + 1, 1)
+  local buffer = ffi.new("char[?]", capacity)
+  local status = capi.status()
+  lib.TF_OperationGetAttrString(operation, name, buffer, capacity, status)
+  capi.check(status, "graph string attribute")
+  return ffi.string(buffer, length)
+end
+
+local function attr_string_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local total = math.max(tonumber(metadata.total_size), 0)
+  local values = ffi.new("void*[?]", math.max(count, 1))
+  local lengths = ffi.new("size_t[?]", math.max(count, 1))
+  local storage = ffi.new("char[?]", math.max(total, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrStringList(operation, name, values, lengths, count,
+    storage, total, status)
+  capi.check(status, "graph string-list attribute")
+  local result = {}
+  for i = 1, count do
+    result[i] = ffi.string(values[i - 1], tonumber(lengths[i - 1]))
+  end
+  return result
+end
+
+local function attr_int_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local values = ffi.new("int64_t[?]", math.max(count, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrIntList(operation, name, values, count, status)
+  capi.check(status, "graph int-list attribute")
+  local result = {}
+  for i = 1, count do result[i] = tonumber(values[i - 1]) end
+  return result
+end
+
+local function attr_float_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local values = ffi.new("float[?]", math.max(count, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrFloatList(operation, name, values, count, status)
+  capi.check(status, "graph float-list attribute")
+  local result = {}
+  for i = 1, count do result[i] = tonumber(values[i - 1]) end
+  return result
+end
+
+local function attr_bool_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local values = ffi.new("unsigned char[?]", math.max(count, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrBoolList(operation, name, values, count, status)
+  capi.check(status, "graph bool-list attribute")
+  local result = {}
+  for i = 1, count do result[i] = values[i - 1] ~= 0 end
+  return result
+end
+
+local function attr_type_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local values = ffi.new("TF_DataType[?]", math.max(count, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrTypeList(operation, name, values, count, status)
+  capi.check(status, "graph type-list attribute")
+  local result = {}
+  for i = 1, count do result[i] = dtype_name(values[i - 1]) end
+  return result
+end
+
+local function attr_shape(lib, operation, name, metadata)
+  local count = tonumber(metadata.total_size)
+  if count < 0 then return nil end
+  if count == 0 then return {} end
+  local dims = ffi.new("int64_t[?]", count)
+  local status = capi.status()
+  lib.TF_OperationGetAttrShape(operation, name, dims, count, status)
+  capi.check(status, "graph shape attribute")
+  local result = {}
+  for i = 1, count do result[i] = tonumber(dims[i - 1]) end
+  return result
+end
+
+local function attr_shape_list(lib, operation, name, metadata)
+  local count = tonumber(metadata.list_size)
+  local total = tonumber(metadata.total_size)
+  if total < 0 then return nil end
+  local pointer = ffi.new("int64_t*[?]", math.max(count, 1))
+  local dimensions = ffi.new("int[?]", math.max(count, 1))
+  local storage = ffi.new("int64_t[?]", math.max(total, 1))
+  local status = capi.status()
+  lib.TF_OperationGetAttrShapeList(operation, name, pointer, dimensions, count,
+    storage, total, status)
+  capi.check(status, "graph shape-list attribute")
+  local result, offset = {}, 0
+  for i = 1, count do
+    local shape = {}
+    for dimension = 1, tonumber(dimensions[i - 1]) do
+      shape[dimension] = tonumber(storage[offset + dimension - 1])
+    end
+    offset = offset + tonumber(dimensions[i - 1])
+    result[i] = shape
+  end
+  return result
+end
+
+function Graph:attribute_info(value, name)
+  local metadata, kind, operation = attribute_metadata(self, value, name)
+  return {
+    name = name,
+    operation = ffi.string(capi.load().TF_OperationName(operation)),
+    kind = kind,
+    is_list = metadata.is_list ~= 0,
+    list_size = tonumber(metadata.list_size),
+    total_size = tonumber(metadata.total_size),
+  }
+end
+
+function Graph:attribute(value, name)
+  local lib = capi.load()
+  local metadata, kind, operation = attribute_metadata(self, value, name)
+  local is_list = metadata.is_list ~= 0
+  if is_list then
+    if kind == "string" then
+      return attr_string_list(lib, operation, name, metadata)
+    elseif kind == "int" then
+      return attr_int_list(lib, operation, name, metadata)
+    elseif kind == "float" then
+      return attr_float_list(lib, operation, name, metadata)
+    elseif kind == "bool" then
+      return attr_bool_list(lib, operation, name, metadata)
+    elseif kind == "type" then
+      return attr_type_list(lib, operation, name, metadata)
+    elseif kind == "shape" then
+      return attr_shape_list(lib, operation, name, metadata)
+    end
+  else
+    if kind == "string" then
+      return attr_string(lib, operation, name, metadata)
+    elseif kind == "int" then
+      local result = ffi.new("int64_t[1]")
+      local status = capi.status()
+      lib.TF_OperationGetAttrInt(operation, name, result, status)
+      capi.check(status, "graph int attribute")
+      return tonumber(result[0])
+    elseif kind == "float" then
+      local result = ffi.new("float[1]")
+      local status = capi.status()
+      lib.TF_OperationGetAttrFloat(operation, name, result, status)
+      capi.check(status, "graph float attribute")
+      return tonumber(result[0])
+    elseif kind == "bool" then
+      local result = ffi.new("unsigned char[1]")
+      local status = capi.status()
+      lib.TF_OperationGetAttrBool(operation, name, result, status)
+      capi.check(status, "graph bool attribute")
+      return result[0] ~= 0
+    elseif kind == "type" then
+      local result = ffi.new("TF_DataType[1]")
+      local status = capi.status()
+      lib.TF_OperationGetAttrType(operation, name, result, status)
+      capi.check(status, "graph type attribute")
+      return dtype_name(result[0])
+    elseif kind == "shape" then
+      return attr_shape(lib, operation, name, metadata)
+    end
+  end
+  error("unsupported graph " .. (is_list and "list " or "") .. kind ..
+    " attribute '" .. name .. "'", 2)
+end
+
 function Graph:operation_info(value)
   local lib = capi.load()
   local operation, index = resolve_operation(self, value)
