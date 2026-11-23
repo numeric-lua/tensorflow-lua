@@ -240,6 +240,65 @@ function Context:mul(a, b)
   return self:execute("Mul", { a, b }, { attrs = { T = a:dtype() } })[1]
 end
 
+local function comparison(context, op_type, a, b)
+  return context:execute(op_type, { a, b },
+    { attrs = { T = a:dtype() } })[1]
+end
+
+function Context:equal(a, b)
+  return comparison(self, "Equal", a, b)
+end
+
+function Context:not_equal(a, b)
+  return comparison(self, "NotEqual", a, b)
+end
+
+function Context:greater(a, b)
+  return comparison(self, "Greater", a, b)
+end
+
+function Context:greater_equal(a, b)
+  return comparison(self, "GreaterEqual", a, b)
+end
+
+function Context:less(a, b)
+  return comparison(self, "Less", a, b)
+end
+
+function Context:less_equal(a, b)
+  return comparison(self, "LessEqual", a, b)
+end
+
+local function logical_binary(context, op_type, a, b)
+  return context:execute(op_type, { a, b })[1]
+end
+
+function Context:logical_and(a, b)
+  return logical_binary(self, "LogicalAnd", a, b)
+end
+
+function Context:logical_or(a, b)
+  return logical_binary(self, "LogicalOr", a, b)
+end
+
+function Context:logical_xor(a, b)
+  return comparison(self, "NotEqual", a, b)
+end
+
+function Context:logical_not(a)
+  return self:execute("LogicalNot", { a })[1]
+end
+
+function Context:maximum(a, b)
+  return self:execute("Maximum", { a, b },
+    { attrs = { T = a:dtype() } })[1]
+end
+
+function Context:minimum(a, b)
+  return self:execute("Minimum", { a, b },
+    { attrs = { T = a:dtype() } })[1]
+end
+
 function Context:matmul(a, b)
   return self:execute("MatMul", { a, b },
     { attrs = { T = a:dtype(), transpose_a = false, transpose_b = false } })[1]
@@ -318,6 +377,14 @@ end
 
 function Context:reduce_prod(a, axes, keep_dims)
   return reduction(self, "Prod", a, axes, keep_dims)
+end
+
+function Context:reduce_all(a, axes, keep_dims)
+  return reduction(self, "All", a, axes, keep_dims)
+end
+
+function Context:reduce_any(a, axes, keep_dims)
+  return reduction(self, "Any", a, axes, keep_dims)
 end
 
 function Context:argmax(a, axis, output_dtype)
