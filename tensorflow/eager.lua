@@ -304,6 +304,68 @@ function Context:matmul(a, b)
     { attrs = { T = a:dtype(), transpose_a = false, transpose_b = false } })[1]
 end
 
+function Context:batch_matmul(a, b, options)
+  options = options or {}
+  local adj_x = options.adj_x
+  if adj_x == nil then adj_x = options.transpose_a end
+  local adj_y = options.adj_y
+  if adj_y == nil then adj_y = options.transpose_b end
+  if adj_x ~= nil and type(adj_x) ~= "boolean" then
+    error("eager batch_matmul adj_x must be a boolean", 2)
+  end
+  if adj_y ~= nil and type(adj_y) ~= "boolean" then
+    error("eager batch_matmul adj_y must be a boolean", 2)
+  end
+  return self:execute("BatchMatMulV2", { a, b },
+    { attrs = { T = a:dtype(), adj_x = adj_x == true,
+      adj_y = adj_y == true } })[1]
+end
+
+function Context:fill(dims, value, dtype)
+  if type(dims) ~= "table" then
+    error("eager fill expects a dims table", 2)
+  end
+  for i, dimension in ipairs(dims) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("eager fill dimensions must be non-negative integers (dimension " ..
+        tostring(i) .. ")", 2)
+    end
+  end
+  local dims_tensor = self:constant(dims, "int32")
+  local value_tensor
+  if getmetatable(value) == ETensor then
+    value_tensor = value
+  else
+    value_tensor = self:constant(value, dtype or "float32")
+  end
+  return self:execute("Fill", { dims_tensor, value_tensor },
+    { attrs = { T = value_tensor:dtype(), index_type = "int32" } })[1]
+end
+
+function Context:range(start, limit, delta, dtype)
+  local value_dtype = dtype or "float32"
+  local start_tensor = self:constant(start, value_dtype)
+  local limit_tensor = self:constant(limit, value_dtype)
+  local delta_tensor = self:constant(delta, value_dtype)
+  return self:execute("Range", { start_tensor, limit_tensor, delta_tensor },
+    { attrs = { Tidx = value_dtype } })[1]
+end
+
+function Context:linspace(start, stop, num, dtype)
+  local value_dtype = dtype or "float32"
+  if value_dtype ~= "float32" and value_dtype ~= "float64" then
+    error("eager linspace dtype must be float32 or float64", 2)
+  end
+  if type(num) ~= "number" or num % 1 ~= 0 or num < 1 then
+    error("eager linspace num must be a positive integer", 2)
+  end
+  local start_tensor = self:constant(start, value_dtype)
+  local stop_tensor = self:constant(stop, value_dtype)
+  local num_tensor = self:constant(num, "int32")
+  return self:execute("LinSpace", { start_tensor, stop_tensor, num_tensor },
+    { attrs = { T = value_dtype, Tidx = "int32" } })[1]
+end
+
 function Context:div(a, b)
   return self:execute("RealDiv", { a, b }, { attrs = { T = a:dtype() } })[1]
 end
@@ -468,6 +530,10 @@ end
 
 function Context:softmax(a)
   return unary(self, "Softmax", a)
+end
+
+function Context:log_softmax(a)
+  return unary(self, "LogSoftmax", a)
 end
 
 function Context:elu(a)
