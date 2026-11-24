@@ -459,3 +459,17 @@ test("reads graph operation attributes", function()
   assert_error(function() graph:attribute("attr_missing", "dtype") end,
     "no operation")
 end)
+
+test("lists graph operation attribute names", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 2 }, "names_x")
+  tf.nn.leaky_relu(graph, x, "names_act", "float32", 0.1)
+  local names = graph:attribute_names("names_act")
+  table.sort(names)
+  assert_eq(table.concat(names, ","), "T,alpha")
+  local placeholder_names = graph:attribute_names(x)
+  table.sort(placeholder_names)
+  assert_eq(table.concat(placeholder_names, ","), "dtype,shape")
+  assert_error(function() graph:attribute_names("names_missing") end,
+    "no operation")
+end)

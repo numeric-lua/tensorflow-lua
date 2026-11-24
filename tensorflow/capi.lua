@@ -86,6 +86,9 @@ int TF_OperationNumControlOutputs(TF_Operation*);
 int TF_OperationGetControlOutputs(TF_Operation*, TF_Operation**, int);
 TF_AttrMetadata TF_OperationGetAttrMetadata(TF_Operation*, const char*,
   TF_Status*);
+int TF_OperationGetNumAttrs(TF_Operation*);
+int TF_OperationGetAttrNameLength(TF_Operation*, int);
+void TF_OperationGetAttrName(TF_Operation*, int, char*, TF_Status*);
 void TF_OperationGetAttrString(TF_Operation*, const char*, void*, size_t,
   TF_Status*);
 void TF_OperationGetAttrStringList(TF_Operation*, const char*, void**,

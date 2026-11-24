@@ -272,6 +272,25 @@ local function attr_shape_list(lib, operation, name, metadata)
   return result
 end
 
+function Graph:attribute_names(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  local count = lib.TF_OperationGetNumAttrs(operation)
+  local names = {}
+  for i = 0, count - 1 do
+    local length = lib.TF_OperationGetAttrNameLength(operation, i)
+    if length < 0 then
+      error("operation has no attribute at index " .. tostring(i), 2)
+    end
+    local buffer = ffi.new("char[?]", length + 1)
+    local status = capi.status()
+    lib.TF_OperationGetAttrName(operation, i, buffer, status)
+    capi.check(status, "graph attribute name")
+    names[#names + 1] = ffi.string(buffer, length)
+  end
+  return names
+end
+
 function Graph:attribute_info(value, name)
   local metadata, kind, operation = attribute_metadata(self, value, name)
   return {
