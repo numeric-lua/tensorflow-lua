@@ -1,38 +1,38 @@
-# tensorflow-lua 2.7.0
+# tensorflow-lua 2.8.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- **Decoded attribute tables.** `graph:attributes(output)` combines
-  `attribute_names`, `attribute_info`, and `attribute` into one table per
-  attribute, skipping only the undecoded tensor/placeholder/function kinds.
-- **Rounding and reciprocal math.** `tf.floor`, `tf.ceil`, `tf.round`,
-  `tf.sign`, `tf.rsqrt`, and `tf.reciprocal` join the graph surface, with eager
+- **Operation list lengths.** `graph:input_list_length(output, name)` and
+  `graph:output_list_length(output, name)` report the arity of list-valued
+  operation arguments such as `Pack` inputs and `Split` outputs.
+- **Zero/one and gradient control.** `tf.zeros_like`, `tf.ones_like`,
+  `tf.identity`, and `tf.stop_gradient` join the graph surface, with eager
   equivalents on `tf.eager.Context`.
-- **Variance and standard deviation.** `tf.reduce_variance` and
-  `tf.reduce_stddev` support integer axis tables and `keep_dims`; the eager
-  context exposes the same reductions.
-- **Consistent gradient clipping.** `clipvalue`/`clip_value` now applies to
-  RMSProp, CenteredRMSProp, Adagrad, Adadelta, ProximalAdagrad, and Ftrl,
-  matching Adam, Adamax, momentum, and gradient descent.
+- **Error functions and predicates.** `tf.erf`, `tf.erfc`, `tf.is_nan`,
+  `tf.is_inf`, and `tf.is_finite` add numeric error functions and boolean
+  predicates in graph and eager modes.
+- **Checkpoint metadata.** `CheckpointReader:dtype(name)`, `shape(name)`, and
+  `info(name)` expose variable metadata without loading the tensor bytes.
 
 ## Surface
 
-The 1.0 API policy still applies; 2.7 is a minor release with additions only.
+The 1.0 API policy still applies; 2.8 is a minor release with additions only.
 The binding includes 2-D/3-D convolution/pooling/upsampling,
 attention/transformer layers, unrolled LSTM/GRU, tensor datasets, gradient
 accumulation, AUC/macro metrics, functional and Sequential models, native LR
 schedules, and portable deployment bundles.
 
-`tf.reduce_variance` and `tf.reduce_stddev` are composed from portable
-TensorFlow ops (`Mean`/`SquaredDifference`/`Sqrt`) and are differentiable
-through the normal graph gradient path. The adaptive optimizers clip the
-gradient graph outputs before applying their update ops.
+`tf.stop_gradient` maps directly to TensorFlow's `StopGradient` op. The
+predicate ops return `bool` tensors, while `erf`/`erfc` preserve their input
+floating dtype. Checkpoint metadata comes from
+`TF_CheckpointReaderGetVariableDataType` and
+`TF_CheckpointReaderGetVariableShape`; missing variables raise Lua errors.
 
 ## Verification
 
-- 224 dependency-free tests;
+- 229 dependency-free tests;
 - full suite run with the checkout's libtensorflow 2.18.0;
 - CI matrix remains Ubuntu 22.04/24.04 with libtensorflow 2.16.2/2.18.0/2.18.1.
 
@@ -47,5 +47,5 @@ because Google stopped publishing Linux x86-64 C archives after 2.18.
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-2.7.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.8.0-1.rockspec
 ```

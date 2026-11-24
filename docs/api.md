@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.7.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.8.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -148,6 +148,17 @@ are returned without `value`.
 for _, attribute in ipairs(graph:attributes("logits")) do
   print(attribute.name, attribute.kind, attribute.value)
 end
+```
+
+### `graph:input_list_length(output, name)` / `graph:output_list_length(output, name)`
+
+Return the number of tensors in a list-valued operation argument. `Pack`/`AddN`
+inputs and `Split`/`Unpack` outputs are the typical uses. Missing arguments and
+non-list arguments raise TensorFlow status errors as Lua errors.
+
+```lua
+local count = graph:input_list_length("packed", "values")
+local splits = graph:output_list_length("split", "output")
 ```
 
 ### `graph:consumers(output)`
@@ -370,8 +381,14 @@ local reader = tf.CheckpointReader.new("model.ckpt")
 print(reader:size())
 for _, name in ipairs(reader:variables()) do print(name) end
 local tensor = reader:tensor(name)
+print(reader:dtype(name), table.concat(reader:shape(name), ","))
+local info = reader:info(name)  -- { name, dtype, shape }
 reader:close()
 ```
+
+`dtype(name)` and `shape(name)` read checkpoint metadata without
+`TF_Tensor` allocation; `info(name)` combines them. Missing variables raise a
+Lua error.
 
 ## Losses
 
@@ -897,7 +914,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `reduce_stddev`, `argmax`/`argmin`, `add_n`, `batch_matmul`, `fill`, `range`,
 `linspace`, `relu`, `relu6`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`,
 `log_softmax`, `softplus`, `exp`, `log`, `sqrt`, `floor`, `ceil`, `round`,
-`sign`, `rsqrt`, `reciprocal`, `abs`, `square`, and `reshape`.
+`sign`, `rsqrt`, `reciprocal`, `zeros_like`, `ones_like`, `identity`,
+`stop_gradient`, `erf`, `erfc`, `is_nan`, `is_inf`, `is_finite`, `abs`,
+`square`, and `reshape`.
 Reduction methods accept an integer axes table and an optional `keep_dims`
 boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
 positive split count or a size table and returns an output list. `stack`,
@@ -929,6 +948,12 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
 | `tf.nn.log_softmax(graph, x, name[, dtype])` | LogSoftmax |
 | `tf.exp`, `tf.log`, `tf.sqrt`, `tf.floor`, `tf.ceil`, `tf.round`, `tf.sign`, `tf.rsqrt`, `tf.reciprocal` | elementwise unary ops |
+| `tf.erf`, `tf.erfc` | elementwise error functions |
+| `tf.is_nan`, `tf.is_inf`, `tf.is_finite` | boolean numeric predicates |
+| `tf.zeros_like(graph, x[, name[, dtype]])` | ZerosLike |
+| `tf.ones_like(graph, x[, name[, dtype]])` | OnesLike |
+| `tf.identity(graph, x[, name[, dtype]])` | Identity |
+| `tf.stop_gradient(graph, x[, name[, dtype]])` | StopGradient |
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
 | `tf.transpose(graph, x, perm[, name[, dtype]])` | Transpose |
 | `tf.expand_dims(graph, x, axis[, name[, dtype]])` | ExpandDims |
@@ -981,10 +1006,13 @@ dimensions; `tf.range` follows TensorFlow's scalar start/limit/delta rules;
 it stays finite for large inputs, and is composed of differentiable ops rather
 than a fused kernel. `tf.reduce_variance` and `tf.reduce_stddev` are composed
 from `Mean`/`SquaredDifference`/`Sqrt`, support `keep_dims`, and infer their
-dtype from the input unless one is supplied. `tf.argmax`/`tf.argmin` validate
-that the axis is an integer. `tf.logical_xor` is built from `NotEqual` because
-the `LogicalXor` op is not registered in the supported C libraries; comparison
-and logical ops return `bool` outputs.
+dtype from the input unless one is supplied. `tf.zeros_like`/`ones_like` keep
+the input shape and dtype, and `tf.stop_gradient` maps to `StopGradient`.
+`tf.erf`/`erfc` preserve the input floating dtype, while `tf.is_nan`,
+`tf.is_inf`, and `tf.is_finite` return `bool` tensors. `tf.argmax`/`tf.argmin`
+validate that the axis is an integer. `tf.logical_xor` is built from `NotEqual`
+because the `LogicalXor` op is not registered in the supported C libraries;
+comparison and logical ops return `bool` outputs.
 
 ### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 

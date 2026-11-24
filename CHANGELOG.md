@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.8.0
+
+- add `Graph:input_list_length` and `Graph:output_list_length` for operations
+  with list-valued inputs or outputs;
+- add graph `tf.zeros_like`, `tf.ones_like`, `tf.identity`,
+  `tf.stop_gradient`, `tf.erf`, `tf.erfc`, `tf.is_nan`, `tf.is_inf`, and
+  `tf.is_finite`;
+- add eager `Context:zeros_like`, `ones_like`, `identity`, `stop_gradient`,
+  `erf`, `erfc`, `is_nan`, `is_inf`, and `is_finite`;
+- add `CheckpointReader:dtype`, `CheckpointReader:shape`, and
+  `CheckpointReader:info` for checkpoint variable metadata;
+- 229 dependency-free tests.
+
 ## 2.7.0
 
 - add `Graph:attributes` for returning decoded operation attribute tables;

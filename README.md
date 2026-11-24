@@ -7,18 +7,18 @@ in-process; it is not a Python wrapper and does not use a second tensor engine.
 
 ## Status
 
-`2.7.0`. Graph inference, construction, training, checkpoints, eager mode,
+`2.8.0`. Graph inference, construction, training, checkpoints, eager mode,
 trainable 2-D/3-D convolution/pooling/upsampling, attention/transformer layers,
 unrolled LSTM/GRU, tensor-backed datasets, portable deployment bundles, a
 checkpointable functional graph model, and a Sequential model. The
-dependency-free suite currently contains 224 tests. See
+dependency-free suite currently contains 229 tests. See
 [docs/stability.md](docs/stability.md) for the API policy.
 
 - load serialized `GraphDef` files into a namespace, with remapped inputs, or
   with selected outputs returned directly;
-- inspect graph operations, inputs/outputs, consumers, control edges, inferred
-  shapes, operation attributes, decoded attribute tables, and attribute names,
-  and refine tensor shapes;
+- inspect graph operations, inputs/outputs, list lengths, consumers, control
+  edges, inferred shapes, operation attributes, decoded attribute tables, and
+  attribute names, and refine tensor shapes;
 - build graphs from Lua with operations, inputs, and attributes;
 - add symbolic gradients with custom upstream seeds, variables,
   gradient-descent updates, and Adam;
@@ -30,20 +30,23 @@ dependency-free suite currently contains 224 tests. See
   `tf.train.clip_by_norm`/`clip_by_global_norm`;
 - write native TensorFlow V2 checkpoints (`SaveV2`/`RestoreV2`);
 - save/restore tensorflow-lua checkpoints and read official TensorFlow
-  checkpoints;
+  checkpoints, including variable dtype/shape metadata;
 - typed ops for reshape, transpose, expand/squeeze, split, stack, unstack,
   slice, reverse, pad, tile, where, gather, batch matrix multiplication,
   comparisons, logical operations, reductions including `reduce_logsumexp`,
   variance, and standard deviation, argmax/argmin, `add_n`,
-  `fill`/`range`/`linspace`, rounding/sign/reciprocal/rsqrt, and common
-  activations including `relu6` and `log_softmax`;
+  `fill`/`range`/`linspace`, rounding/sign/reciprocal/rsqrt,
+  `zeros_like`/`ones_like`, `identity`/`stop_gradient`, erf/erfc, numeric
+  predicates, and common activations including `relu6` and `log_softmax`;
 - experimental eager execution (`tf.eager.Context`) with explicit tensor
   release, arithmetic, cast, transpose, reshape, concatenation, gather, slice,
   pad, tile, where, reverse, split, stack/unstack, one-hot encoding, value
   clipping, comparisons, logical operations, reductions including log-sum-exp,
   variance, and standard deviation, argmax/argmin, `add_n`, batch matrix
   multiplication, `fill`/`range`/`linspace`, rounding/sign/reciprocal/rsqrt,
-  and common math/activation ops including `relu6` and `log_softmax`;
+  `zeros_like`/`ones_like`, `identity`/`stop_gradient`, erf/erfc, numeric
+  predicates, and common math/activation ops including `relu6` and
+  `log_softmax`;
 - compositional Dense, Conv1D, Conv2D, Conv2DTranspose, depthwise and
   separable Conv2D, 1-D/2-D pooling, BatchNormalization, LayerNormalization,
   Activation, Reshape, Permute, UpSampling2D, ZeroPadding2D, Embedding,
@@ -114,11 +117,11 @@ luarocks --lua-version=5.1 install tensorflow-lua
 
 # or install the release source rock directly
 luarocks --lua-version=5.1 install \
-  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.7.0/tensorflow-lua-2.7.0-1.src.rock
+  https://github.com/numeric-lua/tensorflow-lua/releases/download/v2.8.0/tensorflow-lua-2.8.0-1.src.rock
 
 # or build from a checkout
-luarocks --lua-version=5.1 make tensorflow-lua-2.7.0-1.rockspec
-./scripts/package.sh tensorflow-lua-2.7.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.8.0-1.rockspec
+./scripts/package.sh tensorflow-lua-2.8.0-1.rockspec
 ```
 
 Set `TENSORFLOW_ROOT` to the extracted libtensorflow directory or
@@ -293,7 +296,7 @@ See [docs/design.md](docs/design.md) for FFI ownership and architecture, and
 
 ## Releases
 
-[**v2.7.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.7.0)
+[**v2.8.0**](https://github.com/numeric-lua/tensorflow-lua/releases/tag/v2.8.0)
 ships the versioned rockspec and source rock. The `tensorflow-lua` package is
 also published on
 [LuaRocks](https://luarocks.org/modules/mateus-m-reis/tensorflow-lua). Release
