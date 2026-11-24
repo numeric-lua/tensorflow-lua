@@ -35,6 +35,13 @@ local function unary(graph, op_type, input, name, dtype)
   return desc:finish()
 end
 
+local function typed_unary(graph, op_type, input, name, dtype)
+  local value_dtype = input_dtype(input, dtype)
+  local output = unary(graph, op_type, input, name, value_dtype)
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.relu(graph, input, name, dtype)
   return unary(graph, "Relu", input, name, dtype)
 end
@@ -83,6 +90,30 @@ end
 
 function Ops.sqrt(graph, input, name, dtype)
   return unary(graph, "Sqrt", input, name, dtype)
+end
+
+function Ops.floor(graph, input, name, dtype)
+  return typed_unary(graph, "Floor", input, name, dtype)
+end
+
+function Ops.ceil(graph, input, name, dtype)
+  return typed_unary(graph, "Ceil", input, name, dtype)
+end
+
+function Ops.round(graph, input, name, dtype)
+  return typed_unary(graph, "Round", input, name, dtype)
+end
+
+function Ops.sign(graph, input, name, dtype)
+  return typed_unary(graph, "Sign", input, name, dtype)
+end
+
+function Ops.rsqrt(graph, input, name, dtype)
+  return typed_unary(graph, "Rsqrt", input, name, dtype)
+end
+
+function Ops.reciprocal(graph, input, name, dtype)
+  return typed_unary(graph, "Reciprocal", input, name, dtype)
 end
 
 function Ops.softmax(graph, input, name, dtype)

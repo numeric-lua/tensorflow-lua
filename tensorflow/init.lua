@@ -202,6 +202,12 @@ tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
 tf.log = Ops.log
 tf.sqrt = Ops.sqrt
+tf.floor = Ops.floor
+tf.ceil = Ops.ceil
+tf.round = Ops.round
+tf.sign = Ops.sign
+tf.rsqrt = Ops.rsqrt
+tf.reciprocal = Ops.reciprocal
 
 function tf.version()
   capi.load()
