@@ -422,6 +422,35 @@ local function clipping_problem(name)
   return graph, variable, loss
 end
 
+test("clips gradients for adaptive optimizers", function()
+  local optimizers = {
+    "rmsprop", "centered_rmsprop", "adagrad", "adadelta",
+    "proximal_adagrad", "ftrl",
+  }
+  for _, optimizer in ipairs(optimizers) do
+    local graph, variable, loss = clipping_problem("clip_" .. optimizer)
+    local name = "C_" .. optimizer
+    local updates, gradients, state = tf.train[optimizer](graph, loss,
+      { variable }, { name = name, clipvalue = 1, learning_rate = 0.01 })
+    assert_eq(#updates, 1)
+    assert_eq(#gradients, 1)
+    assert_eq(graph:operation_info(name .. "/clipvalue_1").op_type,
+      "ClipByValue")
+    local session = tf.Session.new(graph)
+    local init = { variable.initializer }
+    for _, value in ipairs(state.initializers) do init[#init + 1] = value end
+    session:run({}, {}, init)
+    session:run({}, {}, updates)
+    local value = session:run({}, { variable.read })[1]:totable()
+    assert_true(type(value) == "number", tostring(value))
+    session:close()
+  end
+  local graph, variable, loss = clipping_problem("clip_invalid")
+  assert_error(function()
+    tf.train.rmsprop(graph, loss, { variable }, { clipvalue = 0 })
+  end, "positive")
+end)
+
 test("clips gradient descent by norm and value", function()
   local graph, variable, loss = clipping_problem("clip_norm_v")
   local updates, gradients = tf.train.gradient_descent(graph, loss,
