@@ -95,6 +95,36 @@ function Graph:shape(value)
   return shape
 end
 
+function Graph:set_shape(value, shape)
+  if shape ~= nil and type(shape) ~= "table" then
+    error("graph shape must be a table or nil", 2)
+  end
+  if shape ~= nil then
+    for i, dimension in ipairs(shape) do
+      if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < -1 then
+        error("graph shape dimensions must be integers greater than or equal " ..
+          "to -1 (dimension " .. tostring(i) .. ")", 2)
+      end
+    end
+  end
+  local lib = capi.load()
+  local operation, index = resolve_operation(self, value)
+  if index >= lib.TF_OperationNumOutputs(operation) then
+    error("operation has no output at index " .. tostring(index), 2)
+  end
+  local output = ffi.new("TF_Output", { oper = operation, index = index })
+  local dims, num_dims = nil, -1
+  if shape ~= nil then
+    num_dims = #shape
+    dims = ffi.new("int64_t[?]", math.max(num_dims, 1))
+    for i = 1, num_dims do dims[i - 1] = shape[i] end
+  end
+  local status = capi.status()
+  lib.TF_GraphSetTensorShape(self:handle(), output, dims, num_dims, status)
+  capi.check(status, "graph tensor shape update")
+  return self
+end
+
 function Graph:consumers(value)
   local lib = capi.load()
   local operation, index = resolve_operation(self, value)

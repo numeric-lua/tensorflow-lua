@@ -71,6 +71,8 @@ TF_Operation* TF_GraphOperationByName(TF_Graph*, const char*);
 TF_Operation* TF_GraphNextOperation(TF_Graph*, size_t*);
 int TF_GraphGetTensorNumDims(TF_Graph*, TF_Output, TF_Status*);
 void TF_GraphGetTensorShape(TF_Graph*, TF_Output, int64_t*, int, TF_Status*);
+void TF_GraphSetTensorShape(TF_Graph*, TF_Output, const int64_t*, int,
+  TF_Status*);
 const char* TF_OperationName(TF_Operation*);
 const char* TF_OperationOpType(TF_Operation*);
 int TF_OperationNumInputs(TF_Operation*);

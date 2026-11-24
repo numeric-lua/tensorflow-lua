@@ -146,6 +146,22 @@ test("returns selected outputs from GraphDef imports", function()
   end, "no output")
 end)
 
+test("refines graph tensor shapes", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { -1, 2 }, "set_shape_x")
+  assert_eq(table.concat(graph:shape(x), ","), "-1,2")
+  graph:set_shape(x, { 3, 2 })
+  assert_eq(table.concat(graph:shape("set_shape_x:0"), ","), "3,2")
+  assert_error(function() graph:set_shape(x, { 4, 2 }) end,
+    "graph tensor shape update")
+  assert_error(function() graph:set_shape(x, { 2.5, 2 }) end, "integers")
+  assert_error(function() graph:set_shape(x, "shape") end, "table or nil")
+  assert_error(function() graph:set_shape("set_shape_x:1", { 2 }) end,
+    "no output")
+  assert_error(function() graph:set_shape("missing", { 2 }) end,
+    "no operation")
+end)
+
 test("reports consumers and control edges", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", { 2 }, "ctx")
