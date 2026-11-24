@@ -43,6 +43,42 @@ function Reader:has(name)
   return capi.load().TF_CheckpointReaderHasTensor(self:handle(), name) ~= 0
 end
 
+local function require_variable(reader, name)
+  if type(name) ~= "string" or name == "" then
+    error("checkpoint variable name must be a non-empty string", 3)
+  end
+  if not reader:has(name) then
+    error("checkpoint has no variable '" .. name .. "'", 2)
+  end
+end
+
+function Reader:dtype(name)
+  require_variable(self, name)
+  local code = capi.load().TF_CheckpointReaderGetVariableDataType(self:handle(),
+    name)
+  return (Tensor.dtype_info(tonumber(code)))
+end
+
+function Reader:shape(name)
+  require_variable(self, name)
+  local lib = capi.load()
+  local ndims = lib.TF_CheckpointReaderGetVariableNumDims(self:handle(), name)
+  if ndims < 0 then return nil end
+  if ndims == 0 then return {} end
+  local dims = ffi.new("int64_t[?]", ndims)
+  local status = capi.status()
+  lib.TF_CheckpointReaderGetVariableShape(self:handle(), name, dims, ndims,
+    status)
+  capi.check(status, "checkpoint variable shape")
+  local shape = {}
+  for i = 1, ndims do shape[i] = tonumber(dims[i - 1]) end
+  return shape
+end
+
+function Reader:info(name)
+  return { name = name, dtype = self:dtype(name), shape = self:shape(name) }
+end
+
 function Reader:tensor(name)
   local lib = capi.load()
   local status = capi.status()
