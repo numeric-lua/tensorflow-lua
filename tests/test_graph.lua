@@ -520,3 +520,25 @@ test("reads all graph operation attributes", function()
   assert_error(function() graph:attributes("attrs_missing") end,
     "no operation")
 end)
+
+test("reports operation input and output list lengths", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 2 }, "list_x")
+  tf.stack(graph, { x, x, x }, 0, "list_stack")
+  tf.split(graph, x, 2, 0, "list_split")
+  tf.unstack(graph, tf.reshape(graph, x, { 1, 2 }, "list_reshape"), 1, 0,
+    "list_unstack")
+  assert_eq(graph:input_list_length("list_stack", "values"), 3)
+  assert_eq(graph:output_list_length("list_split", "output"), 2)
+  assert_eq(graph:output_list_length("list_unstack", "output"), 1)
+  assert_error(function()
+    graph:input_list_length("list_stack", "missing")
+  end, "input list length")
+  assert_error(function()
+    graph:output_list_length("list_split", "missing")
+  end, "output list length")
+  assert_error(function() graph:input_list_length("list_stack", "") end,
+    "non-empty")
+  assert_error(function() graph:input_list_length("list_missing", "values") end,
+    "no operation")
+end)

@@ -302,6 +302,31 @@ local function attr_shape_list(lib, operation, name, metadata)
   return result
 end
 
+local function list_length(graph, value, arg_name, output, label)
+  if type(arg_name) ~= "string" or arg_name == "" then
+    error("list length argument name must be a non-empty string", 3)
+  end
+  local lib = capi.load()
+  local operation = resolve_operation(graph, value)
+  local status = capi.status()
+  local length
+  if output then
+    length = lib.TF_OperationOutputListLength(operation, arg_name, status)
+  else
+    length = lib.TF_OperationInputListLength(operation, arg_name, status)
+  end
+  capi.check(status, label)
+  return length
+end
+
+function Graph:input_list_length(value, arg_name)
+  return list_length(self, value, arg_name, false, "graph input list length")
+end
+
+function Graph:output_list_length(value, arg_name)
+  return list_length(self, value, arg_name, true, "graph output list length")
+end
+
 function Graph:attribute_names(value)
   local lib = capi.load()
   local operation = resolve_operation(self, value)
