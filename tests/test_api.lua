@@ -59,7 +59,9 @@ test("exposes the public API surface", function()
     "greater", "greater_equal", "less", "less_equal", "logical_and",
     "logical_or", "logical_xor", "logical_not", "reduce_all", "reduce_any",
     "reduce_logsumexp", "argmin", "relu6", "add_n", "batch_matmul", "fill",
-    "range", "linspace", "log_softmax", "maximum", "minimum",
+    "range", "linspace", "log_softmax", "floor", "ceil", "round", "sign",
+    "rsqrt", "reciprocal", "reduce_variance", "reduce_stddev", "maximum",
+    "minimum",
   }
   for _, name in ipairs(eager_methods) do
     assert_true(type(tf.eager.Context[name]) == "function",

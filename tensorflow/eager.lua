@@ -449,6 +449,23 @@ function Context:reduce_any(a, axes, keep_dims)
   return reduction(self, "Any", a, axes, keep_dims)
 end
 
+function Context:reduce_variance(a, axes, keep_dims)
+  if type(axes) ~= "table" then
+    error("eager reduce_variance expects an axes table", 2)
+  end
+  local mean = self:reduce_mean(a, axes, true)
+  local centered = self:sub(a, mean)
+  local squared = self:mul(centered, centered)
+  return self:reduce_mean(squared, axes, keep_dims)
+end
+
+function Context:reduce_stddev(a, axes, keep_dims)
+  if type(axes) ~= "table" then
+    error("eager reduce_stddev expects an axes table", 2)
+  end
+  return self:sqrt(self:reduce_variance(a, axes, keep_dims))
+end
+
 function Context:reduce_logsumexp(a, axes, keep_dims)
   if type(axes) ~= "table" then
     error("eager reduce_logsumexp expects an axes table", 2)
@@ -514,6 +531,30 @@ end
 
 function Context:sqrt(a)
   return unary(self, "Sqrt", a)
+end
+
+function Context:floor(a)
+  return unary(self, "Floor", a)
+end
+
+function Context:ceil(a)
+  return unary(self, "Ceil", a)
+end
+
+function Context:round(a)
+  return unary(self, "Round", a)
+end
+
+function Context:sign(a)
+  return unary(self, "Sign", a)
+end
+
+function Context:rsqrt(a)
+  return unary(self, "Rsqrt", a)
+end
+
+function Context:reciprocal(a)
+  return unary(self, "Reciprocal", a)
 end
 
 function Context:abs(a)
