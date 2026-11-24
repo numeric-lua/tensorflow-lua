@@ -130,6 +130,7 @@ end
 
 tf.nn = {
   relu = Ops.relu,
+  relu6 = Ops.relu6,
   leaky_relu = Ops.leaky_relu,
   elu = Ops.elu,
   sigmoid = Ops.sigmoid,
@@ -189,6 +190,7 @@ tf.reduce_min = Ops.reduce_min
 tf.reduce_all = Ops.reduce_all
 tf.reduce_any = Ops.reduce_any
 tf.argmax = Ops.argmax
+tf.argmin = Ops.argmin
 tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
 tf.log = Ops.log

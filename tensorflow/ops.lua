@@ -39,6 +39,12 @@ function Ops.relu(graph, input, name, dtype)
   return unary(graph, "Relu", input, name, dtype)
 end
 
+function Ops.relu6(graph, input, name, dtype)
+  local output = unary(graph, "Relu6", input, name, dtype)
+  output.dtype = dtype_name(dtype)
+  return output
+end
+
 function Ops.sigmoid(graph, input, name, dtype)
   return unary(graph, "Sigmoid", input, name, dtype)
 end
@@ -603,15 +609,30 @@ function Ops.one_hot(graph, indices, depth, options)
   return desc:finish()
 end
 
-function Ops.argmax(graph, input, axis, name, dtype, output_dtype)
-  local dimension = constant(graph, axis or 0, name .. "/dimension", "int32")
-  local desc = graph:new_operation("ArgMax", name)
+local function arg_reduction(graph, op_type, input, axis, name, dtype,
+    output_dtype)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error(op_type:lower() .. " expects an integer axis", 3)
+  end
+  local dimension = constant(graph, axis, name .. "/dimension", "int32")
+  local desc = graph:new_operation(op_type, name)
   desc:add_input(input)
   desc:add_input(dimension)
   desc:set_type("T", dtype_name(dtype))
   desc:set_type("Tidx", "int32")
   desc:set_type("output_type", output_dtype or "int64")
-  return desc:finish()
+  local output = desc:finish()
+  output.dtype = output_dtype or "int64"
+  return output
+end
+
+function Ops.argmax(graph, input, axis, name, dtype, output_dtype)
+  return arg_reduction(graph, "ArgMax", input, axis, name, dtype, output_dtype)
+end
+
+function Ops.argmin(graph, input, axis, name, dtype, output_dtype)
+  return arg_reduction(graph, "ArgMin", input, axis, name, dtype, output_dtype)
 end
 
 return Ops

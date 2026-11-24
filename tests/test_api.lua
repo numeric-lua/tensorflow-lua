@@ -8,7 +8,8 @@ test("exposes the public API surface", function()
     "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
     "cast", "concat", "clip_by_value", "reduce_mean",
     "reduce_sum", "reduce_prod", "reduce_max", "reduce_min", "reduce_all",
-    "reduce_any", "argmax", "one_hot", "exp", "equal", "not_equal", "greater",
+    "reduce_any", "argmax", "argmin", "one_hot", "exp", "equal", "not_equal",
+    "greater",
     "greater_equal", "less", "less_equal", "logical_and", "logical_or",
     "logical_xor", "logical_not", "squared_difference",
     "log", "sqrt", "save_v2", "restore_v2", "save_checkpoint",
@@ -28,7 +29,8 @@ test("exposes the public API surface", function()
     assert_true(tf.train[name] ~= nil, "missing tf.train." .. name)
   end
   local nn_functions = {
-    "relu", "leaky_relu", "elu", "sigmoid", "tanh", "softmax", "softplus",
+    "relu", "relu6", "leaky_relu", "elu", "sigmoid", "tanh", "softmax",
+    "softplus",
   }
   for _, name in ipairs(nn_functions) do
     assert_true(tf.nn[name] ~= nil, "missing tf.nn." .. name)
