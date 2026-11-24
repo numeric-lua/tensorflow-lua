@@ -95,6 +95,69 @@ function Ops.log_softmax(graph, input, name, dtype)
   return output
 end
 
+function Ops.fill(graph, dims, value, name, dtype)
+  if type(dims) ~= "table" then
+    error("fill expects a dims table", 3)
+  end
+  for i, dimension in ipairs(dims) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("fill dimensions must be non-negative integers (dimension " ..
+        tostring(i) .. ")", 3)
+    end
+  end
+  name = name or "fill"
+  local value_dtype = dtype_name(dtype)
+  local dims_op = constant(graph, dims, name .. "/dims", "int32")
+  local value_op = constant(graph, value, name .. "/value", value_dtype)
+  local desc = graph:new_operation("Fill", name)
+  desc:add_input(dims_op)
+  desc:add_input(value_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("index_type", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.range(graph, start, limit, delta, name, dtype)
+  name = name or "range"
+  local value_dtype = dtype_name(dtype)
+  local start_op = constant(graph, start, name .. "/start", value_dtype)
+  local limit_op = constant(graph, limit, name .. "/limit", value_dtype)
+  local delta_op = constant(graph, delta, name .. "/delta", value_dtype)
+  local desc = graph:new_operation("Range", name)
+  desc:add_input(start_op)
+  desc:add_input(limit_op)
+  desc:add_input(delta_op)
+  desc:set_type("Tidx", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.linspace(graph, start, stop, num, name, dtype)
+  local value_dtype = dtype_name(dtype)
+  if value_dtype ~= "float32" and value_dtype ~= "float64" then
+    error("linspace dtype must be float32 or float64", 3)
+  end
+  if type(num) ~= "number" or num % 1 ~= 0 or num < 1 then
+    error("linspace num must be a positive integer", 3)
+  end
+  name = name or "linspace"
+  local start_op = constant(graph, start, name .. "/start", value_dtype)
+  local stop_op = constant(graph, stop, name .. "/stop", value_dtype)
+  local num_op = constant(graph, num, name .. "/num", "int32")
+  local desc = graph:new_operation("LinSpace", name)
+  desc:add_input(start_op)
+  desc:add_input(stop_op)
+  desc:add_input(num_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tidx", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.batch_matmul(graph, a, b, name, dtype, options)
   options = options or {}
   name = name or "batch_matmul"
