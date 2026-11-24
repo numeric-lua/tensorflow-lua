@@ -321,6 +321,19 @@ function Graph:attribute_names(value)
   return names
 end
 
+function Graph:attributes(value)
+  local attributes = {}
+  for _, name in ipairs(self:attribute_names(value)) do
+    local info = self:attribute_info(value, name)
+    if info.kind ~= "tensor" and info.kind ~= "placeholder" and
+        info.kind ~= "func" then
+      info.value = self:attribute(value, name)
+    end
+    attributes[#attributes + 1] = info
+  end
+  return attributes
+end
+
 function Graph:attribute_info(value, name)
   local metadata, kind, operation = attribute_metadata(self, value, name)
   return {

@@ -489,3 +489,34 @@ test("lists graph operation attribute names", function()
   assert_error(function() graph:attribute_names("names_missing") end,
     "no operation")
 end)
+
+test("reads all graph operation attributes", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 2 }, "attrs_x")
+  tf.nn.leaky_relu(graph, x, "attrs_act", "float32", 0.25)
+  tf.constant(graph, { 1, 2 }, "attrs_const", "int32")
+
+  local function find(attributes, name)
+    for _, attribute in ipairs(attributes) do
+      if attribute.name == name then return attribute end
+    end
+  end
+
+  local placeholder = graph:attributes(x)
+  local dtype = find(placeholder, "dtype")
+  assert_eq(dtype.kind, "type")
+  assert_eq(dtype.value, "float32")
+  local shape = find(placeholder, "shape")
+  assert_eq(shape.kind, "shape")
+  assert_eq(table.concat(shape.value, ","), "2")
+
+  local activation = find(graph:attributes("attrs_act"), "alpha")
+  assert_eq(activation.kind, "float")
+  assert_eq(activation.value, 0.25)
+
+  local constant = find(graph:attributes("attrs_const"), "value")
+  assert_eq(constant.kind, "tensor")
+  assert_eq(constant.value, nil)
+  assert_error(function() graph:attributes("attrs_missing") end,
+    "no operation")
+end)
