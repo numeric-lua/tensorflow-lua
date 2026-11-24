@@ -108,6 +108,32 @@ function Ops.sqrt(graph, input, name, dtype)
   return unary(graph, "Sqrt", input, name, dtype)
 end
 
+function Ops.erf(graph, input, name, dtype)
+  return typed_unary(graph, "Erf", input, name, dtype)
+end
+
+function Ops.erfc(graph, input, name, dtype)
+  return typed_unary(graph, "Erfc", input, name, dtype)
+end
+
+local function bool_unary(graph, op_type, input, name)
+  local output = unary(graph, op_type, input, name, input_dtype(input, nil))
+  output.dtype = "bool"
+  return output
+end
+
+function Ops.is_nan(graph, input, name)
+  return bool_unary(graph, "IsNan", input, name)
+end
+
+function Ops.is_inf(graph, input, name)
+  return bool_unary(graph, "IsInf", input, name)
+end
+
+function Ops.is_finite(graph, input, name)
+  return bool_unary(graph, "IsFinite", input, name)
+end
+
 function Ops.floor(graph, input, name, dtype)
   return typed_unary(graph, "Floor", input, name, dtype)
 end

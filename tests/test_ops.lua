@@ -266,6 +266,35 @@ test("runs rounding, sign, reciprocal, and rsqrt ops", function()
   session:close()
 end)
 
+test("runs error functions and predicates", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 5 }, "pred_x")
+  local erf = tf.erf(graph, x, "pred_erf")
+  local erfc = tf.erfc(graph, x, "pred_erfc")
+  local is_nan = tf.is_nan(graph, x, "pred_nan")
+  local is_inf = tf.is_inf(graph, x, "pred_inf")
+  local is_finite = tf.is_finite(graph, x, "pred_finite")
+  local nan, inf = 0 / 0, math.huge
+  assert_true(nan ~= nan)
+  local session = tf.Session.new(graph)
+  local result = session:run({ [x] = { 0, 1, nan, inf, -inf } },
+    { erf, erfc, is_nan, is_inf, is_finite })
+  assert_eq(result[1]:totable()[1], 0)
+  assert_true(math.abs(result[1]:totable()[2] - 0.8427008) < 1e-5)
+  assert_eq(result[2]:totable()[1], 1)
+  assert_true(math.abs(result[2]:totable()[2] - 0.1572992) < 1e-5)
+  local function bits(values)
+    local text = {}
+    for i, value in ipairs(values) do text[i] = tostring(value) end
+    return table.concat(text, ",")
+  end
+  assert_eq(result[3]:dtype(), "bool")
+  assert_eq(bits(result[3]:totable()), "false,false,true,false,false")
+  assert_eq(bits(result[4]:totable()), "false,false,false,true,true")
+  assert_eq(bits(result[5]:totable()), "true,true,false,false,false")
+  session:close()
+end)
+
 test("builds zero/one tensors and stops gradients", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", { 2, 2 }, "like_x")
