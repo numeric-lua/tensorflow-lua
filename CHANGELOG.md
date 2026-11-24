@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.7.0
+
+- add `Graph:attributes` for returning decoded operation attribute tables;
+- add graph `tf.floor`, `tf.ceil`, `tf.round`, `tf.sign`, `tf.rsqrt`,
+  `tf.reciprocal`, `tf.reduce_variance`, and `tf.reduce_stddev`;
+- add eager `Context:floor`, `ceil`, `round`, `sign`, `rsqrt`, `reciprocal`,
+  `reduce_variance`, and `reduce_stddev`;
+- add `clipvalue`/`clip_value` gradient clipping to RMSProp,
+  CenteredRMSProp, Adagrad, Adadelta, ProximalAdagrad, and Ftrl;
+- 224 dependency-free tests.
+
 ## 2.6.0
 
 - add `Graph:set_shape` for merging refined tensor dimensions into a graph;

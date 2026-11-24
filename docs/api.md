@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.6.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.7.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -137,6 +137,19 @@ operations raise a Lua error.
 local names = graph:attribute_names("logits")  -- e.g. { "T", "shape" }
 ```
 
+### `graph:attributes(output)`
+
+Returns a list of decoded attribute records in attribute-name order. Each record
+contains the fields from `attribute_info` plus `value` for string, int, float,
+bool, type, and shape attributes. Tensor, placeholder, and function attributes
+are returned without `value`.
+
+```lua
+for _, attribute in ipairs(graph:attributes("logits")) do
+  print(attribute.name, attribute.kind, attribute.value)
+end
+```
+
 ### `graph:consumers(output)`
 
 Returns the operations that consume an output as a list of
@@ -239,6 +252,8 @@ Adds `ApplyGradientDescent` targets for the variables and returns
 per training step. Options: `clipnorm` limits the global gradient norm,
 `clipvalue` limits each gradient element, and `gradients` supplies precomputed
 gradients instead of calling `tf.gradients`. Clipping bounds must be positive.
+Every optimizer documented here accepts the same `clipnorm`/`clip_norm` and
+`clipvalue`/`clip_value` options.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -878,10 +893,11 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
-`reduce_all`/`reduce_any`/`reduce_logsumexp`, `argmax`/`argmin`, `add_n`,
-`batch_matmul`, `fill`, `range`, `linspace`, `relu`, `relu6`, `leaky_relu`,
-`elu`, `sigmoid`, `tanh`, `softmax`, `log_softmax`, `softplus`, `exp`, `log`,
-`sqrt`, `abs`, `square`, and `reshape`.
+`reduce_all`/`reduce_any`/`reduce_logsumexp`/`reduce_variance`/
+`reduce_stddev`, `argmax`/`argmin`, `add_n`, `batch_matmul`, `fill`, `range`,
+`linspace`, `relu`, `relu6`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`,
+`log_softmax`, `softplus`, `exp`, `log`, `sqrt`, `floor`, `ceil`, `round`,
+`sign`, `rsqrt`, `reciprocal`, `abs`, `square`, and `reshape`.
 Reduction methods accept an integer axes table and an optional `keep_dims`
 boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
 positive split count or a size table and returns an output list. `stack`,
@@ -912,7 +928,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.tanh(graph, x, name[, dtype])` | Tanh |
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
 | `tf.nn.log_softmax(graph, x, name[, dtype])` | LogSoftmax |
-| `tf.exp`, `tf.log`, `tf.sqrt` | elementwise unary ops |
+| `tf.exp`, `tf.log`, `tf.sqrt`, `tf.floor`, `tf.ceil`, `tf.round`, `tf.sign`, `tf.rsqrt`, `tf.reciprocal` | elementwise unary ops |
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
 | `tf.transpose(graph, x, perm[, name[, dtype]])` | Transpose |
 | `tf.expand_dims(graph, x, axis[, name[, dtype]])` | ExpandDims |
@@ -922,6 +938,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.reduce_prod(graph, x, axes[, name[, dtype[, keep_dims]]])` | Prod |
 | `tf.reduce_all`, `tf.reduce_any` | All/Any boolean reductions |
+| `tf.reduce_variance(graph, x, axes[, name[, dtype[, keep_dims]]])` | composed variance |
+| `tf.reduce_stddev(graph, x, axes[, name[, dtype[, keep_dims]]])` | composed standard deviation |
 | `tf.equal`, `tf.not_equal`, `tf.greater`, `tf.greater_equal`, `tf.less`, `tf.less_equal` | elementwise comparisons returning bool |
 | `tf.logical_and`, `tf.logical_or`, `tf.logical_xor`, `tf.logical_not` | boolean logic |
 | `tf.squared_difference(graph, a, b[, name[, dtype]])` | SquaredDifference |
@@ -961,10 +979,12 @@ dimensions; `tf.range` follows TensorFlow's scalar start/limit/delta rules;
 `tf.linspace` requires a positive integer `num` and a float32/float64 dtype.
 `tf.reduce_logsumexp` subtracts the per-axis maximum before exponentiating, so
 it stays finite for large inputs, and is composed of differentiable ops rather
-than a fused kernel. `tf.argmax`/`tf.argmin` validate that the axis is an
-integer. `tf.logical_xor` is built from `NotEqual` because the `LogicalXor` op
-is not registered in the supported C libraries; comparison and logical ops
-return `bool` outputs.
+than a fused kernel. `tf.reduce_variance` and `tf.reduce_stddev` are composed
+from `Mean`/`SquaredDifference`/`Sqrt`, support `keep_dims`, and infer their
+dtype from the input unless one is supplied. `tf.argmax`/`tf.argmin` validate
+that the axis is an integer. `tf.logical_xor` is built from `NotEqual` because
+the `LogicalXor` op is not registered in the supported C libraries; comparison
+and logical ops return `bool` outputs.
 
 ### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 

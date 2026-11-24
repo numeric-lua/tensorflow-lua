@@ -1,39 +1,38 @@
-# tensorflow-lua 2.6.0
+# tensorflow-lua 2.7.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- **Tensor shape refinement.** `graph:set_shape(output, shape)` merges known
-  dimensions into an operation's inferred shape, using `-1` for unknown
-  dimensions and reporting incompatible shapes through the normal
-  `TF_Status` error path.
-- **Batched linear algebra.** `tf.batch_matmul` and
-  `Context:batch_matmul` wrap `BatchMatMulV2` with `adj_x`/`adj_y` (and
-  `transpose_a`/`transpose_b`) options for rank-2 and batched rank-3+ inputs.
-- **Log-softmax.** `tf.nn.log_softmax` and `Context:log_softmax` add the
-  numerically stable log-softmax activation and preserve float64 inputs.
-- **Tensor builders.** `tf.fill`, `tf.range`, and `tf.linspace` join the graph
-  surface, with eager equivalents on `tf.eager.Context`.
-- **Adam Nesterov momentum.** `tf.train.adam` accepts
-  `nesterov = true`/`use_nesterov = true`; `clipvalue` is now validated
-  consistently in Adam and its AdamW wrapper.
+- **Decoded attribute tables.** `graph:attributes(output)` combines
+  `attribute_names`, `attribute_info`, and `attribute` into one table per
+  attribute, skipping only the undecoded tensor/placeholder/function kinds.
+- **Rounding and reciprocal math.** `tf.floor`, `tf.ceil`, `tf.round`,
+  `tf.sign`, `tf.rsqrt`, and `tf.reciprocal` join the graph surface, with eager
+  equivalents on `tf.eager.Context`.
+- **Variance and standard deviation.** `tf.reduce_variance` and
+  `tf.reduce_stddev` support integer axis tables and `keep_dims`; the eager
+  context exposes the same reductions.
+- **Consistent gradient clipping.** `clipvalue`/`clip_value` now applies to
+  RMSProp, CenteredRMSProp, Adagrad, Adadelta, ProximalAdagrad, and Ftrl,
+  matching Adam, Adamax, momentum, and gradient descent.
 
 ## Surface
 
-The 1.0 API policy still applies; 2.6 is a minor release with additions only.
+The 1.0 API policy still applies; 2.7 is a minor release with additions only.
 The binding includes 2-D/3-D convolution/pooling/upsampling,
 attention/transformer layers, unrolled LSTM/GRU, tensor datasets, gradient
 accumulation, AUC/macro metrics, functional and Sequential models, native LR
 schedules, and portable deployment bundles.
 
-`tf.batch_matmul` requires TensorFlow's `BatchMatMulV2` kernel. `tf.fill`,
-`tf.range`, and `tf.linspace` are built from the corresponding portable
-TensorFlow ops and therefore follow TensorFlow's dtype and shape rules.
+`tf.reduce_variance` and `tf.reduce_stddev` are composed from portable
+TensorFlow ops (`Mean`/`SquaredDifference`/`Sqrt`) and are differentiable
+through the normal graph gradient path. The adaptive optimizers clip the
+gradient graph outputs before applying their update ops.
 
 ## Verification
 
-- 219 dependency-free tests;
+- 224 dependency-free tests;
 - full suite run with the checkout's libtensorflow 2.18.0;
 - CI matrix remains Ubuntu 22.04/24.04 with libtensorflow 2.16.2/2.18.0/2.18.1.
 
@@ -48,5 +47,5 @@ because Google stopped publishing Linux x86-64 C archives after 2.18.
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-2.6.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.7.0-1.rockspec
 ```
