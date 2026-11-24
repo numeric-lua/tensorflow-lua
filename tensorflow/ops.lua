@@ -68,6 +68,22 @@ function Ops.leaky_relu(graph, input, name, dtype, alpha)
   return desc:finish()
 end
 
+function Ops.zeros_like(graph, input, name, dtype)
+  return typed_unary(graph, "ZerosLike", input, name, dtype)
+end
+
+function Ops.ones_like(graph, input, name, dtype)
+  return typed_unary(graph, "OnesLike", input, name, dtype)
+end
+
+function Ops.identity(graph, input, name, dtype)
+  return typed_unary(graph, "Identity", input, name, dtype)
+end
+
+function Ops.stop_gradient(graph, input, name, dtype)
+  return typed_unary(graph, "StopGradient", input, name, dtype)
+end
+
 function Ops.tanh(graph, input, name, dtype)
   return unary(graph, "Tanh", input, name, dtype)
 end
