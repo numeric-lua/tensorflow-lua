@@ -40,6 +40,44 @@ test("runs ArgMin and Relu6 graph ops", function()
   session:close()
 end)
 
+test("batches matrix multiplication and log-softmax", function()
+  local graph = tf.Graph.new()
+  local a = tf.placeholder(graph, "float32", { 2, 2, 3 }, "bmm_a")
+  local b = tf.placeholder(graph, "float32", { 2, 3, 2 }, "bmm_b")
+  local product = tf.batch_matmul(graph, a, b, "bmm")
+  local transposed_a = tf.placeholder(graph, "float32", { 3, 2 }, "bmm_ta")
+  local transposed = tf.placeholder(graph, "float32", { 3, 2 }, "bmm_tb")
+  local adjoint = tf.batch_matmul(graph, transposed_a, transposed, "bmm_adj",
+    nil, { adj_x = true })
+  local logits = tf.placeholder(graph, "float32", { 3 }, "log_softmax_x")
+  local log_softmax = tf.nn.log_softmax(graph, logits, "log_softmax")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [a] = { { { 1, 2, 3 }, { 4, 5, 6 } }, { { 1, 0, 0 }, { 0, 1, 0 } } },
+    [b] = { { { 1, 0 }, { 0, 1 }, { 1, 1 } }, { { 1, 2 }, { 3, 4 }, { 5, 6 } } },
+    [transposed_a] = { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+    [transposed] = { { 1, 0 }, { 0, 1 }, { 1, 1 } },
+    [logits] = { 0, 1, 2 },
+  }, { product, adjoint, log_softmax })
+  assert_eq(table.concat(result[1]:shape(), ","), "2,2,2")
+  assert_eq(result[1]:totable()[1][1][1], 4)
+  assert_eq(result[1]:totable()[1][2][2], 11)
+  assert_eq(result[1]:totable()[2][1][2], 2)
+  assert_eq(table.concat(result[2]:shape(), ","), "2,2")
+  assert_eq(result[2]:totable()[1][1], 6)
+  assert_eq(result[2]:totable()[2][2], 10)
+  assert_eq(graph:attribute("bmm", "adj_x"), false)
+  assert_eq(graph:attribute("bmm_adj", "adj_x"), true)
+  local log_values = result[3]:totable()
+  assert_true(math.abs(log_values[2] - log_values[1] - 1) < 1e-6)
+  assert_true(math.abs(math.exp(log_values[1]) + math.exp(log_values[2]) +
+    math.exp(log_values[3]) - 1) < 1e-6)
+  assert_error(function()
+    tf.batch_matmul(graph, a, b, "bmm_bad_adj", nil, { adj_x = "yes" })
+  end, "boolean")
+  session:close()
+end)
+
 test("adds tensor lists and computes stable log-sum-exp", function()
   local graph = tf.Graph.new()
   local a = tf.placeholder(graph, "float32", { 2 }, "lse_a")

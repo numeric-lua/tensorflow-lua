@@ -89,6 +89,37 @@ function Ops.softmax(graph, input, name, dtype)
   return unary(graph, "Softmax", input, name, dtype)
 end
 
+function Ops.log_softmax(graph, input, name, dtype)
+  local output = unary(graph, "LogSoftmax", input, name, dtype)
+  output.dtype = dtype_name(dtype)
+  return output
+end
+
+function Ops.batch_matmul(graph, a, b, name, dtype, options)
+  options = options or {}
+  name = name or "batch_matmul"
+  local adj_x = options.adj_x
+  if adj_x == nil then adj_x = options.transpose_a end
+  local adj_y = options.adj_y
+  if adj_y == nil then adj_y = options.transpose_b end
+  if adj_x ~= nil and type(adj_x) ~= "boolean" then
+    error("batch_matmul adj_x must be a boolean", 3)
+  end
+  if adj_y ~= nil and type(adj_y) ~= "boolean" then
+    error("batch_matmul adj_y must be a boolean", 3)
+  end
+  local value_dtype = input_dtype(a, dtype)
+  local desc = graph:new_operation("BatchMatMulV2", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("adj_x", adj_x == true)
+  desc:set_bool("adj_y", adj_y == true)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.shape(graph, input, name, dtype)
   local desc = graph:new_operation("Shape", name)
   desc:add_input(input)

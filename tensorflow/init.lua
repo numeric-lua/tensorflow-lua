@@ -136,6 +136,7 @@ tf.nn = {
   sigmoid = Ops.sigmoid,
   tanh = Ops.tanh,
   softmax = Ops.softmax,
+  log_softmax = Ops.log_softmax,
   softplus = Ops.softplus,
 }
 
@@ -183,6 +184,7 @@ tf.div = Ops.div
 tf.concat = Ops.concat
 tf.abs = Ops.abs
 tf.add_n = Ops.add_n
+tf.batch_matmul = Ops.batch_matmul
 tf.reduce_mean = Ops.reduce_mean
 tf.reduce_sum = Ops.reduce_sum
 tf.reduce_logsumexp = Ops.reduce_logsumexp

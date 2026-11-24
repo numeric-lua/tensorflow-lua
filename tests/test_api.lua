@@ -6,7 +6,7 @@ test("exposes the public API surface", function()
     "Sequential", "tensor", "complex", "placeholder", "constant", "variable",
     "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
     "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
-    "cast", "concat", "clip_by_value", "add_n", "reduce_mean",
+    "cast", "concat", "clip_by_value", "add_n", "batch_matmul", "reduce_mean",
     "reduce_sum", "reduce_logsumexp", "reduce_prod", "reduce_max",
     "reduce_min", "reduce_all",
     "reduce_any", "argmax", "argmin", "one_hot", "exp", "equal", "not_equal",
@@ -31,7 +31,7 @@ test("exposes the public API surface", function()
   end
   local nn_functions = {
     "relu", "relu6", "leaky_relu", "elu", "sigmoid", "tanh", "softmax",
-    "softplus",
+    "log_softmax", "softplus",
   }
   for _, name in ipairs(nn_functions) do
     assert_true(tf.nn[name] ~= nil, "missing tf.nn." .. name)
