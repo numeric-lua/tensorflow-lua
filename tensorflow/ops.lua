@@ -90,8 +90,9 @@ function Ops.softmax(graph, input, name, dtype)
 end
 
 function Ops.log_softmax(graph, input, name, dtype)
-  local output = unary(graph, "LogSoftmax", input, name, dtype)
-  output.dtype = dtype_name(dtype)
+  local value_dtype = input_dtype(input, dtype)
+  local output = unary(graph, "LogSoftmax", input, name, value_dtype)
+  output.dtype = value_dtype
   return output
 end
 
