@@ -563,6 +563,56 @@ local function bool_reduction(graph, op_type, input, axes, name, dtype,
   return output
 end
 
+local function add_output(graph, op_type, a, b, name, dtype)
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
+function Ops.add_n(graph, inputs, name, dtype)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("add_n expects a non-empty input list", 3)
+  end
+  name = name or "add_n"
+  local value_dtype = input_dtype(inputs[1], dtype)
+  local desc = graph:new_operation("AddN", name)
+  desc:add_inputs(inputs)
+  desc:set_type("T", value_dtype)
+  desc:set_int("N", #inputs)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.reduce_logsumexp(graph, input, axes, name, dtype, keep_dims)
+  axes = axes or {}
+  if type(axes) ~= "table" then
+    error("reduce_logsumexp expects an axes table", 3)
+  end
+  for _, axis in ipairs(axes) do
+    if type(axis) ~= "number" or axis % 1 ~= 0 then
+      error("reduce_logsumexp axes must be integers", 3)
+    end
+  end
+  name = name or "reduce_logsumexp"
+  local value_dtype = input_dtype(input, dtype)
+  local maximum = Ops.reduce_max(graph, input, axes, name .. "/max",
+    value_dtype, true)
+  local centered = add_output(graph, "Sub", input, maximum,
+    name .. "/centered", value_dtype)
+  local exponential = Ops.exp(graph, centered, name .. "/exp")
+  local total = Ops.reduce_sum(graph, exponential, axes, name .. "/sum",
+    value_dtype, keep_dims)
+  local logarithm = Ops.log(graph, total, name .. "/log")
+  local reduced_max = keep_dims and maximum or Ops.reduce_max(graph, input,
+    axes, name .. "/reduced_max", value_dtype, false)
+  return add_output(graph, "AddV2", logarithm, reduced_max, name, value_dtype)
+end
+
 function Ops.reduce_mean(graph, input, axes, name, dtype, keep_dims)
   return reduction(graph, "Mean", input, axes, name, dtype, keep_dims)
 end

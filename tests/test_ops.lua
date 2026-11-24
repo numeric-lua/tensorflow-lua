@@ -40,6 +40,33 @@ test("runs ArgMin and Relu6 graph ops", function()
   session:close()
 end)
 
+test("adds tensor lists and computes stable log-sum-exp", function()
+  local graph = tf.Graph.new()
+  local a = tf.placeholder(graph, "float32", { 2 }, "lse_a")
+  local b = tf.placeholder(graph, "float32", { 2 }, "lse_b")
+  local summed = tf.add_n(graph, { a, b }, "lse_add")
+  local matrix = tf.placeholder(graph, "float32", { 2, 2 }, "lse_matrix")
+  local lse = tf.reduce_logsumexp(graph, matrix, { 1 }, "lse")
+  local kept = tf.reduce_logsumexp(graph, matrix, { 1 }, "lse_kept", nil, true)
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [a] = { 1, 2 },
+    [b] = { 3, 4 },
+    [matrix] = { { 0, 1 }, { 1000, 1000 } },
+  }, { summed, lse, kept })
+  assert_eq(table.concat(result[1]:totable(), ","), "4,6")
+  assert_true(math.abs(result[2]:totable()[1] - math.log(1 + math.exp(1))) <
+    1e-5)
+  assert_true(math.abs(result[2]:totable()[2] - (1000 + math.log(2))) < 1e-4)
+  assert_eq(table.concat(result[3]:shape(), ","), "2,1")
+  assert_error(function() tf.add_n(graph, {}, "lse_empty") end,
+    "non-empty")
+  assert_error(function()
+    tf.reduce_logsumexp(graph, matrix, { 0.5 }, "lse_bad_axis")
+  end, "integers")
+  session:close()
+end)
+
 test("typed ops reject invalid shapes", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", nil, "bx")
