@@ -777,6 +777,15 @@ function Train.momentum(graph, loss, variables, options)
   local learning_rate = options.learning_rate or options.lr or 0.01
   local momentum_value = options.momentum or 0.9
   local name = options.name or "Momentum"
+  local nesterov = options.nesterov
+  if nesterov == nil then nesterov = options.use_nesterov end
+  if nesterov ~= nil and type(nesterov) ~= "boolean" then
+    error("momentum nesterov must be a boolean", 3)
+  end
+  local clipvalue = options.clipvalue or options.clip_value
+  if clipvalue ~= nil and (type(clipvalue) ~= "number" or clipvalue <= 0) then
+    error("clipvalue must be a positive number", 3)
+  end
   if type(variables) ~= "table" or #variables == 0 then
     error("momentum expects a non-empty variable list", 3)
   end
@@ -784,6 +793,13 @@ function Train.momentum(graph, loss, variables, options)
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
   local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
+  if clipvalue ~= nil then
+    for i, gradient in ipairs(gradients) do
+      gradients[i] = require("tensorflow").clip_by_value(graph, gradient,
+        -clipvalue, clipvalue, name .. "/clip_" .. i,
+        variables[i].dtype or dtype)
+    end
+  end
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
   local targets, initializers, state_variables = {}, {}, {}
@@ -802,7 +818,7 @@ function Train.momentum(graph, loss, variables, options)
     desc:add_input(mom)
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
-    desc:set_bool("use_nesterov", false)
+    desc:set_bool("use_nesterov", nesterov == true)
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
