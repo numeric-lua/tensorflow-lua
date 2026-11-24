@@ -9,7 +9,7 @@ test("exposes the public API surface", function()
     "cast", "concat", "clip_by_value", "add_n", "batch_matmul", "fill", "range",
     "linspace", "reduce_mean",
     "reduce_sum", "reduce_logsumexp", "reduce_prod", "reduce_max",
-    "reduce_min", "reduce_all",
+    "reduce_min", "reduce_variance", "reduce_stddev", "reduce_all",
     "reduce_any", "argmax", "argmin", "one_hot", "exp", "equal", "not_equal",
     "greater",
     "greater_equal", "less", "less_equal", "logical_and", "logical_or",

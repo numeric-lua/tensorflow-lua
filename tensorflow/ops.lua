@@ -767,6 +767,44 @@ function Ops.reduce_any(graph, input, axes, name, dtype, keep_dims)
   return bool_reduction(graph, "Any", input, axes, name, dtype, keep_dims)
 end
 
+local function variance_axes(axes, label)
+  axes = axes or {}
+  if type(axes) ~= "table" then
+    error(label .. " expects an axes table", 3)
+  end
+  for _, axis in ipairs(axes) do
+    if type(axis) ~= "number" or axis % 1 ~= 0 then
+      error(label .. " axes must be integers", 3)
+    end
+  end
+  return axes
+end
+
+function Ops.reduce_variance(graph, input, axes, name, dtype, keep_dims)
+  axes = variance_axes(axes, "reduce_variance")
+  name = name or "reduce_variance"
+  local value_dtype = input_dtype(input, dtype)
+  local mean = Ops.reduce_mean(graph, input, axes, name .. "/mean",
+    value_dtype, true)
+  local squared = Ops.squared_difference(graph, input, mean,
+    name .. "/squared", value_dtype)
+  local variance = Ops.reduce_mean(graph, squared, axes,
+    name .. "/variance", value_dtype, keep_dims)
+  variance.dtype = value_dtype
+  return variance
+end
+
+function Ops.reduce_stddev(graph, input, axes, name, dtype, keep_dims)
+  axes = variance_axes(axes, "reduce_stddev")
+  name = name or "reduce_stddev"
+  local value_dtype = input_dtype(input, dtype)
+  local variance = Ops.reduce_variance(graph, input, axes, name .. "/variance",
+    value_dtype, keep_dims)
+  local output = Ops.sqrt(graph, variance, name .. "/sqrt", value_dtype)
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")
