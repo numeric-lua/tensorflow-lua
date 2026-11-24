@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.5.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.6.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -91,6 +91,17 @@ Returns the graph's operation names in TensorFlow's iteration order.
 Returns the inferred shape of an output (a graph output table, `"op"`, or
 `"op:index"`), or `nil` when the rank is unknown. Unknown dimensions are `-1`.
 Invalid output indices raise a Lua error before reaching TensorFlow.
+
+### `graph:set_shape(output, shape)`
+
+Merges a refined shape into an operation output and returns the graph. `shape`
+is a table of integer dimensions, where `-1` keeps a dimension unknown, or
+`nil` for unknown rank. TensorFlow rejects incompatible merges through
+`TF_Status`, so an existing `{ -1, 2 }` can become `{ 3, 2 }` but not `{ 4, 2 }`.
+
+```lua
+graph:set_shape("images:0", { 8, 224, 224, 3 })
+```
 
 ### `graph:operation_info(output)`
 
@@ -243,9 +254,10 @@ exceeds `clip_norm`. The returned norm is the pre-clipping norm.
 ### `tf.train.adam(graph, loss, variables[, opts])`
 
 Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
-(default `0.001`), `beta1` (0.9), `beta2` (0.999), `epsilon` (1e-8), `name`.
-Options also include `weight_decay` and `clipvalue` (gradient-value clamping).
-Returns `targets, gradients, state`.
+(default `0.001`), `beta1` (0.9), `beta2` (0.999), `epsilon` (1e-8), `name`,
+`nesterov` (or `use_nesterov`), `weight_decay`, and `clipvalue`/`clip_value`
+(gradient-value clamping, must be positive). Returns
+`targets, gradients, state`.
 Initialize each variable and every entry in `state.initializers` before
 training.
 
@@ -867,8 +879,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
 `reduce_all`/`reduce_any`/`reduce_logsumexp`, `argmax`/`argmin`, `add_n`,
-`relu`, `relu6`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`,
-`softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and `reshape`.
+`batch_matmul`, `fill`, `range`, `linspace`, `relu`, `relu6`, `leaky_relu`,
+`elu`, `sigmoid`, `tanh`, `softmax`, `log_softmax`, `softplus`, `exp`, `log`,
+`sqrt`, `abs`, `square`, and `reshape`.
 Reduction methods accept an integer axes table and an optional `keep_dims`
 boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
 positive split count or a size table and returns an output list. `stack`,
@@ -898,6 +911,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.sigmoid(graph, x, name[, dtype])` | Sigmoid |
 | `tf.nn.tanh(graph, x, name[, dtype])` | Tanh |
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
+| `tf.nn.log_softmax(graph, x, name[, dtype])` | LogSoftmax |
 | `tf.exp`, `tf.log`, `tf.sqrt` | elementwise unary ops |
 | `tf.reshape(graph, x, shape, name[, dtype])` | Reshape |
 | `tf.transpose(graph, x, perm[, name[, dtype]])` | Transpose |
@@ -912,6 +926,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.logical_and`, `tf.logical_or`, `tf.logical_xor`, `tf.logical_not` | boolean logic |
 | `tf.squared_difference(graph, a, b[, name[, dtype]])` | SquaredDifference |
 | `tf.add_n(graph, inputs[, name[, dtype]])` | AddN |
+| `tf.batch_matmul(graph, a, b[, name[, dtype[, opts]]])` | BatchMatMulV2 |
+| `tf.fill(graph, dims, value[, name[, dtype]])` | Fill |
+| `tf.range(graph, start, limit, delta[, name[, dtype]])` | Range |
+| `tf.linspace(graph, start, stop, num[, name[, dtype]])` | LinSpace |
 | `tf.reduce_logsumexp(graph, x, axes[, name[, dtype[, keep_dims]]])` | stable composed log-sum-exp |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.argmin(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMin |
@@ -937,6 +955,10 @@ padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
 integer axis or a table of axes. `tf.add_n` sums a non-empty output list.
+`tf.batch_matmul` accepts `opts.adj_x`/`opts.adj_y` (aliases
+`transpose_a`/`transpose_b`). `tf.fill` requires non-negative integer
+dimensions; `tf.range` follows TensorFlow's scalar start/limit/delta rules;
+`tf.linspace` requires a positive integer `num` and a float32/float64 dtype.
 `tf.reduce_logsumexp` subtracts the per-axis maximum before exponentiating, so
 it stays finite for large inputs, and is composed of differentiable ops rather
 than a fused kernel. `tf.argmax`/`tf.argmin` validate that the axis is an

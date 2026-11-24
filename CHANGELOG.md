@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.6.0
+
+- add `Graph:set_shape` for merging refined tensor dimensions into a graph;
+- add graph `tf.batch_matmul` with `adj_x`/`adj_y` support, `tf.nn.log_softmax`,
+  and `tf.fill`/`tf.range`/`tf.linspace`;
+- add eager `Context:batch_matmul`, `log_softmax`, `fill`, `range`, and
+  `linspace`;
+- add Adam Nesterov momentum (`nesterov = true`) and validate `clipvalue`;
+- 219 dependency-free tests.
+
 ## 2.5.0
 
 - add `Graph:attribute_names` for enumerating an operation's attribute names;

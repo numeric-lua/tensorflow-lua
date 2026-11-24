@@ -1,38 +1,39 @@
-# tensorflow-lua 2.5.0
+# tensorflow-lua 2.6.0
 
 Native LuaJIT bindings for the TensorFlow C API.
 
 ## Highlights
 
-- **Attribute-name introspection.** `graph:attribute_names(output)` enumerates
-  the attributes attached to any operation, complementing the existing
-  `attribute_info`/`attribute` value readers.
-- **ArgMin and Relu6.** Graph and eager surfaces add `argmin` and `relu6`,
-  with matching axis validation for `argmax`/`argmin`.
-- **List addition.** `tf.add_n` and `Context:add_n` sum non-empty graph-output
-  or eager-tensor lists.
-- **Stable log-sum-exp.** `tf.reduce_logsumexp` and
-  `Context:reduce_logsumexp` use a max-shifted implementation, support
-  `keep_dims`, and avoid overflow for large inputs.
-- **Nesterov momentum and clipping.** `tf.train.momentum` accepts
-  `nesterov = true`/`use_nesterov = true` and `clipvalue`/`clip_value` for
-  per-gradient value clipping, in addition to the existing `clipnorm` path.
+- **Tensor shape refinement.** `graph:set_shape(output, shape)` merges known
+  dimensions into an operation's inferred shape, using `-1` for unknown
+  dimensions and reporting incompatible shapes through the normal
+  `TF_Status` error path.
+- **Batched linear algebra.** `tf.batch_matmul` and
+  `Context:batch_matmul` wrap `BatchMatMulV2` with `adj_x`/`adj_y` (and
+  `transpose_a`/`transpose_b`) options for rank-2 and batched rank-3+ inputs.
+- **Log-softmax.** `tf.nn.log_softmax` and `Context:log_softmax` add the
+  numerically stable log-softmax activation and preserve float64 inputs.
+- **Tensor builders.** `tf.fill`, `tf.range`, and `tf.linspace` join the graph
+  surface, with eager equivalents on `tf.eager.Context`.
+- **Adam Nesterov momentum.** `tf.train.adam` accepts
+  `nesterov = true`/`use_nesterov = true`; `clipvalue` is now validated
+  consistently in Adam and its AdamW wrapper.
 
 ## Surface
 
-The 1.0 API policy still applies; 2.5 is a minor release with additions only.
+The 1.0 API policy still applies; 2.6 is a minor release with additions only.
 The binding includes 2-D/3-D convolution/pooling/upsampling,
 attention/transformer layers, unrolled LSTM/GRU, tensor datasets, gradient
 accumulation, AUC/macro metrics, functional and Sequential models, native LR
 schedules, and portable deployment bundles.
 
-`tf.reduce_logsumexp` is composed from portable TensorFlow ops
-(`Max`/`Sub`/`Exp`/`Sum`/`Log`/`AddV2`) and is therefore differentiable
-through the normal graph gradient path. It is not a single fused kernel.
+`tf.batch_matmul` requires TensorFlow's `BatchMatMulV2` kernel. `tf.fill`,
+`tf.range`, and `tf.linspace` are built from the corresponding portable
+TensorFlow ops and therefore follow TensorFlow's dtype and shape rules.
 
 ## Verification
 
-- 214 dependency-free tests;
+- 219 dependency-free tests;
 - full suite run with the checkout's libtensorflow 2.18.0;
 - CI matrix remains Ubuntu 22.04/24.04 with libtensorflow 2.16.2/2.18.0/2.18.1.
 
@@ -47,5 +48,5 @@ because Google stopped publishing Linux x86-64 C archives after 2.18.
 ```sh
 ./scripts/fetch_libtensorflow.sh
 ./scripts/test.sh
-luarocks --lua-version=5.1 make tensorflow-lua-2.5.0-1.rockspec
+luarocks --lua-version=5.1 make tensorflow-lua-2.6.0-1.rockspec
 ```
