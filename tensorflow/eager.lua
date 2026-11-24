@@ -557,6 +557,46 @@ function Context:reciprocal(a)
   return unary(self, "Reciprocal", a)
 end
 
+function Context:zeros_like(a)
+  return unary(self, "ZerosLike", a)
+end
+
+function Context:ones_like(a)
+  return unary(self, "OnesLike", a)
+end
+
+function Context:identity(a)
+  return unary(self, "Identity", a)
+end
+
+function Context:stop_gradient(a)
+  return unary(self, "StopGradient", a)
+end
+
+function Context:erf(a)
+  return unary(self, "Erf", a)
+end
+
+function Context:erfc(a)
+  return unary(self, "Erfc", a)
+end
+
+local function predicate(context, op_type, a)
+  return context:execute(op_type, { a }, { attrs = { T = a:dtype() } })[1]
+end
+
+function Context:is_nan(a)
+  return predicate(self, "IsNan", a)
+end
+
+function Context:is_inf(a)
+  return predicate(self, "IsInf", a)
+end
+
+function Context:is_finite(a)
+  return predicate(self, "IsFinite", a)
+end
+
 function Context:abs(a)
   return unary(self, "Abs", a)
 end

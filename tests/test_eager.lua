@@ -162,6 +162,38 @@ test("executes eager math, sign, and variance reductions", function()
   context:close()
 end)
 
+test("executes eager zero/one, identity, error, and predicate ops", function()
+  local context = tf.eager.Context.new()
+  local x = context:constant({ { 1, 2 }, { 3, 4 } })
+  assert_eq(table.concat(context:zeros_like(x):totable()[1], ","), "0,0")
+  assert_eq(table.concat(context:ones_like(x):totable()[2], ","), "1,1")
+  assert_eq(context:identity(x):totable()[2][1], 3)
+  assert_eq(context:stop_gradient(x):totable()[1][2], 2)
+  local float64 = context:constant({ 5, 6 }, "float64")
+  assert_eq(context:zeros_like(float64):dtype(), "float64")
+  local nan, inf = 0 / 0, math.huge
+  local values = context:constant({ 0, 1, nan, inf, -inf })
+  local erf = context:erf(values):totable()
+  assert_eq(erf[1], 0)
+  assert_true(math.abs(erf[2] - 0.8427008) < 1e-5)
+  local erfc = context:erfc(values):totable()
+  assert_eq(erfc[1], 1)
+  assert_true(math.abs(erfc[2] - 0.1572992) < 1e-5)
+  local function bits(list)
+    local text = {}
+    for i, value in ipairs(list) do text[i] = tostring(value) end
+    return table.concat(text, ",")
+  end
+  local is_nan = context:is_nan(values)
+  assert_eq(is_nan:dtype(), "bool")
+  assert_eq(bits(is_nan:totable()), "false,false,true,false,false")
+  assert_eq(bits(context:is_inf(values):totable()),
+    "false,false,false,true,true")
+  assert_eq(bits(context:is_finite(values):totable()),
+    "true,true,false,false,false")
+  context:close()
+end)
+
 test("handles eager strings and scalars", function()
   local context = tf.eager.Context.new()
   local text = context:constant({ "a", "b" })
