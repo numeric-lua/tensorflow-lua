@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.5.0
+
+- add `Graph:attribute_names` for enumerating an operation's attribute names;
+- add graph `tf.argmin`, `tf.nn.relu6`, `tf.add_n`, and numerically stable
+  `tf.reduce_logsumexp` with `keep_dims` support;
+- add eager `Context:argmin`, `Context:relu6`, `Context:add_n`, and
+  `Context:reduce_logsumexp`;
+- add Nesterov momentum (`nesterov = true`) and `clipvalue` gradient clipping
+  to `tf.train.momentum`;
+- validate integer axes in graph and eager `argmax`/`argmin`;
+- 214 dependency-free tests.
+
 ## 2.4.0
 
 - add `Graph:attribute_info` and `Graph:attribute` for typed operation

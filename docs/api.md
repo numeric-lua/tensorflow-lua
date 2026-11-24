@@ -30,7 +30,7 @@ with libtensorflow 2.16.2, 2.18.0, and 2.18.1; see
 `TENSORFLOW_LIB`, `TENSORFLOW_ROOT`, `third_party/libtensorflow`, or the dynamic
 linker path.
 
-`tf.VERSION` is the binding version (`2.4.0`); `tf.version()` returns
+`tf.VERSION` is the binding version (`2.5.0`); `tf.version()` returns
 libtensorflow's version.
 
 ## Tensors
@@ -114,6 +114,16 @@ tables of dimensions.
 local info = graph:attribute_info("logits", "T")   -- kind = "type"
 local dtype = graph:attribute("logits", "T")      -- "float32"
 local dims = graph:attribute("images", "shape")    -- { 2, 3 }
+```
+
+### `graph:attribute_names(output)`
+
+Returns the operation's attribute names in TensorFlow's attribute order. The
+argument may be an operation name, `"op:index"`, or a graph output. Missing
+operations raise a Lua error.
+
+```lua
+local names = graph:attribute_names("logits")  -- e.g. { "T", "shape" }
 ```
 
 ### `graph:consumers(output)`
@@ -297,7 +307,8 @@ Adds Ftrl-Proximal updates with accumulator and linear slots. Options:
 ### `tf.train.momentum(graph, loss, variables[, opts])`
 
 Adds `ApplyMomentum` updates and accumulator variables. Options:
-`learning_rate`/`lr` (default `0.01`), `momentum` (0.9), `name`. Initialize
+`learning_rate`/`lr` (default `0.01`), `momentum` (0.9), `nesterov` (or
+`use_nesterov`), `clipnorm`, `clipvalue`/`clip_value`, and `name`. Initialize
 `state.initializers`.
 
 ### `tf.save_checkpoint(session, path, variables)`
@@ -855,9 +866,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
-`reduce_all`/`reduce_any`, `argmax`, `relu`, `leaky_relu`, `elu`, `sigmoid`,
-`tanh`, `softmax`, `softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and
-`reshape`.
+`reduce_all`/`reduce_any`/`reduce_logsumexp`, `argmax`/`argmin`, `add_n`,
+`relu`, `relu6`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`,
+`softplus`, `exp`, `log`, `sqrt`, `abs`, `square`, and `reshape`.
 Reduction methods accept an integer axes table and an optional `keep_dims`
 boolean. `pad` accepts `CONSTANT`, `REFLECT`, or `SYMMETRIC`; `split` accepts a
 positive split count or a size table and returns an output list. `stack`,
@@ -881,6 +892,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | function | operation |
 | --- | --- |
 | `tf.nn.relu(graph, x, name[, dtype])` | Relu |
+| `tf.nn.relu6(graph, x, name[, dtype])` | Relu6 |
 | `tf.nn.leaky_relu(graph, x, name[, dtype[, alpha]])` | LeakyRelu |
 | `tf.nn.elu(graph, x, name[, dtype])` | Elu |
 | `tf.nn.sigmoid(graph, x, name[, dtype])` | Sigmoid |
@@ -899,7 +911,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.equal`, `tf.not_equal`, `tf.greater`, `tf.greater_equal`, `tf.less`, `tf.less_equal` | elementwise comparisons returning bool |
 | `tf.logical_and`, `tf.logical_or`, `tf.logical_xor`, `tf.logical_not` | boolean logic |
 | `tf.squared_difference(graph, a, b[, name[, dtype]])` | SquaredDifference |
+| `tf.add_n(graph, inputs[, name[, dtype]])` | AddN |
+| `tf.reduce_logsumexp(graph, x, axes[, name[, dtype[, keep_dims]]])` | stable composed log-sum-exp |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
+| `tf.argmin(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMin |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
 | `tf.clip_by_value(graph, x, min, max[, name[, dtype]])` | ClipByValue |
@@ -921,9 +936,13 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
-integer axis or a table of axes. `tf.logical_xor` is built from `NotEqual`
-because the `LogicalXor` op is not registered in the supported C libraries;
-comparison and logical ops return `bool` outputs.
+integer axis or a table of axes. `tf.add_n` sums a non-empty output list.
+`tf.reduce_logsumexp` subtracts the per-axis maximum before exponentiating, so
+it stays finite for large inputs, and is composed of differentiable ops rather
+than a fused kernel. `tf.argmax`/`tf.argmin` validate that the axis is an
+integer. `tf.logical_xor` is built from `NotEqual` because the `LogicalXor` op
+is not registered in the supported C libraries; comparison and logical ops
+return `bool` outputs.
 
 ### `tf.gradients(graph, outputs, inputs[, grad_ys])`
 
