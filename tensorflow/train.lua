@@ -262,6 +262,15 @@ function Train.adam(graph, loss, variables, options)
   local beta2 = options.beta2 or 0.999
   local epsilon = options.epsilon or 1e-8
   local name = options.name or "Adam"
+  local nesterov = options.nesterov
+  if nesterov == nil then nesterov = options.use_nesterov end
+  if nesterov ~= nil and type(nesterov) ~= "boolean" then
+    error("adam nesterov must be a boolean", 3)
+  end
+  local clipvalue = options.clipvalue or options.clip_value
+  if clipvalue ~= nil and (type(clipvalue) ~= "number" or clipvalue <= 0) then
+    error("clipvalue must be a positive number", 3)
+  end
   if type(variables) ~= "table" or #variables == 0 then
     error("adam expects a non-empty variable list", 3)
   end
@@ -269,11 +278,11 @@ function Train.adam(graph, loss, variables, options)
   for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
   local gradients = options.gradients or train_gradients(graph, loss, refs, options, name)
   local dtype = variables[1].dtype or "float32"
-  local clipvalue = options.clipvalue or options.clip_value
   if clipvalue ~= nil then
     for i, gradient in ipairs(gradients) do
       gradients[i] = require("tensorflow").clip_by_value(graph, gradient,
-        -clipvalue, clipvalue, name .. "/clip_" .. i, dtype)
+        -clipvalue, clipvalue, name .. "/clip_" .. i,
+        variables[i].dtype or dtype)
     end
   end
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
@@ -338,7 +347,7 @@ function Train.adam(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
-    desc:set_bool("use_nesterov", false)
+    desc:set_bool("use_nesterov", nesterov == true)
     local apply = desc:finish()
     apply_ops[#apply_ops + 1] = apply
     targets[#targets + 1] = apply
