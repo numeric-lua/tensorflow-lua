@@ -48,17 +48,22 @@ test("adds tensor lists and computes stable log-sum-exp", function()
   local matrix = tf.placeholder(graph, "float32", { 2, 2 }, "lse_matrix")
   local lse = tf.reduce_logsumexp(graph, matrix, { 1 }, "lse")
   local kept = tf.reduce_logsumexp(graph, matrix, { 1 }, "lse_kept", nil, true)
+  local matrix64 = tf.placeholder(graph, "float64", { 2, 2 }, "lse_matrix64")
+  local lse64 = tf.reduce_logsumexp(graph, matrix64, { 1 }, "lse64")
   local session = tf.Session.new(graph)
   local result = session:run({
     [a] = { 1, 2 },
     [b] = { 3, 4 },
     [matrix] = { { 0, 1 }, { 1000, 1000 } },
-  }, { summed, lse, kept })
+    [matrix64] = { { 0, 1 }, { 1000, 1000 } },
+  }, { summed, lse, kept, lse64 })
   assert_eq(table.concat(result[1]:totable(), ","), "4,6")
   assert_true(math.abs(result[2]:totable()[1] - math.log(1 + math.exp(1))) <
     1e-5)
   assert_true(math.abs(result[2]:totable()[2] - (1000 + math.log(2))) < 1e-4)
   assert_eq(table.concat(result[3]:shape(), ","), "2,1")
+  assert_eq(result[4]:dtype(), "float64")
+  assert_true(math.abs(result[4]:totable()[2] - (1000 + math.log(2))) < 1e-10)
   assert_error(function() tf.add_n(graph, {}, "lse_empty") end,
     "non-empty")
   assert_error(function()

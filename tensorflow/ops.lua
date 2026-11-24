@@ -604,10 +604,10 @@ function Ops.reduce_logsumexp(graph, input, axes, name, dtype, keep_dims)
     value_dtype, true)
   local centered = add_output(graph, "Sub", input, maximum,
     name .. "/centered", value_dtype)
-  local exponential = Ops.exp(graph, centered, name .. "/exp")
+  local exponential = Ops.exp(graph, centered, name .. "/exp", value_dtype)
   local total = Ops.reduce_sum(graph, exponential, axes, name .. "/sum",
     value_dtype, keep_dims)
-  local logarithm = Ops.log(graph, total, name .. "/log")
+  local logarithm = Ops.log(graph, total, name .. "/log", value_dtype)
   local reduced_max = keep_dims and maximum or Ops.reduce_max(graph, input,
     axes, name .. "/reduced_max", value_dtype, false)
   return add_output(graph, "AddV2", logarithm, reduced_max, name, value_dtype)
