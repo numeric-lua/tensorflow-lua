@@ -387,19 +387,51 @@ function Context:reduce_any(a, axes, keep_dims)
   return reduction(self, "Any", a, axes, keep_dims)
 end
 
-function Context:argmax(a, axis, output_dtype)
+function Context:reduce_logsumexp(a, axes, keep_dims)
+  if type(axes) ~= "table" then
+    error("eager reduce_logsumexp expects an axes table", 2)
+  end
+  local maximum = self:reduce_max(a, axes, true)
+  local centered = self:sub(a, maximum)
+  local total = self:reduce_sum(self:exp(centered), axes, keep_dims)
+  local logarithm = self:log(total)
+  local reduced_max = keep_dims and maximum or self:reduce_max(a, axes, false)
+  return self:add(logarithm, reduced_max)
+end
+
+function Context:add_n(inputs)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("eager add_n expects a non-empty input list", 2)
+  end
+  return self:execute("AddN", inputs,
+    { attrs = { T = inputs[1]:dtype(), N = { int = #inputs } } })[1]
+end
+
+local function arg_reduction(context, op_type, a, axis, output_dtype)
   axis = axis or 0
   if type(axis) ~= "number" or axis % 1 ~= 0 then
-    error("eager argmax expects an integer axis", 2)
+    error("eager " .. op_type:lower() .. " expects an integer axis", 3)
   end
   local dtype = Tensor.dtype_info(output_dtype or "int64")
-  local dimension = self:constant(axis, "int32")
-  return self:execute("ArgMax", { a, dimension },
+  local dimension = context:constant(axis, "int32")
+  return context:execute(op_type, { a, dimension },
     { attrs = { T = a:dtype(), Tidx = "int32", output_type = dtype } })[1]
+end
+
+function Context:argmax(a, axis, output_dtype)
+  return arg_reduction(self, "ArgMax", a, axis, output_dtype)
+end
+
+function Context:argmin(a, axis, output_dtype)
+  return arg_reduction(self, "ArgMin", a, axis, output_dtype)
 end
 
 function Context:relu(a)
   return unary(self, "Relu", a)
+end
+
+function Context:relu6(a)
+  return unary(self, "Relu6", a)
 end
 
 function Context:sigmoid(a)
