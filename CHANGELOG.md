@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- decode scalar tensor attributes through `Graph:attribute` and include them in
+  `Graph:attributes`;
+- add graph `tf.gather_nd`, `tf.scatter_nd`, `tf.diag`, and `tf.diag_part`;
+- add eager `Context:gather_nd`, `scatter_nd`, `diag`, and `diag_part`;
+- add decoupled `weight_decay`/`wd` support to `tf.train.gradient_descent` and
+  `tf.train.momentum`;
+- 233 dependency-free tests.
+
 ## 2.8.0
 
 - add `Graph:input_list_length` and `Graph:output_list_length` for operations

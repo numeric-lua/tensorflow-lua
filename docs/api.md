@@ -117,9 +117,11 @@ Reads a named operation attribute directly from a `TF_Operation`.
 `attribute_info` returns `{ name, operation, kind, is_list, list_size,
 total_size }`, where `kind` is one of `string`, `int`, `float`, `bool`, `type`,
 `shape`, `tensor`, `placeholder`, or `func`. `attribute` decodes scalar and
-list values for all kinds except `tensor`, `placeholder`, and `func`; dtype
-attributes are returned as documented dtype names and shape attributes as
-tables of dimensions.
+list values for string, int, float, bool, type, and shape attributes, and
+returns scalar tensor attributes as `tf.Tensor` objects (tensor-list,
+placeholder, and function attributes are not decoded). Dtype attributes are
+returned as documented dtype names and shape attributes as tables of
+dimensions.
 
 ```lua
 local info = graph:attribute_info("logits", "T")   -- kind = "type"
@@ -141,8 +143,10 @@ local names = graph:attribute_names("logits")  -- e.g. { "T", "shape" }
 
 Returns a list of decoded attribute records in attribute-name order. Each record
 contains the fields from `attribute_info` plus `value` for string, int, float,
-bool, type, and shape attributes. Tensor, placeholder, and function attributes
-are returned without `value`.
+bool, type, shape, and scalar tensor attributes. Tensor-list, placeholder, and
+function attributes are returned without `value`. Tensor values returned by
+`attribute`/`attributes` are owned by Lua and should be destroyed explicitly
+when no longer needed.
 
 ```lua
 for _, attribute in ipairs(graph:attributes("logits")) do
@@ -261,10 +265,11 @@ Adds `ApplyGradientDescent` targets for the variables and returns
 `targets, gradients, learning_rate`. Initialize variables first with
 `session:run({}, {}, { variable.initializer })`, then run the target list once
 per training step. Options: `clipnorm` limits the global gradient norm,
-`clipvalue` limits each gradient element, and `gradients` supplies precomputed
-gradients instead of calling `tf.gradients`. Clipping bounds must be positive.
-Every optimizer documented here accepts the same `clipnorm`/`clip_norm` and
-`clipvalue`/`clip_value` options.
+`clipvalue` limits each gradient element, `weight_decay`/`wd` applies decoupled
+weight decay, and `gradients` supplies precomputed gradients instead of calling
+`tf.gradients`. Clipping and decay bounds must be non-negative (clipping bounds
+positive). Every optimizer documented here accepts the same
+`clipnorm`/`clip_norm` and `clipvalue`/`clip_value` options.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -346,8 +351,8 @@ Adds Ftrl-Proximal updates with accumulator and linear slots. Options:
 
 Adds `ApplyMomentum` updates and accumulator variables. Options:
 `learning_rate`/`lr` (default `0.01`), `momentum` (0.9), `nesterov` (or
-`use_nesterov`), `clipnorm`, `clipvalue`/`clip_value`, and `name`. Initialize
-`state.initializers`.
+`use_nesterov`), `weight_decay`/`wd`, `clipnorm`, `clipvalue`/`clip_value`, and
+`name`. Initialize `state.initializers`.
 
 ### `tf.save_checkpoint(session, path, variables)`
 
@@ -906,7 +911,8 @@ or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
 methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
-`concat`, `gather`, `slice`, `pad`, `tile`, `where`, `reverse`, `split`,
+`concat`, `gather`, `gather_nd`, `scatter_nd`, `diag`, `diag_part`, `slice`,
+`pad`, `tile`, `where`, `reverse`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
@@ -959,6 +965,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.expand_dims(graph, x, axis[, name[, dtype]])` | ExpandDims |
 | `tf.squeeze(graph, x[, axis[, name[, dtype]]])` | Squeeze |
 | `tf.gather(graph, params, indices[, axis[, name[, dtype[, indices_dtype]]]])` | GatherV2 |
+| `tf.gather_nd(graph, params, indices[, name[, dtype[, indices_dtype]]])` | GatherNd |
+| `tf.scatter_nd(graph, indices, updates, shape[, name[, dtype[, indices_dtype]]])` | ScatterNd |
+| `tf.diag(graph, x[, name[, dtype]])` | Diag |
+| `tf.diag_part(graph, x[, name[, dtype]])` | DiagPart |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.reduce_prod(graph, x, axes[, name[, dtype[, keep_dims]]])` | Prod |
