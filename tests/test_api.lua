@@ -65,7 +65,8 @@ test("exposes the public API surface", function()
     "reduce_logsumexp", "argmin", "relu6", "add_n", "batch_matmul", "fill",
     "range", "linspace", "log_softmax", "floor", "ceil", "round", "sign",
     "rsqrt", "reciprocal", "zeros_like", "ones_like", "identity",
-    "stop_gradient", "erf", "erfc", "is_nan", "is_inf", "is_finite",
+    "stop_gradient", "diag", "diag_part", "gather_nd", "scatter_nd", "erf",
+    "erfc", "is_nan", "is_inf", "is_finite",
     "reduce_variance", "reduce_stddev", "maximum", "minimum",
   }
   for _, name in ipairs(eager_methods) do

@@ -194,6 +194,38 @@ test("executes eager zero/one, identity, error, and predicate ops", function()
   context:close()
 end)
 
+test("executes eager ND gather/scatter and diagonal ops", function()
+  local context = tf.eager.Context.new()
+  local params = context:constant({ { 10, 11 }, { 20, 21 }, { 30, 31 } })
+  local gathered = context:gather_nd(params,
+    context:constant({ { 0 }, { 2 } }, "int32"))
+  assert_eq(table.concat(gathered:shape(), ","), "2,2")
+  assert_eq(gathered:totable()[1][1], 10)
+  assert_eq(gathered:totable()[2][2], 31)
+  local scattered = context:scatter_nd(
+    context:constant({ { 0 }, { 2 } }, "int32"),
+    context:constant({ { 1, 2 }, { 3, 4 } }), { 3, 2 })
+  assert_eq(table.concat(scattered:shape(), ","), "3,2")
+  assert_eq(scattered:totable()[1][2], 2)
+  assert_eq(scattered:totable()[2][1], 0)
+  assert_eq(scattered:totable()[3][1], 3)
+  local diagonal = context:diag(context:constant({ 1, 2, 3 }))
+  assert_eq(table.concat(diagonal:shape(), ","), "3,3")
+  assert_eq(diagonal:totable()[2][2], 2)
+  local extracted = context:diag_part(
+    context:constant({ { 1, 2 }, { 3, 4 } }))
+  assert_eq(table.concat(extracted:totable(), ","), "1,4")
+  assert_error(function()
+    context:scatter_nd(context:constant({ { 0 } }, "int32"),
+      context:constant({ 1 }), {})
+  end, "non-empty")
+  assert_error(function()
+    context:scatter_nd(context:constant({ { 0 } }, "int32"),
+      context:constant({ 1 }), { -1 })
+  end, "non-negative")
+  context:close()
+end)
+
 test("handles eager strings and scalars", function()
   local context = tf.eager.Context.new()
   local text = context:constant({ "a", "b" })

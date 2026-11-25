@@ -569,6 +569,14 @@ function Context:identity(a)
   return unary(self, "Identity", a)
 end
 
+function Context:diag(a)
+  return unary(self, "Diag", a)
+end
+
+function Context:diag_part(a)
+  return unary(self, "DiagPart", a)
+end
+
 function Context:stop_gradient(a)
   return unary(self, "StopGradient", a)
 end
@@ -676,6 +684,23 @@ function Context:gather(params, indices, axis)
   return self:execute("GatherV2", { params, indices, axis_tensor },
     { attrs = { Tparams = params:dtype(), Tindices = indices:dtype(),
       Taxis = "int32", batch_dims = { int = 0 } } })[1]
+end
+
+function Context:gather_nd(params, indices)
+  return self:execute("GatherNd", { params, indices },
+    { attrs = { Tparams = params:dtype(), Tindices = indices:dtype() } })[1]
+end
+
+function Context:scatter_nd(indices, updates, shape)
+  shape = integer_table(shape, "scatter_nd shape")
+  for _, dimension in ipairs(shape) do
+    if dimension < 0 then
+      error("eager scatter_nd dimensions must be non-negative", 2)
+    end
+  end
+  local shape_tensor = self:constant(shape, "int32")
+  return self:execute("ScatterNd", { indices, updates, shape_tensor },
+    { attrs = { T = updates:dtype(), Tindices = indices:dtype() } })[1]
 end
 
 function Context:slice(a, begin, size)
