@@ -603,6 +603,37 @@ function Ops.reverse_sequence(graph, input, lengths, seq_dim, batch_dim, name,
   return output
 end
 
+local function depth_space(graph, op_type, input, block_size, name, dtype,
+    data_format)
+  if type(block_size) ~= "number" or block_size % 1 ~= 0 or block_size < 1 then
+    error(op_type:lower() .. " block_size must be a positive integer", 3)
+  end
+  data_format = string.upper(data_format or "NHWC")
+  if data_format ~= "NHWC" and data_format ~= "NCHW" then
+    error(op_type:lower() .. " data_format must be NHWC or NCHW", 3)
+  end
+  name = name or op_type:lower()
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_int("block_size", block_size)
+  desc:set_string("data_format", data_format)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.depth_to_space(graph, input, block_size, name, dtype, data_format)
+  return depth_space(graph, "DepthToSpace", input, block_size, name, dtype,
+    data_format)
+end
+
+function Ops.space_to_depth(graph, input, block_size, name, dtype, data_format)
+  return depth_space(graph, "SpaceToDepth", input, block_size, name, dtype,
+    data_format)
+end
+
 function Ops.reshape(graph, input, shape, name, dtype)
   if type(shape) ~= "table" then
     error("reshape expects a shape table", 3)
