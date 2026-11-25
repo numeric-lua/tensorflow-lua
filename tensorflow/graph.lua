@@ -593,6 +593,24 @@ function Graph:import_file(path, options)
   return self:import_graph_def(data, options)
 end
 
+function Graph:node_def(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  local buffer = ffi.gc(capi.require(lib.TF_NewBuffer(), "TF_NewBuffer"),
+    function(pointer) lib.TF_DeleteBuffer(pointer) end)
+  local status = capi.status()
+  lib.TF_OperationToNodeDef(operation, buffer, status)
+  capi.check(status, "NodeDef export")
+  local struct = lib.TF_GetBuffer(buffer)
+  if struct.length > 0 and struct.data == nil then
+    error("TF_OperationToNodeDef returned no data", 2)
+  end
+  local data = struct.length > 0 and ffi.string(struct.data, struct.length) or ""
+  ffi.gc(buffer, nil)
+  lib.TF_DeleteBuffer(buffer)
+  return data
+end
+
 function Graph:graph_def()
   local lib = capi.load()
   local buffer = capi.require(lib.TF_NewBuffer(), "TF_NewBuffer")
