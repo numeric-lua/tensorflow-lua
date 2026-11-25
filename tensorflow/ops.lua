@@ -76,6 +76,14 @@ function Ops.ones_like(graph, input, name, dtype)
   return typed_unary(graph, "OnesLike", input, name, dtype)
 end
 
+function Ops.diag(graph, input, name, dtype)
+  return typed_unary(graph, "Diag", input, name, dtype)
+end
+
+function Ops.diag_part(graph, input, name, dtype)
+  return typed_unary(graph, "DiagPart", input, name, dtype)
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end

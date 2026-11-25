@@ -319,6 +319,27 @@ test("builds zero/one tensors and stops gradients", function()
   session:close()
 end)
 
+test("builds diagonal matrices and extracts diagonals", function()
+  local graph = tf.Graph.new()
+  local vector = tf.placeholder(graph, "float32", { 3 }, "diag_x")
+  local matrix = tf.placeholder(graph, "float32", { 3, 3 }, "diag_m")
+  local diagonal = tf.diag(graph, vector, "diag")
+  local extracted = tf.diag_part(graph, matrix, "diag_part")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [vector] = { 1, 2, 3 },
+    [matrix] = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } },
+  }, { diagonal, extracted })
+  assert_eq(table.concat(result[1]:shape(), ","), "3,3")
+  assert_eq(result[1]:totable()[1][1], 1)
+  assert_eq(result[1]:totable()[2][1], 0)
+  assert_eq(result[1]:totable()[2][2], 2)
+  assert_eq(result[1]:totable()[3][3], 3)
+  assert_eq(table.concat(result[2]:shape(), ","), "3")
+  assert_eq(table.concat(result[2]:totable(), ","), "1,5,9")
+  session:close()
+end)
+
 test("clips values to a range", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", { 3 }, "clip_x")
