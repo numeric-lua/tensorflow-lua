@@ -643,6 +643,26 @@ function Graph:node_def(value)
   return data
 end
 
+function Graph:op_def(op_type)
+  if type(op_type) ~= "string" or op_type == "" then
+    error("op type must be a non-empty string", 2)
+  end
+  local lib = capi.load()
+  local buffer = ffi.gc(capi.require(lib.TF_NewBuffer(), "TF_NewBuffer"),
+    function(pointer) lib.TF_DeleteBuffer(pointer) end)
+  local status = capi.status()
+  lib.TF_GraphGetOpDef(self:handle(), op_type, buffer, status)
+  capi.check(status, "OpDef export")
+  local struct = lib.TF_GetBuffer(buffer)
+  if struct.length > 0 and struct.data == nil then
+    error("TF_GraphGetOpDef returned no data", 2)
+  end
+  local data = struct.length > 0 and ffi.string(struct.data, struct.length) or ""
+  ffi.gc(buffer, nil)
+  lib.TF_DeleteBuffer(buffer)
+  return data
+end
+
 function Graph:graph_def()
   local lib = capi.load()
   local buffer = capi.require(lib.TF_NewBuffer(), "TF_NewBuffer")
