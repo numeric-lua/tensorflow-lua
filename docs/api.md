@@ -96,6 +96,13 @@ missing operations become Lua errors.
 local bytes = graph:node_def("logits")
 ```
 
+### `graph:operation_device(output)` / `graph:all_inputs(output)`
+
+`operation_device` returns the device string assigned to an operation, or `nil`
+when no device was assigned. `all_inputs` returns the flattened input edges as
+`{ input, name, index, dtype }` records, including every tensor in list-valued
+inputs such as `Pack` and `AddN`.
+
 ### `graph:shape(output)`
 
 Returns the inferred shape of an output (a graph output table, `"op"`, or
@@ -279,7 +286,8 @@ per training step. Options: `clipnorm` limits the global gradient norm,
 weight decay, and `gradients` supplies precomputed gradients instead of calling
 `tf.gradients`. Clipping and decay bounds must be non-negative (clipping bounds
 positive). Every optimizer documented here accepts the same
-`clipnorm`/`clip_norm` and `clipvalue`/`clip_value` options.
+`clipnorm`/`clip_norm`, `clipvalue`/`clip_value`, and `weight_decay`/`wd`
+options.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -339,25 +347,26 @@ slots. Options: `learning_rate`/`lr` (default `0.001`), `rho` (0.9),
 ### `tf.train.adagrad(graph, loss, variables[, opts])`
 
 Adds `ApplyAdagrad` updates and accumulator variables. Options:
-`learning_rate`/`lr` (default `0.01`), `name`. Initialize
+`learning_rate`/`lr` (default `0.01`), `weight_decay`/`wd`, `name`. Initialize
 `state.initializers`.
 
 ### `tf.train.adadelta(graph, loss, variables[, opts])`
 
 Adds `ApplyAdadelta` updates with accumulator and update slots. Options:
-`learning_rate`/`lr` (default `1.0`), `rho` (0.95), `epsilon` (1e-8), `name`.
-Initialize `state.initializers`.
+`learning_rate`/`lr` (default `1.0`), `rho` (0.95), `epsilon` (1e-8),
+`weight_decay`/`wd`, `name`. Initialize `state.initializers`.
 
 ### `tf.train.proximal_adagrad(graph, loss, variables[, opts])`
 
 Adds FOBOS/Adagrad updates with an accumulator slot. Options:
-`learning_rate`/`lr` (default `0.01`), `l1` (0), `l2` (0), `name`. Initialize
-`state.initializers`.
+`learning_rate`/`lr` (default `0.01`), `l1` (0), `l2` (0), `weight_decay`/`wd`,
+`name`. Initialize `state.initializers`.
 
 ### `tf.train.ftrl(graph, loss, variables[, opts])`
 
 Adds Ftrl-Proximal updates with accumulator and linear slots. Options:
-`learning_rate`/`lr` (default `0.001`), `l1` (0), `l2` (0), `lr_power`
+`learning_rate`/`lr` (default `0.001`), `l1` (0), `l2` (0),
+`weight_decay`/`wd`, `lr_power`
 (`-0.5`), `name`. Initialize `state.initializers`.
 
 ### `tf.train.momentum(graph, loss, variables[, opts])`
@@ -926,13 +935,15 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
 `concat`, `gather`, `gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
 `tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, `diag_part`,
-`slice`, `pad`, `tile`, `where`, `reverse`, `split`,
+`slice`, `pad`, `tile`, `where`, `reverse`, `reverse_sequence`,
+`invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
 `reduce_all`/`reduce_any`/`reduce_logsumexp`/`reduce_variance`/
 `reduce_stddev`, `argmax`/`argmin`, `add_n`, `batch_matmul`, `fill`, `range`,
-`linspace`, `relu`, `relu6`, `leaky_relu`, `elu`, `sigmoid`, `tanh`, `softmax`,
+`linspace`, `relu`, `relu6`, `leaky_relu`, `elu`, `softsign`, `selu`,
+`sigmoid`, `tanh`, `softmax`,
 `log_softmax`, `softplus`, `exp`, `log`, `sqrt`, `floor`, `ceil`, `round`,
 `sign`, `rsqrt`, `reciprocal`, `zeros_like`, `ones_like`, `identity`,
 `stop_gradient`, `erf`, `erfc`, `is_nan`, `is_inf`, `is_finite`, `abs`,
@@ -963,6 +974,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.relu6(graph, x, name[, dtype])` | Relu6 |
 | `tf.nn.leaky_relu(graph, x, name[, dtype[, alpha]])` | LeakyRelu |
 | `tf.nn.elu(graph, x, name[, dtype])` | Elu |
+| `tf.nn.softsign(graph, x, name[, dtype])` | Softsign |
+| `tf.nn.selu(graph, x, name[, dtype])` | Selu |
 | `tf.nn.sigmoid(graph, x, name[, dtype])` | Sigmoid |
 | `tf.nn.tanh(graph, x, name[, dtype])` | Tanh |
 | `tf.nn.softmax(graph, x, name[, dtype])` | Softmax |
@@ -1018,6 +1031,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.unstack(graph, x, num[, axis[, name[, dtype]]])` | Unpack |
 | `tf.slice(graph, x, begin, size[, name[, dtype]])` | Slice |
 | `tf.reverse(graph, x, axis[, name[, dtype]])` | ReverseV2 |
+| `tf.reverse_sequence(graph, x, lengths[, seq_dim[, batch_dim[, name[, dtype[, lengths_dtype]]]]])` | ReverseSequence |
+| `tf.invert_permutation(graph, x[, name[, dtype]])` | InvertPermutation |
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 
 `tf.split` and `tf.unstack` return lists of outputs; a numeric split count uses

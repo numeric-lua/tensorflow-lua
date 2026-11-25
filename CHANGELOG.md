@@ -5,7 +5,11 @@
 - decode scalar tensor attributes through `Graph:attribute` and include them in
   `Graph:attributes`;
 - add `Graph:node_def` for exporting a single operation as serialized NodeDef
-  bytes;
+  bytes, and add `Graph:operation_device`/`Graph:all_inputs`;
+- add graph `tf.nn.softsign`, `tf.nn.selu`, `tf.invert_permutation`, and
+  `tf.reverse_sequence`;
+- add eager `Context:softsign`, `selu`, `invert_permutation`, and
+  `reverse_sequence`;
 - add graph `tf.gather_nd`, `tf.scatter_nd`, `tf.tensor_scatter_nd_update`,
   `tf.tensor_scatter_nd_add`, `tf.unique`, `tf.unique_with_counts`, `tf.diag`,
   and `tf.diag_part`;
@@ -13,9 +17,10 @@
   `tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, and
   `diag_part`;
 - add decoupled `weight_decay`/`wd` support to `tf.train.gradient_descent`,
-  `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`, and
-  `tf.train.centered_rmsprop`;
-- 238 dependency-free tests.
+  `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
+  `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
+  `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
+- 243 dependency-free tests.
 
 ## 2.8.0
 
