@@ -159,6 +159,35 @@ test("applies decoupled weight decay to adaptive optimizers", function()
   end
 end)
 
+test("applies decoupled weight decay to accumulator optimizers", function()
+  local optimizers = {
+    { "adagrad", "AGW" },
+    { "adadelta", "ADW" },
+    { "proximal_adagrad", "PAW" },
+    { "ftrl", "FTRLW" },
+  }
+  for _, optimizer in ipairs(optimizers) do
+    local graph = tf.Graph.new()
+    local variable = tf.variable(graph, 5, "wd2_" .. optimizer[1])
+    local loss = tf.square(graph, variable.read, "wd2_loss_" .. optimizer[1])
+    local updates, _, state = tf.train[optimizer[1]](graph, loss, { variable },
+      { learning_rate = 0.01, weight_decay = 0.1, name = optimizer[2] })
+    assert_eq(graph:attribute(optimizer[2] .. "/wd_1/weight_decay", "T"),
+      "float32")
+    local session = tf.Session.new(graph)
+    local init = { variable.initializer }
+    for _, initializer in ipairs(state.initializers) do
+      init[#init + 1] = initializer
+    end
+    session:run({}, {}, init)
+    session:run({}, {}, updates)
+    local value = session:run({}, { variable.read })[1]:totable()
+    assert_true(value == value and value < 5 and value > 4.9,
+      tostring(value))
+    session:close()
+  end
+end)
+
 test("saves and restores variable values", function()
   local path = os.tmpname()
   local graph = tf.Graph.new()

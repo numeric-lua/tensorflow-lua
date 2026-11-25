@@ -704,6 +704,7 @@ function Train.adagrad(graph, loss, variables, options)
     variables[1].dtype or "float32")
   local dtype = variables[1].dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -712,6 +713,8 @@ function Train.adagrad(graph, loss, variables, options)
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
     state_variables[#state_variables + 1] = accum
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyAdagrad", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -720,6 +723,7 @@ function Train.adagrad(graph, loss, variables, options)
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
     desc:set_bool("update_slots", true)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
@@ -745,6 +749,7 @@ function Train.adadelta(graph, loss, variables, options)
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -758,6 +763,8 @@ function Train.adadelta(graph, loss, variables, options)
     initializers[#initializers + 1] = update.initializer
     state_variables[#state_variables + 1] = accum
     state_variables[#state_variables + 1] = update
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyAdadelta", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -768,6 +775,7 @@ function Train.adadelta(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
@@ -794,6 +802,7 @@ function Train.proximal_adagrad(graph, loss, variables, options)
     dtype)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
   local l2_op = Train.constant(graph, l2, name .. "/l2", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -802,6 +811,8 @@ function Train.proximal_adagrad(graph, loss, variables, options)
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
     state_variables[#state_variables + 1] = accum
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyProximalAdagrad",
       name .. "/update_" .. i)
     desc:add_input(ref)
@@ -812,6 +823,7 @@ function Train.proximal_adagrad(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
@@ -839,6 +851,7 @@ function Train.ftrl(graph, loss, variables, options)
   local l1_op = Train.constant(graph, l1, name .. "/l1", dtype)
   local l2_op = Train.constant(graph, l2, name .. "/l2", dtype)
   local power = Train.constant(graph, lr_power, name .. "/lr_power", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -852,6 +865,8 @@ function Train.ftrl(graph, loss, variables, options)
     initializers[#initializers + 1] = linear.initializer
     state_variables[#state_variables + 1] = accum
     state_variables[#state_variables + 1] = linear
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyFtrl", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -863,6 +878,7 @@ function Train.ftrl(graph, loss, variables, options)
     desc:add_input(power)
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
