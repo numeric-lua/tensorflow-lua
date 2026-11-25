@@ -4,8 +4,12 @@
 
 - decode scalar tensor attributes through `Graph:attribute` and include them in
   `Graph:attributes`;
-- add `Graph:node_def` for exporting a single operation as serialized NodeDef
+- add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
   bytes, and add `Graph:operation_device`/`Graph:all_inputs`;
+- add graph `tf.boolean_mask`, `tf.depth_to_space`, and `tf.space_to_depth`;
+- add eager `Context:boolean_mask`, `depth_to_space`, and `space_to_depth`;
+- add `tf.train.Saver:size` and reject missing or duplicate Saver variable
+  names;
 - add graph `tf.nn.softsign`, `tf.nn.selu`, `tf.invert_permutation`, and
   `tf.reverse_sequence`;
 - add eager `Context:softsign`, `selu`, `invert_permutation`, and
@@ -20,7 +24,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 243 dependency-free tests.
+- 248 dependency-free tests.
 
 ## 2.8.0
 

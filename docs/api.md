@@ -96,6 +96,16 @@ missing operations become Lua errors.
 local bytes = graph:node_def("logits")
 ```
 
+### `graph:op_def(op_type)`
+
+Returns the registered operation's serialized `OpDef` protobuf bytes for
+`op_type`. Missing or unregistered op types raise TensorFlow status errors as
+Lua errors.
+
+```lua
+local schema = graph:op_def("AddV2")
+```
+
 ### `graph:operation_device(output)` / `graph:all_inputs(output)`
 
 `operation_device` returns the device string assigned to an operation, or `nil`
@@ -334,8 +344,9 @@ Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 ### `tf.train.Saver.new(graph, variables)`
 
 Reusable native V2 checkpoint saver. `variables` is a list of
-`{ name = ..., variable = ... }` entries. Methods: `save(session, prefix)`,
-`restore(session, prefix)`, and `names()`.
+`{ name = ..., variable = ... }` entries. Names must be non-empty and unique.
+Methods: `save(session, prefix)`, `restore(session, prefix)`, `names()`, and
+`size()`.
 
 ### `tf.train.centered_rmsprop(graph, loss, variables[, opts])`
 
@@ -933,7 +944,8 @@ or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
 methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
-`concat`, `gather`, `gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
+`concat`, `gather`, `boolean_mask`, `depth_to_space`, `space_to_depth`,
+`gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
 `tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, `diag_part`,
 `slice`, `pad`, `tile`, `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
@@ -992,6 +1004,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.expand_dims(graph, x, axis[, name[, dtype]])` | ExpandDims |
 | `tf.squeeze(graph, x[, axis[, name[, dtype]]])` | Squeeze |
 | `tf.gather(graph, params, indices[, axis[, name[, dtype[, indices_dtype]]]])` | GatherV2 |
+| `tf.boolean_mask(graph, x, mask[, name[, dtype]])` | Where + Reshape + GatherV2 |
+| `tf.depth_to_space(graph, x, block_size[, name[, dtype[, data_format]]])` | DepthToSpace |
+| `tf.space_to_depth(graph, x, block_size[, name[, dtype[, data_format]]])` | SpaceToDepth |
 | `tf.gather_nd(graph, params, indices[, name[, dtype[, indices_dtype]]])` | GatherNd |
 | `tf.scatter_nd(graph, indices, updates, shape[, name[, dtype[, indices_dtype]]])` | ScatterNd |
 | `tf.tensor_scatter_nd_update(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterUpdate |
@@ -1039,7 +1054,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 `Split` and a size table uses `SplitV`. `tf.unique` returns
 `{ values, indices }`; `tf.unique_with_counts` returns
 `{ values, indices, counts }`. Their `out_idx` defaults to `int32` and applies
-to the index/count outputs. `tf.pad` accepts `CONSTANT` (zero
+to the index/count outputs. `tf.boolean_mask` expects a rank-1 boolean mask and
+gathers matching slices along axis 0; `tf.depth_to_space` and
+`tf.space_to_depth` accept `NHWC` or `NCHW` and a positive `block_size`.
+`tf.pad` accepts `CONSTANT` (zero
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
