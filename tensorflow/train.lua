@@ -464,6 +464,7 @@ function Train.adamax(graph, loss, variables, options)
   local eps = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
   local beta1_power = Train.variable(graph, beta1, name .. "/beta1_power",
     { dtype = dtype })
+  local weight_decay = weight_decay_value(options)
   local initializers = { beta1_power.initializer }
   local state_variables = { beta1_power }
   local targets, apply_ops = {}, {}
@@ -479,6 +480,8 @@ function Train.adamax(graph, loss, variables, options)
     initializers[#initializers + 1] = v.initializer
     state_variables[#state_variables + 1] = m
     state_variables[#state_variables + 1] = v
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyAdaMax", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(m.ref)
@@ -491,6 +494,7 @@ function Train.adamax(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     local apply = desc:finish()
     apply_ops[#apply_ops + 1] = apply
     targets[#targets + 1] = apply
@@ -590,6 +594,7 @@ function Train.rmsprop(graph, loss, variables, options)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -603,6 +608,8 @@ function Train.rmsprop(graph, loss, variables, options)
     initializers[#initializers + 1] = mom.initializer
     state_variables[#state_variables + 1] = ms
     state_variables[#state_variables + 1] = mom
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyRMSProp", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(ms.ref)
@@ -614,6 +621,7 @@ function Train.rmsprop(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
@@ -641,6 +649,7 @@ function Train.centered_rmsprop(graph, loss, variables, options)
   local rho_op = Train.constant(graph, rho, name .. "/rho", dtype)
   local momentum_op = Train.constant(graph, momentum, name .. "/momentum", dtype)
   local epsilon_op = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -658,6 +667,8 @@ function Train.centered_rmsprop(graph, loss, variables, options)
     state_variables[#state_variables + 1] = mg
     state_variables[#state_variables + 1] = ms
     state_variables[#state_variables + 1] = mom
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyCenteredRMSProp",
       name .. "/update_" .. i)
     desc:add_input(ref)
@@ -671,6 +682,7 @@ function Train.centered_rmsprop(graph, loss, variables, options)
     desc:add_input(gradients[i])
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,
