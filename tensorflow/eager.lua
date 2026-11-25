@@ -694,6 +694,12 @@ function Context:gather(params, indices, axis)
       Taxis = "int32", batch_dims = { int = 0 } } })[1]
 end
 
+function Context:boolean_mask(a, mask)
+  local indices = self:execute("Where", { mask })[1]
+  local flat = self:reshape(indices, { -1 })
+  return self:gather(a, flat, 0)
+end
+
 function Context:gather_nd(params, indices)
   return self:execute("GatherNd", { params, indices },
     { attrs = { Tparams = params:dtype(), Tindices = indices:dtype() } })[1]
@@ -731,6 +737,29 @@ function Context:unique_with_counts(a, out_idx)
   return self:execute("UniqueWithCounts", { a },
     { attrs = { T = a:dtype(), out_idx = out_idx or "int32" },
       num_outputs = 3 })
+end
+
+local function depth_space(context, op_type, a, block_size, data_format)
+  if type(block_size) ~= "number" or block_size % 1 ~= 0 or block_size < 1 then
+    error("eager " .. op_type:lower() ..
+      " block_size must be a positive integer", 2)
+  end
+  data_format = string.upper(data_format or "NHWC")
+  if data_format ~= "NHWC" and data_format ~= "NCHW" then
+    error("eager " .. op_type:lower() ..
+      " data_format must be NHWC or NCHW", 2)
+  end
+  return context:execute(op_type, { a },
+    { attrs = { T = a:dtype(), block_size = { int = block_size },
+      data_format = { string = data_format } } })[1]
+end
+
+function Context:depth_to_space(a, block_size, data_format)
+  return depth_space(self, "DepthToSpace", a, block_size, data_format)
+end
+
+function Context:space_to_depth(a, block_size, data_format)
+  return depth_space(self, "SpaceToDepth", a, block_size, data_format)
 end
 
 function Context:slice(a, begin, size)

@@ -278,6 +278,30 @@ test("executes eager tensor scatter and unique ops", function()
   context:close()
 end)
 
+test("executes eager boolean masks and depth/space transforms", function()
+  local context = tf.eager.Context.new()
+  local matrix = context:constant({ { 1, 2, 3 }, { 4, 5, 6 } })
+  local masked = context:boolean_mask(matrix,
+    context:constant({ true, false }))
+  assert_eq(table.concat(masked:shape(), ","), "1,3")
+  assert_eq(table.concat(masked:totable()[1], ","), "1,2,3")
+  local source = {
+    { { { 1, 2, 3, 4 }, { 5, 6, 7, 8 } },
+      { { 9, 10, 11, 12 }, { 13, 14, 15, 16 } } },
+  }
+  local expanded = context:depth_to_space(context:constant(source), 2)
+  assert_eq(table.concat(expanded:shape(), ","), "1,4,4,1")
+  local restored = context:space_to_depth(expanded, 2)
+  assert_eq(table.concat(restored:shape(), ","), "1,2,2,4")
+  assert_eq(table.concat(restored:totable()[1][1][1], ","), "1,2,3,4")
+  assert_eq(table.concat(restored:totable()[1][2][2], ","), "13,14,15,16")
+  assert_error(function() context:depth_to_space(expanded, 0) end, "positive")
+  assert_error(function()
+    context:space_to_depth(expanded, 2, "XYZ")
+  end, "NHWC or NCHW")
+  context:close()
+end)
+
 test("handles eager strings and scalars", function()
   local context = tf.eager.Context.new()
   local text = context:constant({ "a", "b" })
