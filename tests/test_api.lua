@@ -66,7 +66,9 @@ test("exposes the public API surface", function()
     "reduce_logsumexp", "argmin", "relu6", "add_n", "batch_matmul", "fill",
     "range", "linspace", "log_softmax", "floor", "ceil", "round", "sign",
     "rsqrt", "reciprocal", "zeros_like", "ones_like", "identity",
-    "stop_gradient", "diag", "diag_part", "gather_nd", "scatter_nd", "erf",
+    "stop_gradient", "diag", "diag_part", "gather_nd", "scatter_nd",
+    "tensor_scatter_nd_update", "tensor_scatter_nd_add", "unique",
+    "unique_with_counts", "erf",
     "erfc", "is_nan", "is_inf", "is_finite",
     "reduce_variance", "reduce_stddev", "maximum", "minimum",
   }

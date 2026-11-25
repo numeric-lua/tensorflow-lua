@@ -703,6 +703,28 @@ function Context:scatter_nd(indices, updates, shape)
     { attrs = { T = updates:dtype(), Tindices = indices:dtype() } })[1]
 end
 
+function Context:tensor_scatter_nd_update(tensor, indices, updates)
+  return self:execute("TensorScatterUpdate", { tensor, indices, updates },
+    { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
+end
+
+function Context:tensor_scatter_nd_add(tensor, indices, updates)
+  return self:execute("TensorScatterAdd", { tensor, indices, updates },
+    { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
+end
+
+function Context:unique(a, out_idx)
+  return self:execute("Unique", { a },
+    { attrs = { T = a:dtype(), out_idx = out_idx or "int32" },
+      num_outputs = 2 })
+end
+
+function Context:unique_with_counts(a, out_idx)
+  return self:execute("UniqueWithCounts", { a },
+    { attrs = { T = a:dtype(), out_idx = out_idx or "int32" },
+      num_outputs = 3 })
+end
+
 function Context:slice(a, begin, size)
   begin = integer_table(begin, "slice begin")
   if type(size) ~= "table" or #size ~= #begin then
