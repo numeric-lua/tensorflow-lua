@@ -410,6 +410,29 @@ test("gathers and scatters with ND indices", function()
   session:close()
 end)
 
+test("updates and adds into tensors with ND indices", function()
+  local graph = tf.Graph.new()
+  local tensor = tf.placeholder(graph, "float32", { 3, 2 }, "ts_tensor")
+  local indices = tf.placeholder(graph, "int32", { 1, 1 }, "ts_indices")
+  local updates = tf.placeholder(graph, "float32", { 1, 2 }, "ts_updates")
+  local updated = tf.tensor_scatter_nd_update(graph, tensor, indices, updates,
+    "ts_update")
+  local added = tf.tensor_scatter_nd_add(graph, tensor, indices, updates,
+    "ts_add")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [tensor] = { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+    [indices] = { { 1 } },
+    [updates] = { { 9, 9 } },
+  }, { updated, added })
+  assert_eq(table.concat(result[1]:shape(), ","), "3,2")
+  assert_eq(table.concat(result[1]:totable()[2], ","), "9,9")
+  assert_eq(table.concat(result[1]:totable()[1], ","), "1,2")
+  assert_eq(table.concat(result[2]:totable()[2], ","), "12,13")
+  assert_eq(table.concat(result[2]:totable()[3], ","), "5,6")
+  session:close()
+end)
+
 test("splits tensors into equal and explicit parts", function()
   local graph = tf.Graph.new()
   local value = tf.placeholder(graph, "float32", { 6 }, "split_value")

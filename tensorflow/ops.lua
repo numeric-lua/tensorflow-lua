@@ -679,6 +679,35 @@ function Ops.scatter_nd(graph, indices, updates, shape, name, dtype,
   return output
 end
 
+local function tensor_scatter_nd(graph, op_type, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  name = name or op_type:lower()
+  local value_dtype = input_dtype(tensor, dtype)
+  local index_dtype = dtype_name(indices_dtype or
+    (type(indices) == "table" and indices.dtype) or "int32")
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(tensor)
+  desc:add_input(indices)
+  desc:add_input(updates)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tindices", index_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.tensor_scatter_nd_update(graph, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  return tensor_scatter_nd(graph, "TensorScatterUpdate", tensor, indices,
+    updates, name, dtype, indices_dtype)
+end
+
+function Ops.tensor_scatter_nd_add(graph, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  return tensor_scatter_nd(graph, "TensorScatterAdd", tensor, indices,
+    updates, name, dtype, indices_dtype)
+end
+
 local function comparison(graph, op_type, a, b, name, dtype)
   local value_dtype = input_dtype(a, dtype)
   local desc = graph:new_operation(op_type, name)
