@@ -168,6 +168,7 @@ tf.reverse = Ops.reverse
 tf.invert_permutation = Ops.invert_permutation
 tf.reverse_sequence = Ops.reverse_sequence
 tf.gather = Ops.gather
+tf.boolean_mask = Ops.boolean_mask
 tf.gather_nd = Ops.gather_nd
 tf.scatter_nd = Ops.scatter_nd
 tf.tensor_scatter_nd_update = Ops.tensor_scatter_nd_update

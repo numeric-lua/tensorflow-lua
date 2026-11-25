@@ -683,6 +683,24 @@ function Ops.gather(graph, params, indices, axis, name, dtype, indices_dtype)
   return desc:finish()
 end
 
+local function where_indices(graph, condition, name)
+  local desc = graph:new_operation("Where", name)
+  desc:add_input(condition)
+  local output = desc:finish()
+  output.dtype = "int64"
+  return output
+end
+
+function Ops.boolean_mask(graph, input, mask, name, dtype)
+  name = name or "boolean_mask"
+  local value_dtype = input_dtype(input, dtype)
+  local indices = where_indices(graph, mask, name .. "/where")
+  local flat = Ops.reshape(graph, indices, { -1 }, name .. "/indices", "int64")
+  local output = Ops.gather(graph, input, flat, 0, name, value_dtype, "int64")
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.gather_nd(graph, params, indices, name, dtype, indices_dtype)
   name = name or "gather_nd"
   local value_dtype = input_dtype(params, dtype)

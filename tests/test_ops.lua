@@ -473,6 +473,21 @@ test("finds unique values, indices, and counts", function()
   session:close()
 end)
 
+test("masks tensor rows with a boolean vector", function()
+  local graph = tf.Graph.new()
+  local matrix = tf.placeholder(graph, "float32", { 2, 3 }, "mask_x")
+  local mask = tf.placeholder(graph, "bool", { 2 }, "mask_b")
+  local masked = tf.boolean_mask(graph, matrix, mask, "mask")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [matrix] = { { 1, 2, 3 }, { 4, 5, 6 } },
+    [mask] = { true, false },
+  }, { masked })[1]
+  assert_eq(table.concat(result:shape(), ","), "1,3")
+  assert_eq(table.concat(result:totable()[1], ","), "1,2,3")
+  session:close()
+end)
+
 test("splits tensors into equal and explicit parts", function()
   local graph = tf.Graph.new()
   local value = tf.placeholder(graph, "float32", { 6 }, "split_value")
