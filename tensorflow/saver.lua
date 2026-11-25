@@ -5,16 +5,18 @@ local Saver = {}
 Saver.__index = Saver
 
 local function normalize(variables)
-  local entries = {}
+  local entries, seen = {}, {}
   for i, entry in ipairs(variables) do
     local variable = entry.variable or entry
-    entries[i] = {
-      name = entry.name or variable.name,
-      variable = variable,
-    }
-    if entries[i].name == nil then
+    local name = entry.name or variable.name
+    if type(name) ~= "string" or name == "" then
       error("Saver variable " .. i .. " is missing a name", 3)
     end
+    if seen[name] then
+      error("Saver variable name '" .. name .. "' is duplicated", 3)
+    end
+    seen[name] = true
+    entries[i] = { name = name, variable = variable }
   end
   return entries
 end
@@ -25,6 +27,10 @@ function Saver.new(graph, variables)
   end
   return setmetatable({ graph = graph, entries = normalize(variables) },
     Saver)
+end
+
+function Saver:size()
+  return #self.entries
 end
 
 function Saver:names()

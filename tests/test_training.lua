@@ -418,6 +418,26 @@ test("uses a reusable native Saver", function()
   os.execute("rm -rf /tmp/tf-lua-saver")
 end)
 
+test("validates reusable Saver entries", function()
+  local graph = tf.Graph.new()
+  local v = tf.variable(graph, 1, "saver_meta_v")
+  local saver = tf.train.Saver.new(graph, {
+    { name = "left", variable = v },
+    { name = "right", variable = v },
+  })
+  assert_eq(saver:size(), 2)
+  assert_eq(table.concat(saver:names(), ","), "left,right")
+  assert_error(function()
+    tf.train.Saver.new(graph, {
+      { name = "same", variable = v },
+      { name = "same", variable = v },
+    })
+  end, "duplicated")
+  assert_error(function()
+    tf.train.Saver.new(graph, { { name = "", variable = v } })
+  end, "missing a name")
+end)
+
 test("trains with Adam weight decay", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates, _, state = tf.train.adamw(graph, loss, { w, b },
