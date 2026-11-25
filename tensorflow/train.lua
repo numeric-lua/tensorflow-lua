@@ -97,6 +97,43 @@ local function add(graph, a, b, name, dtype)
   return output
 end
 
+local function weight_decay_value(options)
+  local weight_decay = options.weight_decay or options.wd or 0
+  if type(weight_decay) ~= "number" or weight_decay < 0 then
+    error("weight_decay must be a non-negative number", 3)
+  end
+  return weight_decay
+end
+
+local function weight_decay_assign(graph, variable, learning_rate, weight_decay,
+    name, dtype)
+  if weight_decay == 0 then return nil end
+  local tf = require("tensorflow")
+  local factor
+  if type(learning_rate) == "table" and learning_rate.oper ~= nil then
+    local one = Train.constant(graph, 1, name .. "/decay_one", dtype)
+    local decay = Train.constant(graph, weight_decay, name .. "/decay_weight",
+      dtype)
+    factor = tf.sub(graph, one,
+      tf.mul(graph, learning_rate, decay, name .. "/decay_scale", dtype),
+      name .. "/decay_factor", dtype)
+  else
+    factor = Train.constant(graph, 1 - learning_rate * weight_decay,
+      name .. "/decay_factor", dtype)
+  end
+  local ref = variable.ref or variable
+  local read = variable.read or ref
+  local var_dtype = type(variable) == "table" and variable.dtype or dtype
+  local decayed = multiply(graph, read, factor, name .. "/decayed",
+    var_dtype or dtype)
+  local desc = graph:new_operation("Assign", name .. "/weight_decay")
+  desc:add_input(ref)
+  desc:add_input(decayed)
+  desc:set_type("T", var_dtype or dtype)
+  desc:set_bool("use_locking", true)
+  return desc:finish()
+end
+
 local function check_clip_norm(clip_norm)
   if type(clip_norm) ~= "number" or clip_norm <= 0 then
     error("clipnorm/clip_norm must be a positive number", 3)
@@ -238,10 +275,13 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
   local lr_dtype = variables[1].dtype or variables[1].ref.dtype or "float32"
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
     lr_dtype)
+  local weight_decay = weight_decay_value(options)
   local targets = {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
     local dtype = variable.dtype or "float32"
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, dtype)
     local desc = graph:new_operation("ApplyGradientDescent",
       name .. "/update_" .. i)
     desc:add_input(ref)
@@ -249,6 +289,7 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
     desc:add_input(gradients[i])
     desc:set_type("T", dtype)
     desc:set_bool("use_locking", false)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, lr
@@ -846,6 +887,7 @@ function Train.momentum(graph, loss, variables, options)
   end
   local lr = Train.constant(graph, learning_rate, name .. "/learning_rate", dtype)
   local mom = Train.constant(graph, momentum_value, name .. "/momentum", dtype)
+  local weight_decay = weight_decay_value(options)
   local targets, initializers, state_variables = {}, {}, {}
   for i, variable in ipairs(variables) do
     local ref = variable.ref or variable
@@ -854,6 +896,8 @@ function Train.momentum(graph, loss, variables, options)
       name .. "/accum_" .. i, { dtype = var_dtype })
     initializers[#initializers + 1] = accum.initializer
     state_variables[#state_variables + 1] = accum
+    local decay = weight_decay_assign(graph, variable, lr, weight_decay,
+      name .. "/wd_" .. i, var_dtype)
     local desc = graph:new_operation("ApplyMomentum", name .. "/update_" .. i)
     desc:add_input(ref)
     desc:add_input(accum.ref)
@@ -863,6 +907,7 @@ function Train.momentum(graph, loss, variables, options)
     desc:set_type("T", var_dtype)
     desc:set_bool("use_locking", false)
     desc:set_bool("use_nesterov", nesterov == true)
+    if decay ~= nil then desc:add_control_input(decay) end
     targets[#targets + 1] = desc:finish()
   end
   return targets, gradients, { initializers = initializers,

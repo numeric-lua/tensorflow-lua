@@ -92,6 +92,48 @@ test("supports Adam Nesterov momentum and clipping", function()
   session:close()
 end)
 
+local function weight_decay_problem(name)
+  local graph = tf.Graph.new()
+  local variable = tf.variable(graph, 5, name .. "_v")
+  local zero = tf.constant(graph, 0, name .. "_zero", "float32")
+  local loss = tf.mul(graph, variable.read, zero, name .. "_loss")
+  return graph, variable, loss
+end
+
+test("applies decoupled weight decay to SGD and momentum", function()
+  local graph, variable, loss = weight_decay_problem("sgdw")
+  local updates = tf.train.gradient_descent(graph, loss, { variable }, 0.1,
+    "SGDW", { weight_decay = 0.1 })
+  assert_eq(graph:attribute("SGDW/wd_1/weight_decay", "T"), "float32")
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { variable.initializer })
+  session:run({}, {}, updates)
+  local value = session:run({}, { variable.read })[1]:totable()
+  assert_true(math.abs(value - 4.95) < 1e-5, tostring(value))
+  session:close()
+
+  local graph2, variable2, loss2 = weight_decay_problem("momentumw")
+  local updates2, _, state2 = tf.train.momentum(graph2, loss2, { variable2 },
+    { learning_rate = 0.1, momentum = 0, weight_decay = 0.2, name = "MW" })
+  assert_eq(graph2:attribute("MW/wd_1/weight_decay", "T"), "float32")
+  local session2 = tf.Session.new(graph2)
+  local init = { variable2.initializer }
+  for _, initializer in ipairs(state2.initializers) do
+    init[#init + 1] = initializer
+  end
+  session2:run({}, {}, init)
+  session2:run({}, {}, updates2)
+  local value2 = session2:run({}, { variable2.read })[1]:totable()
+  assert_true(math.abs(value2 - 4.9) < 1e-5, tostring(value2))
+  session2:close()
+
+  local graph3, variable3, loss3 = weight_decay_problem("bad_decay")
+  assert_error(function()
+    tf.train.gradient_descent(graph3, loss3, { variable3 }, 0.1, "BadDecay",
+      { weight_decay = -1 })
+  end, "non-negative")
+end)
+
 test("saves and restores variable values", function()
   local path = os.tmpname()
   local graph = tf.Graph.new()
