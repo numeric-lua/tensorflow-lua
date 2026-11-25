@@ -4,11 +4,18 @@
 
 - decode scalar tensor attributes through `Graph:attribute` and include them in
   `Graph:attributes`;
-- add graph `tf.gather_nd`, `tf.scatter_nd`, `tf.diag`, and `tf.diag_part`;
-- add eager `Context:gather_nd`, `scatter_nd`, `diag`, and `diag_part`;
-- add decoupled `weight_decay`/`wd` support to `tf.train.gradient_descent` and
-  `tf.train.momentum`;
-- 233 dependency-free tests.
+- add `Graph:node_def` for exporting a single operation as serialized NodeDef
+  bytes;
+- add graph `tf.gather_nd`, `tf.scatter_nd`, `tf.tensor_scatter_nd_update`,
+  `tf.tensor_scatter_nd_add`, `tf.unique`, `tf.unique_with_counts`, `tf.diag`,
+  and `tf.diag_part`;
+- add eager `Context:gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
+  `tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, and
+  `diag_part`;
+- add decoupled `weight_decay`/`wd` support to `tf.train.gradient_descent`,
+  `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`, and
+  `tf.train.centered_rmsprop`;
+- 238 dependency-free tests.
 
 ## 2.8.0
 

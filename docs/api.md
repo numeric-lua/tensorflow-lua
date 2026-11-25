@@ -86,6 +86,16 @@ Creates a TF_Graph.
 
 Returns the graph's operation names in TensorFlow's iteration order.
 
+### `graph:node_def(output)`
+
+Returns the operation's serialized `NodeDef` protobuf bytes. The argument may be
+an operation name, `"op:index"`, or a graph output. TensorFlow status errors and
+missing operations become Lua errors.
+
+```lua
+local bytes = graph:node_def("logits")
+```
+
 ### `graph:shape(output)`
 
 Returns the inferred shape of an output (a graph output table, `"op"`, or
@@ -301,15 +311,17 @@ same options and returns the same triple as `tf.train.adam`.
 
 Adds `ApplyAdaMax` updates with first-moment, infinity-norm, and
 `beta1_power` state. Options: `learning_rate`/`lr` (default `0.001`), `beta1`
-(0.9), `beta2` (0.999), `epsilon` (1e-8), `clipvalue`, and `name`. Returns
+(0.9), `beta2` (0.999), `epsilon` (1e-8), `weight_decay`/`wd`, `clipvalue`, and
+`name`. Returns
 `targets, gradients, state`; initialize every `state.initializers` entry
 before training. The state table also exposes `state.beta1_power`.
 
 ### `tf.train.rmsprop(graph, loss, variables[, opts])`
 
 Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
-(default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10), `name`.
-Returns `targets, gradients, state`; initialize `state.initializers`.
+(default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10),
+`weight_decay`/`wd`, `name`. Returns `targets, gradients, state`; initialize
+`state.initializers`.
 
 ### `tf.train.Saver.new(graph, variables)`
 
@@ -321,7 +333,8 @@ Reusable native V2 checkpoint saver. `variables` is a list of
 
 Adds `ApplyCenteredRMSProp` updates with mean-gradient, variance, and momentum
 slots. Options: `learning_rate`/`lr` (default `0.001`), `rho` (0.9),
-`momentum` (0), `epsilon` (1e-10), `name`. Initialize `state.initializers`.
+`momentum` (0), `epsilon` (1e-10), `weight_decay`/`wd`, `name`. Initialize
+`state.initializers`.
 
 ### `tf.train.adagrad(graph, loss, variables[, opts])`
 
@@ -911,8 +924,9 @@ or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
 methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
-`concat`, `gather`, `gather_nd`, `scatter_nd`, `diag`, `diag_part`, `slice`,
-`pad`, `tile`, `where`, `reverse`, `split`,
+`concat`, `gather`, `gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
+`tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, `diag_part`,
+`slice`, `pad`, `tile`, `where`, `reverse`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
 `reduce_sum`/`reduce_mean`/`reduce_max`/`reduce_min`/`reduce_prod`/
@@ -967,6 +981,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.gather(graph, params, indices[, axis[, name[, dtype[, indices_dtype]]]])` | GatherV2 |
 | `tf.gather_nd(graph, params, indices[, name[, dtype[, indices_dtype]]])` | GatherNd |
 | `tf.scatter_nd(graph, indices, updates, shape[, name[, dtype[, indices_dtype]]])` | ScatterNd |
+| `tf.tensor_scatter_nd_update(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterUpdate |
+| `tf.tensor_scatter_nd_add(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterAdd |
+| `tf.unique(graph, x[, name[, dtype[, out_idx]]])` | Unique (values, indices) |
+| `tf.unique_with_counts(graph, x[, name[, dtype[, out_idx]]])` | UniqueWithCounts (values, indices, counts) |
 | `tf.diag(graph, x[, name[, dtype]])` | Diag |
 | `tf.diag_part(graph, x[, name[, dtype]])` | DiagPart |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
@@ -1003,7 +1021,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.nn.softplus(graph, x, name[, dtype])` | Softplus |
 
 `tf.split` and `tf.unstack` return lists of outputs; a numeric split count uses
-`Split` and a size table uses `SplitV`. `tf.pad` accepts `CONSTANT` (zero
+`Split` and a size table uses `SplitV`. `tf.unique` returns
+`{ values, indices }`; `tf.unique_with_counts` returns
+`{ values, indices, counts }`. Their `out_idx` defaults to `int32` and applies
+to the index/count outputs. `tf.pad` accepts `CONSTANT` (zero
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
