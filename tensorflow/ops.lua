@@ -926,6 +926,40 @@ function Ops.reduce_stddev(graph, input, axes, name, dtype, keep_dims)
   return output
 end
 
+local function unique_outputs(result, name, value_dtype, index_dtype, count)
+  local outputs = {
+    { oper = result.oper, index = 0, name = name .. ":0", dtype = value_dtype },
+    { oper = result.oper, index = 1, name = name .. ":1", dtype = index_dtype },
+  }
+  if count then
+    outputs[3] = { oper = result.oper, index = 2, name = name .. ":2",
+      dtype = index_dtype }
+  end
+  return outputs
+end
+
+function Ops.unique(graph, input, name, dtype, out_idx)
+  name = name or "unique"
+  local value_dtype = input_dtype(input, dtype)
+  local index_dtype = dtype_name(out_idx or "int32")
+  local desc = graph:new_operation("Unique", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_type("out_idx", index_dtype)
+  return unique_outputs(desc:finish(), name, value_dtype, index_dtype, false)
+end
+
+function Ops.unique_with_counts(graph, input, name, dtype, out_idx)
+  name = name or "unique_with_counts"
+  local value_dtype = input_dtype(input, dtype)
+  local index_dtype = dtype_name(out_idx or "int32")
+  local desc = graph:new_operation("UniqueWithCounts", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_type("out_idx", index_dtype)
+  return unique_outputs(desc:finish(), name, value_dtype, index_dtype, true)
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")

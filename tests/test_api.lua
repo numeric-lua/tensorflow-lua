@@ -7,7 +7,7 @@ test("exposes the public API surface", function()
     "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
     "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
     "gather_nd", "scatter_nd", "tensor_scatter_nd_update",
-    "tensor_scatter_nd_add",
+    "tensor_scatter_nd_add", "unique", "unique_with_counts",
     "cast", "concat", "clip_by_value", "add_n", "zeros_like", "ones_like",
     "identity", "stop_gradient", "diag", "diag_part", "batch_matmul", "fill",
     "range",
