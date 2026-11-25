@@ -37,8 +37,8 @@ test("exposes the public API surface", function()
     assert_true(tf.train[name] ~= nil, "missing tf.train." .. name)
   end
   local nn_functions = {
-    "relu", "relu6", "leaky_relu", "elu", "sigmoid", "tanh", "softmax",
-    "log_softmax", "softplus",
+    "relu", "relu6", "leaky_relu", "elu", "softsign", "selu", "sigmoid",
+    "tanh", "softmax", "log_softmax", "softplus",
   }
   for _, name in ipairs(nn_functions) do
     assert_true(tf.nn[name] ~= nil, "missing tf.nn." .. name)

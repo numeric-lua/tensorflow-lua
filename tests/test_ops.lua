@@ -235,6 +235,27 @@ test("runs leaky ReLU and ELU", function()
   session:close()
 end)
 
+test("runs Softsign and SELU activations", function()
+  local graph = tf.Graph.new()
+  local x = tf.placeholder(graph, "float32", { 3 }, "ss_x")
+  local softsign = tf.nn.softsign(graph, x, "ss_softsign")
+  local selu = tf.nn.selu(graph, x, "ss_selu")
+  local session = tf.Session.new(graph)
+  local result = session:run({ [x] = { -1, 0, 2 } }, { softsign, selu })
+  local soft = result[1]:totable()
+  assert_true(math.abs(soft[1] + 0.5) < 1e-6)
+  assert_eq(soft[2], 0)
+  assert_true(math.abs(soft[3] - 2 / 3) < 1e-6)
+  local scale = 1.0507009873554805
+  local alpha = 1.6732632423543772
+  local activated = result[2]:totable()
+  assert_true(math.abs(activated[1] - scale * alpha * (math.exp(-1) - 1)) <
+    1e-5)
+  assert_eq(activated[2], 0)
+  assert_true(math.abs(activated[3] - scale * 2) < 1e-5)
+  session:close()
+end)
+
 test("runs rounding, sign, reciprocal, and rsqrt ops", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", { 3 }, "math_x")

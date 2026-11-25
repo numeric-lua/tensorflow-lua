@@ -60,6 +60,14 @@ function Ops.elu(graph, input, name, dtype)
   return unary(graph, "Elu", input, name, dtype)
 end
 
+function Ops.softsign(graph, input, name, dtype)
+  return typed_unary(graph, "Softsign", input, name, dtype)
+end
+
+function Ops.selu(graph, input, name, dtype)
+  return typed_unary(graph, "Selu", input, name, dtype)
+end
+
 function Ops.leaky_relu(graph, input, name, dtype, alpha)
   local desc = graph:new_operation("LeakyRelu", name)
   desc:add_input(input)
