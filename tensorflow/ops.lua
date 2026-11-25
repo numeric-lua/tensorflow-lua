@@ -629,6 +629,48 @@ function Ops.gather(graph, params, indices, axis, name, dtype, indices_dtype)
   return desc:finish()
 end
 
+function Ops.gather_nd(graph, params, indices, name, dtype, indices_dtype)
+  name = name or "gather_nd"
+  local value_dtype = input_dtype(params, dtype)
+  local index_dtype = dtype_name(indices_dtype or
+    (type(indices) == "table" and indices.dtype) or "int32")
+  local desc = graph:new_operation("GatherNd", name)
+  desc:add_input(params)
+  desc:add_input(indices)
+  desc:set_type("Tparams", value_dtype)
+  desc:set_type("Tindices", index_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.scatter_nd(graph, indices, updates, shape, name, dtype,
+    indices_dtype)
+  if type(shape) ~= "table" or #shape == 0 then
+    error("scatter_nd expects a non-empty shape table", 3)
+  end
+  for i, dimension in ipairs(shape) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("scatter_nd dimensions must be non-negative integers (dimension " ..
+        tostring(i) .. ")", 3)
+    end
+  end
+  name = name or "scatter_nd"
+  local value_dtype = input_dtype(updates, dtype)
+  local index_dtype = dtype_name(indices_dtype or
+    (type(indices) == "table" and indices.dtype) or "int32")
+  local shape_op = constant(graph, shape, name .. "/shape", "int32")
+  local desc = graph:new_operation("ScatterNd", name)
+  desc:add_input(indices)
+  desc:add_input(updates)
+  desc:add_input(shape_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tindices", index_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 local function comparison(graph, op_type, a, b, name, dtype)
   local value_dtype = input_dtype(a, dtype)
   local desc = graph:new_operation(op_type, name)

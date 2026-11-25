@@ -357,6 +357,38 @@ test("transposes, expands, squeezes, and gathers graph outputs", function()
   session:close()
 end)
 
+test("gathers and scatters with ND indices", function()
+  local graph = tf.Graph.new()
+  local params = tf.placeholder(graph, "float32", { 3, 2 }, "nd_params")
+  local gather_indices = tf.placeholder(graph, "int32", { 2, 1 }, "nd_gi")
+  local gathered = tf.gather_nd(graph, params, gather_indices, "nd_gather")
+  local scatter_indices = tf.placeholder(graph, "int32", { 2, 1 }, "nd_si")
+  local updates = tf.placeholder(graph, "float32", { 2, 2 }, "nd_updates")
+  local scattered = tf.scatter_nd(graph, scatter_indices, updates, { 3, 2 },
+    "nd_scatter")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [params] = { { 10, 11 }, { 20, 21 }, { 30, 31 } },
+    [gather_indices] = { { 0 }, { 2 } },
+    [scatter_indices] = { { 0 }, { 2 } },
+    [updates] = { { 1, 2 }, { 3, 4 } },
+  }, { gathered, scattered })
+  assert_eq(table.concat(result[1]:shape(), ","), "2,2")
+  assert_eq(result[1]:totable()[1][1], 10)
+  assert_eq(result[1]:totable()[2][2], 31)
+  assert_eq(table.concat(result[2]:shape(), ","), "3,2")
+  assert_eq(result[2]:totable()[1][2], 2)
+  assert_eq(result[2]:totable()[2][1], 0)
+  assert_eq(result[2]:totable()[3][1], 3)
+  assert_error(function()
+    tf.scatter_nd(graph, scatter_indices, updates, {}, "nd_bad_shape")
+  end, "non-empty")
+  assert_error(function()
+    tf.scatter_nd(graph, scatter_indices, updates, { -1, 2 }, "nd_negative")
+  end, "non-negative")
+  session:close()
+end)
+
 test("splits tensors into equal and explicit parts", function()
   local graph = tf.Graph.new()
   local value = tf.placeholder(graph, "float32", { 6 }, "split_value")

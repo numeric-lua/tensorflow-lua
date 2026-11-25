@@ -6,6 +6,7 @@ test("exposes the public API surface", function()
     "Sequential", "tensor", "complex", "placeholder", "constant", "variable",
     "gradients", "reshape", "transpose", "expand_dims", "squeeze", "split",
     "pad", "tile", "where", "stack", "unstack", "slice", "reverse", "gather",
+    "gather_nd", "scatter_nd",
     "cast", "concat", "clip_by_value", "add_n", "zeros_like", "ones_like",
     "identity", "stop_gradient", "batch_matmul", "fill", "range",
     "linspace", "reduce_mean",
