@@ -629,6 +629,14 @@ function Context:elu(a)
   return unary(self, "Elu", a)
 end
 
+function Context:softsign(a)
+  return unary(self, "Softsign", a)
+end
+
+function Context:selu(a)
+  return unary(self, "Selu", a)
+end
+
 function Context:leaky_relu(a, alpha)
   alpha = alpha or 0.2
   if type(alpha) ~= "number" then
@@ -792,6 +800,25 @@ function Context:reverse(a, axis)
   local axis_tensor = self:constant(axis, "int32")
   return self:execute("ReverseV2", { a, axis_tensor },
     { attrs = { T = a:dtype(), Tidx = "int32" } })[1]
+end
+
+function Context:invert_permutation(a, dtype)
+  return self:execute("InvertPermutation", { a },
+    { attrs = { T = dtype or a:dtype() } })[1]
+end
+
+function Context:reverse_sequence(a, lengths, seq_dim, batch_dim)
+  seq_dim = integer_axis(seq_dim or 1, "reverse_sequence seq_dim")
+  batch_dim = integer_axis(batch_dim or 0, "reverse_sequence batch_dim")
+  if seq_dim < 0 then
+    error("eager reverse_sequence seq_dim must be non-negative", 2)
+  end
+  if batch_dim < 0 then
+    error("eager reverse_sequence batch_dim must be non-negative", 2)
+  end
+  return self:execute("ReverseSequence", { a, lengths },
+    { attrs = { T = a:dtype(), Tlen = lengths:dtype(),
+      seq_dim = { int = seq_dim }, batch_dim = { int = batch_dim } } })[1]
 end
 
 function Context:split(a, num_or_size_splits, axis)

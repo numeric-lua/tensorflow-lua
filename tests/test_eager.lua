@@ -162,6 +162,36 @@ test("executes eager math, sign, and variance reductions", function()
   context:close()
 end)
 
+test("executes eager Softsign/SELU and sequence transforms", function()
+  local context = tf.eager.Context.new()
+  local values = context:constant({ -1, 0, 2 })
+  local soft = context:softsign(values):totable()
+  assert_true(math.abs(soft[1] + 0.5) < 1e-6)
+  assert_eq(soft[2], 0)
+  assert_true(math.abs(soft[3] - 2 / 3) < 1e-6)
+  local scale = 1.0507009873554805
+  local alpha = 1.6732632423543772
+  local selu = context:selu(values):totable()
+  assert_true(math.abs(selu[1] - scale * alpha * (math.exp(-1) - 1)) < 1e-5)
+  assert_true(math.abs(selu[3] - scale * 2) < 1e-5)
+  local inverse = context:invert_permutation(
+    context:constant({ 2, 0, 1 }, "int32"))
+  assert_eq(table.concat(inverse:totable(), ","), "1,2,0")
+  local sequence = context:constant({
+    { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+    { { 7, 8 }, { 9, 10 }, { 11, 12 } },
+  })
+  local reversed = context:reverse_sequence(sequence,
+    context:constant({ 2, 3 }, "int32"), 1, 0)
+  assert_eq(table.concat(reversed:totable()[1][1], ","), "3,4")
+  assert_eq(table.concat(reversed:totable()[2][1], ","), "11,12")
+  assert_error(function()
+    context:reverse_sequence(sequence, context:constant({ 2, 3 }, "int32"),
+      -1, 0)
+  end, "non-negative")
+  context:close()
+end)
+
 test("executes eager zero/one, identity, error, and predicate ops", function()
   local context = tf.eager.Context.new()
   local x = context:constant({ { 1, 2 }, { 3, 4 } })
