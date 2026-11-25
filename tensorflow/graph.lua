@@ -330,6 +330,38 @@ local function list_length(graph, value, arg_name, output, label)
   return length
 end
 
+function Graph:operation_device(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  local device = lib.TF_OperationDevice(operation)
+  if device == nil then return nil end
+  local text = ffi.string(device)
+  if text == "" then return nil end
+  return text
+end
+
+function Graph:all_inputs(value)
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  local count = lib.TF_OperationNumInputs(operation)
+  local inputs = {}
+  if count > 0 then
+    local array = ffi.new("TF_Output[?]", count)
+    lib.TF_OperationAllInputs(operation, array, count)
+    for i = 1, count do
+      local output = array[i - 1]
+      inputs[i] = {
+        input = i - 1,
+        name = ffi.string(lib.TF_OperationName(output.oper)) .. ":" ..
+          tostring(output.index),
+        index = output.index,
+        dtype = dtype_name(lib.TF_OperationOutputType(output)),
+      }
+    end
+  end
+  return inputs
+end
+
 function Graph:input_list_length(value, arg_name)
   return list_length(self, value, arg_name, false, "graph input list length")
 end
