@@ -565,6 +565,44 @@ function Ops.reverse(graph, input, axis, name, dtype)
   return output
 end
 
+function Ops.invert_permutation(graph, input, name, dtype)
+  name = name or "invert_permutation"
+  local value_dtype = dtype_name(dtype or
+    (type(input) == "table" and input.dtype) or "int32")
+  local desc = graph:new_operation("InvertPermutation", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.reverse_sequence(graph, input, lengths, seq_dim, batch_dim, name,
+    dtype, lengths_dtype)
+  seq_dim = seq_dim or 1
+  batch_dim = batch_dim or 0
+  if type(seq_dim) ~= "number" or seq_dim % 1 ~= 0 or seq_dim < 0 then
+    error("reverse_sequence seq_dim must be a non-negative integer", 3)
+  end
+  if type(batch_dim) ~= "number" or batch_dim % 1 ~= 0 or batch_dim < 0 then
+    error("reverse_sequence batch_dim must be a non-negative integer", 3)
+  end
+  name = name or "reverse_sequence"
+  local value_dtype = input_dtype(input, dtype)
+  local length_dtype = dtype_name(lengths_dtype or
+    (type(lengths) == "table" and lengths.dtype) or "int32")
+  local desc = graph:new_operation("ReverseSequence", name)
+  desc:add_input(input)
+  desc:add_input(lengths)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tlen", length_dtype)
+  desc:set_int("seq_dim", seq_dim)
+  desc:set_int("batch_dim", batch_dim)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.reshape(graph, input, shape, name, dtype)
   if type(shape) ~= "table" then
     error("reshape expects a shape table", 3)

@@ -632,6 +632,39 @@ test("stacks, unstacks, slices, and reverses graph tensors", function()
   session:close()
 end)
 
+test("inverts permutations and reverses sequences", function()
+  local graph = tf.Graph.new()
+  local permutation = tf.placeholder(graph, "int32", { 3 }, "perm_x")
+  local inverse = tf.invert_permutation(graph, permutation, "perm_inverse")
+  local sequence = tf.placeholder(graph, "float32", { 2, 3, 2 }, "seq_x")
+  local lengths = tf.placeholder(graph, "int32", { 2 }, "seq_lengths")
+  local reversed = tf.reverse_sequence(graph, sequence, lengths, 1, 0,
+    "seq_reverse")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [permutation] = { 2, 0, 1 },
+    [sequence] = {
+      { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+      { { 7, 8 }, { 9, 10 }, { 11, 12 } },
+    },
+    [lengths] = { 2, 3 },
+  }, { inverse, reversed })
+  assert_eq(result[1]:dtype(), "int32")
+  assert_eq(table.concat(result[1]:totable(), ","), "1,2,0")
+  assert_eq(table.concat(result[2]:shape(), ","), "2,3,2")
+  assert_eq(table.concat(result[2]:totable()[1][1], ","), "3,4")
+  assert_eq(table.concat(result[2]:totable()[1][2], ","), "1,2")
+  assert_eq(table.concat(result[2]:totable()[2][1], ","), "11,12")
+  assert_eq(table.concat(result[2]:totable()[2][3], ","), "7,8")
+  assert_error(function()
+    tf.reverse_sequence(graph, sequence, lengths, -1, 0, "bad_seq_dim")
+  end, "non-negative")
+  assert_error(function()
+    tf.reverse_sequence(graph, sequence, lengths, 1, 0.5, "bad_batch_dim")
+  end, "non-negative")
+  session:close()
+end)
+
 test("compares values and evaluates logical graph ops", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "int32", { 3 }, "cmp_x")
