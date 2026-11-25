@@ -466,8 +466,10 @@ test("reads graph operation attributes", function()
 
   local value_info = graph:attribute_info("attr_const", "value")
   assert_eq(value_info.kind, "tensor")
-  assert_error(function() graph:attribute("attr_const", "value") end,
-    "unsupported")
+  local value = graph:attribute("attr_const", "value")
+  assert_eq(value:dtype(), "int32")
+  assert_eq(table.concat(value:totable(), ","), "1,2")
+  value:destroy()
   assert_error(function() graph:attribute("attr_x", "missing") end,
     "attribute")
   assert_error(function() graph:attribute_info("attr_x", "") end,
@@ -516,7 +518,9 @@ test("reads all graph operation attributes", function()
 
   local constant = find(graph:attributes("attrs_const"), "value")
   assert_eq(constant.kind, "tensor")
-  assert_eq(constant.value, nil)
+  assert_eq(constant.value:dtype(), "int32")
+  assert_eq(table.concat(constant.value:totable(), ","), "1,2")
+  constant.value:destroy()
   assert_error(function() graph:attributes("attrs_missing") end,
     "no operation")
 end)

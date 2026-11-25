@@ -279,6 +279,17 @@ local function attr_shape(lib, operation, name, metadata)
   return result
 end
 
+local function attr_tensor(lib, operation, name)
+  local holder = ffi.new("TF_Tensor*[1]")
+  local status = capi.status()
+  lib.TF_OperationGetAttrTensor(operation, name, holder, status)
+  capi.check(status, "graph tensor attribute")
+  if holder[0] == nil then
+    error("graph tensor attribute '" .. name .. "' is null", 3)
+  end
+  return Tensor.wrap(holder[0])
+end
+
 local function attr_shape_list(lib, operation, name, metadata)
   local count = tonumber(metadata.list_size)
   local total = tonumber(metadata.total_size)
@@ -350,8 +361,9 @@ function Graph:attributes(value)
   local attributes = {}
   for _, name in ipairs(self:attribute_names(value)) do
     local info = self:attribute_info(value, name)
-    if info.kind ~= "tensor" and info.kind ~= "placeholder" and
-        info.kind ~= "func" then
+    local undecoded = info.kind == "placeholder" or info.kind == "func" or
+      (info.kind == "tensor" and info.is_list)
+    if not undecoded then
       info.value = self:attribute(value, name)
     end
     attributes[#attributes + 1] = info
@@ -418,6 +430,8 @@ function Graph:attribute(value, name)
       return dtype_name(result[0])
     elseif kind == "shape" then
       return attr_shape(lib, operation, name, metadata)
+    elseif kind == "tensor" then
+      return attr_tensor(lib, operation, name)
     end
   end
   error("unsupported graph " .. (is_list and "list " or "") .. kind ..

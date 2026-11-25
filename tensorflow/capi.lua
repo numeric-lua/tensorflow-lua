@@ -115,6 +115,8 @@ void TF_OperationGetAttrShape(TF_Operation*, const char*, int64_t*, int,
   TF_Status*);
 void TF_OperationGetAttrShapeList(TF_Operation*, const char*, int64_t**, int*,
   int, int64_t*, int, TF_Status*);
+void TF_OperationGetAttrTensor(TF_Operation*, const char*, TF_Tensor**,
+  TF_Status*);
 TF_OperationDescription* TF_NewOperation(TF_Graph*, const char*, const char*);
 void TF_AddInput(TF_OperationDescription*, TF_Output);
 void TF_AddInputList(TF_OperationDescription*, const TF_Output*, int);
