@@ -146,6 +146,12 @@ TF_ImportGraphDefOptions* TF_NewImportGraphDefOptions(void);
 void TF_DeleteImportGraphDefOptions(TF_ImportGraphDefOptions*);
 void TF_ImportGraphDefOptionsSetPrefix(TF_ImportGraphDefOptions*,
   const char*);
+void TF_ImportGraphDefOptionsSetDefaultDevice(TF_ImportGraphDefOptions*,
+  const char*);
+void TF_ImportGraphDefOptionsSetUniquifyNames(TF_ImportGraphDefOptions*,
+  unsigned char);
+void TF_ImportGraphDefOptionsSetUniquifyPrefix(TF_ImportGraphDefOptions*,
+  unsigned char);
 void TF_ImportGraphDefOptionsAddInputMapping(TF_ImportGraphDefOptions*,
   const char*, int, TF_Output);
 

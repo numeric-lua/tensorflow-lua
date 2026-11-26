@@ -68,6 +68,37 @@ test("imports prefixed GraphDefs into one graph", function()
   session:close()
 end)
 
+test("imports GraphDefs with device and uniquify options", function()
+  local graph = tf.Graph.new()
+  graph:import_graph_def(graph_def)
+  graph:import_graph_def(graph_def, { uniquify_names = true })
+  local names = graph:operations()
+  assert_eq(#names, 6)
+  assert_true(graph:operation("x_1") ~= nil)
+
+  local deviced = tf.Graph.new():import_graph_def(graph_def,
+    { default_device = "/CPU:0" })
+  assert_eq(deviced:operation_device("z"), "/CPU:0")
+  assert_eq(deviced:operation_device("x"), "/CPU:0")
+
+  local prefixed = tf.Graph.new():import_graph_def(graph_def, { prefix = "p" })
+  prefixed:import_graph_def(graph_def, {
+    prefix = "p", uniquify_prefix = true,
+  })
+  assert_eq(#prefixed:operations(), 6)
+  assert_true(prefixed:operation("p_1/x") ~= nil)
+
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, { default_device = 1 })
+  end, "default_device")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, { uniquify_names = "yes" })
+  end, "uniquify_names")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, { uniquify_prefix = "yes" })
+  end, "uniquify_prefix")
+end)
+
 test("remaps GraphDef inputs to existing graph outputs", function()
   local graph = tf.Graph.new()
   local replacement = tf.constant(graph, { 1, 2, 3 }, "replacement")

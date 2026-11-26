@@ -531,6 +531,18 @@ function Graph:import_graph_def(data, options)
   if prefix ~= nil and type(prefix) ~= "string" then
     error("GraphDef import prefix must be a string", 2)
   end
+  local default_device = options and options.default_device
+  if default_device ~= nil and type(default_device) ~= "string" then
+    error("GraphDef import default_device must be a string", 2)
+  end
+  local uniquify_names = options and options.uniquify_names
+  if uniquify_names ~= nil and type(uniquify_names) ~= "boolean" then
+    error("GraphDef import uniquify_names must be a boolean", 2)
+  end
+  local uniquify_prefix = options and options.uniquify_prefix
+  if uniquify_prefix ~= nil and type(uniquify_prefix) ~= "boolean" then
+    error("GraphDef import uniquify_prefix must be a boolean", 2)
+  end
   local input_map = options and options.input_map
   if input_map ~= nil and type(input_map) ~= "table" then
     error("GraphDef import input_map must be a table", 2)
@@ -581,6 +593,18 @@ function Graph:import_graph_def(data, options)
     function(value) lib.TF_DeleteImportGraphDefOptions(value) end)
   if prefix ~= nil then
     lib.TF_ImportGraphDefOptionsSetPrefix(import_options, prefix)
+  end
+  if default_device ~= nil then
+    lib.TF_ImportGraphDefOptionsSetDefaultDevice(import_options,
+      default_device)
+  end
+  if uniquify_names ~= nil then
+    lib.TF_ImportGraphDefOptionsSetUniquifyNames(import_options,
+      uniquify_names and 1 or 0)
+  end
+  if uniquify_prefix ~= nil then
+    lib.TF_ImportGraphDefOptionsSetUniquifyPrefix(import_options,
+      uniquify_prefix and 1 or 0)
   end
   for _, mapping in ipairs(mappings) do
     lib.TF_ImportGraphDefOptionsAddInputMapping(import_options, mapping.name,
