@@ -615,6 +615,24 @@ function Context:matrix_diag_part(a)
   return unary(self, "MatrixDiagPart", a)
 end
 
+function Context:matrix_band_part(a, num_lower, num_upper)
+  if type(num_lower) ~= "number" or num_lower % 1 ~= 0 or num_lower < -1 then
+    error("eager matrix_band_part num_lower must be an integer >= -1", 2)
+  end
+  if type(num_upper) ~= "number" or num_upper % 1 ~= 0 or num_upper < -1 then
+    error("eager matrix_band_part num_upper must be an integer >= -1", 2)
+  end
+  local lower = self:constant(num_lower, "int32")
+  local upper = self:constant(num_upper, "int32")
+  return self:execute("MatrixBandPart", { a, lower, upper },
+    { attrs = { T = a:dtype(), Tindex = "int32" } })[1]
+end
+
+function Context:matrix_set_diag(a, diagonal)
+  return self:execute("MatrixSetDiag", { a, diagonal },
+    { attrs = { T = a:dtype() } })[1]
+end
+
 function Context:stop_gradient(a)
   return unary(self, "StopGradient", a)
 end
@@ -942,6 +960,35 @@ end
 function Context:where(condition, x, y)
   return self:execute("SelectV2", { condition, x, y },
     { attrs = { T = x:dtype() } })[1]
+end
+
+function Context:broadcast_to(a, shape)
+  if type(shape) ~= "table" or #shape == 0 then
+    error("eager broadcast_to expects a non-empty shape table", 2)
+  end
+  for i, dimension in ipairs(shape) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("eager broadcast_to dimensions must be non-negative integers " ..
+        "(index " .. tostring(i) .. ")", 2)
+    end
+  end
+  local shape_tensor = self:constant(shape, "int32")
+  return self:execute("BroadcastTo", { a, shape_tensor },
+    { attrs = { T = a:dtype(), Tidx = "int32" } })[1]
+end
+
+function Context:roll(a, shift, axis)
+  if type(shift) == "number" then shift = { shift } end
+  if type(axis) == "number" then axis = { axis } end
+  shift = integer_table(shift, "roll shift")
+  axis = integer_table(axis, "roll axis")
+  if #shift ~= #axis then
+    error("eager roll shift and axis lengths must match", 2)
+  end
+  local shift_tensor = self:constant(shift, "int32")
+  local axis_tensor = self:constant(axis, "int32")
+  return self:execute("Roll", { a, shift_tensor, axis_tensor },
+    { attrs = { T = a:dtype(), Tshift = "int32", Taxis = "int32" } })[1]
 end
 
 function Context:reverse(a, axis)

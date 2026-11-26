@@ -83,7 +83,8 @@ test("exposes the public API surface", function()
     "batch_to_space_nd", "unique", "unique_with_counts", "erf",
     "erfc", "is_nan", "is_inf", "is_finite",
     "reduce_variance", "reduce_stddev", "norm", "matrix_diag",
-    "matrix_diag_part", "maximum", "minimum",
+    "matrix_diag_part", "matrix_band_part", "matrix_set_diag", "broadcast_to",
+    "roll", "maximum", "minimum",
   }
   for _, name in ipairs(eager_methods) do
     assert_true(type(tf.eager.Context[name]) == "function",
