@@ -70,6 +70,12 @@ tf.train = {
   gradient_descent = function(graph, loss, variables, lr, name, options)
     return Train.gradient_descent(graph, loss, variables, lr, name, options)
   end,
+  sgd = function(graph, loss, variables, options)
+    return Train.sgd(graph, loss, variables, options)
+  end,
+  optimizer = function(kind, graph, loss, variables, options)
+    return Train.optimizer(kind, graph, loss, variables, options)
+  end,
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,

@@ -295,6 +295,14 @@ function Train.gradient_descent(graph, loss, variables, learning_rate, name,
   return targets, gradients, lr
 end
 
+function Train.sgd(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.01
+  local name = options.name or "SGD"
+  return Train.gradient_descent(graph, loss, variables, learning_rate, name,
+    options)
+end
+
 local function zeros(shape, depth)
   depth = depth or 1
   if depth > #shape then return 0 end
@@ -940,6 +948,54 @@ function Train.momentum(graph, loss, variables, options)
   end
   return targets, gradients, { initializers = initializers,
     variables = state_variables }
+end
+
+local optimizer_functions = {
+  adam = function(graph, loss, variables, options)
+    return Train.adam(graph, loss, variables, options)
+  end,
+  adamw = function(graph, loss, variables, options)
+    return Train.adamw(graph, loss, variables, options)
+  end,
+  adamax = function(graph, loss, variables, options)
+    return Train.adamax(graph, loss, variables, options)
+  end,
+  rmsprop = function(graph, loss, variables, options)
+    return Train.rmsprop(graph, loss, variables, options)
+  end,
+  centered_rmsprop = function(graph, loss, variables, options)
+    return Train.centered_rmsprop(graph, loss, variables, options)
+  end,
+  adagrad = function(graph, loss, variables, options)
+    return Train.adagrad(graph, loss, variables, options)
+  end,
+  adadelta = function(graph, loss, variables, options)
+    return Train.adadelta(graph, loss, variables, options)
+  end,
+  ftrl = function(graph, loss, variables, options)
+    return Train.ftrl(graph, loss, variables, options)
+  end,
+  proximal_adagrad = function(graph, loss, variables, options)
+    return Train.proximal_adagrad(graph, loss, variables, options)
+  end,
+  momentum = function(graph, loss, variables, options)
+    return Train.momentum(graph, loss, variables, options)
+  end,
+}
+
+function Train.optimizer(kind, graph, loss, variables, options)
+  if type(kind) ~= "string" or kind == "" then
+    error("optimizer kind must be a non-empty string", 3)
+  end
+  local key = string.lower(kind)
+  if key == "sgd" or key == "gradient_descent" then
+    return Train.sgd(graph, loss, variables, options)
+  end
+  local factory = optimizer_functions[key]
+  if factory == nil then
+    error("unknown optimizer '" .. kind .. "'", 3)
+  end
+  return factory(graph, loss, variables, options or {})
 end
 
 return Train

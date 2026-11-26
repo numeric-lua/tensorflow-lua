@@ -320,6 +320,38 @@ local function linear_problem()
   return graph, x, target, w, b, loss
 end
 
+test("trains with named optimizer entrypoints", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates = tf.train.sgd(graph, loss, { w, b },
+    { learning_rate = 0.05 })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { w.initializer, b.initializer })
+  for _ = 1, 200 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read })[1]:totable()
+  assert_true(math.abs(result - 2) < 0.4, tostring(result))
+  session:close()
+
+  local graph2, x2, target2, w2, b2, loss2 = linear_problem()
+  local updates2, _, state2 = tf.train.optimizer("adam", graph2, loss2,
+    { w2, b2 }, { learning_rate = 0.05 })
+  local init = { w2.initializer, b2.initializer }
+  for _, initializer in ipairs(state2.initializers) do
+    init[#init + 1] = initializer
+  end
+  local session2 = tf.Session.new(graph2)
+  session2:run({}, {}, init)
+  session2:run({ [x2] = { 0, 1, 2, 3 }, [target2] = { 1, 3, 5, 7 } }, {},
+    updates2)
+  local value = session2:run({}, { w2.read })[1]:totable()
+  assert_true(value == value and value < 1)
+  assert_error(function()
+    tf.train.optimizer("not_an_optimizer", graph2, loss2, { w2 }, {})
+  end, "unknown optimizer")
+  session2:close()
+end)
+
 test("trains linear regression with Adagrad", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates, _, state = tf.train.adagrad(graph, loss, { w, b },
