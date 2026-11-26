@@ -100,6 +100,40 @@ function Ops.matrix_diag_part(graph, input, name, dtype)
   return typed_unary(graph, "MatrixDiagPart", input, name, dtype)
 end
 
+function Ops.matrix_band_part(graph, input, num_lower, num_upper, name, dtype)
+  if type(num_lower) ~= "number" or num_lower % 1 ~= 0 or num_lower < -1 then
+    error("matrix_band_part num_lower must be an integer >= -1", 3)
+  end
+  if type(num_upper) ~= "number" or num_upper % 1 ~= 0 or num_upper < -1 then
+    error("matrix_band_part num_upper must be an integer >= -1", 3)
+  end
+  name = name or "matrix_band_part"
+  local value_dtype = input_dtype(input, dtype)
+  local lower = constant(graph, num_lower, name .. "/lower", "int32")
+  local upper = constant(graph, num_upper, name .. "/upper", "int32")
+  local desc = graph:new_operation("MatrixBandPart", name)
+  desc:add_input(input)
+  desc:add_input(lower)
+  desc:add_input(upper)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tindex", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.matrix_set_diag(graph, input, diagonal, name, dtype)
+  name = name or "matrix_set_diag"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("MatrixSetDiag", name)
+  desc:add_input(input)
+  desc:add_input(diagonal)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end
