@@ -10,7 +10,7 @@ test("exposes the public API surface", function()
     "depth_to_space", "space_to_depth", "gather_nd", "scatter_nd",
     "tensor_scatter_nd_update", "tensor_scatter_nd_add",
     "tensor_scatter_nd_sub", "tensor_scatter_nd_min",
-    "tensor_scatter_nd_max", "unique", "unique_with_counts",
+    "tensor_scatter_nd_max", "unique", "unique_with_counts", "sequence_mask",
     "cast", "concat", "clip_by_value", "add_n", "zeros_like", "ones_like",
     "identity", "stop_gradient", "diag", "diag_part", "batch_matmul", "fill",
     "range",

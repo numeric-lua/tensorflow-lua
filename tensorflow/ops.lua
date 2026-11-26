@@ -1073,6 +1073,30 @@ function Ops.unique_with_counts(graph, input, name, dtype, out_idx)
   return unique_outputs(desc:finish(), name, value_dtype, index_dtype, true)
 end
 
+function Ops.sequence_mask(graph, lengths, maxlen, name, dtype)
+  if type(maxlen) ~= "number" or maxlen % 1 ~= 0 or maxlen < 1 then
+    error("sequence_mask maxlen must be a positive integer", 3)
+  end
+  name = name or "sequence_mask"
+  local length_dtype = dtype_name(lengths.dtype or "int32")
+  if length_dtype ~= "int32" then
+    lengths = Ops.cast(graph, lengths, length_dtype, "int32",
+      name .. "/lengths_int32")
+  end
+  local positions = Ops.range(graph, 0, maxlen, 1, name .. "/range", "int32")
+  positions = Ops.expand_dims(graph, positions, 0, name .. "/positions",
+    "int32")
+  positions.dtype = "int32"
+  local expanded = Ops.expand_dims(graph, lengths, 1, name .. "/lengths",
+    "int32")
+  expanded.dtype = "int32"
+  local comparison = Ops.less(graph, positions, expanded, name .. "/less")
+  local mask_dtype = dtype_name(dtype or "float32")
+  local output = Ops.cast(graph, comparison, "bool", mask_dtype, name)
+  output.dtype = mask_dtype
+  return output
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")

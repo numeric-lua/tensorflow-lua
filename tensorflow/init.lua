@@ -180,6 +180,7 @@ tf.tensor_scatter_nd_min = Ops.tensor_scatter_nd_min
 tf.tensor_scatter_nd_max = Ops.tensor_scatter_nd_max
 tf.unique = Ops.unique
 tf.unique_with_counts = Ops.unique_with_counts
+tf.sequence_mask = Ops.sequence_mask
 tf.cast = Ops.cast
 tf.clip_by_value = Ops.clip_by_value
 tf.maximum = Ops.maximum
