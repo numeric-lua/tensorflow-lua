@@ -92,6 +92,14 @@ function Ops.diag_part(graph, input, name, dtype)
   return typed_unary(graph, "DiagPart", input, name, dtype)
 end
 
+function Ops.matrix_diag(graph, input, name, dtype)
+  return typed_unary(graph, "MatrixDiag", input, name, dtype)
+end
+
+function Ops.matrix_diag_part(graph, input, name, dtype)
+  return typed_unary(graph, "MatrixDiagPart", input, name, dtype)
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end
