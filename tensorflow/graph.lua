@@ -663,6 +663,23 @@ function Graph:op_def(op_type)
   return data
 end
 
+function Graph:version_def()
+  local lib = capi.load()
+  local buffer = ffi.gc(capi.require(lib.TF_NewBuffer(), "TF_NewBuffer"),
+    function(pointer) lib.TF_DeleteBuffer(pointer) end)
+  local status = capi.status()
+  lib.TF_GraphVersions(self:handle(), buffer, status)
+  capi.check(status, "graph versions export")
+  local struct = lib.TF_GetBuffer(buffer)
+  if struct.length > 0 and struct.data == nil then
+    error("TF_GraphVersions returned no data", 2)
+  end
+  local data = struct.length > 0 and ffi.string(struct.data, struct.length) or ""
+  ffi.gc(buffer, nil)
+  lib.TF_DeleteBuffer(buffer)
+  return data
+end
+
 function Graph:graph_def()
   local lib = capi.load()
   local buffer = capi.require(lib.TF_NewBuffer(), "TF_NewBuffer")

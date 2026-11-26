@@ -355,6 +355,13 @@ test("exports operation OpDefs", function()
   assert_error(function() graph:op_def("") end, "non-empty")
 end)
 
+test("exports graph version metadata", function()
+  local graph = tf.Graph.new()
+  local data = graph:version_def()
+  assert_true(#data > 0)
+  assert_eq(#graph:version_def(), #data)
+end)
+
 test("round-trips a graph through GraphDef", function()
   local graph = tf.Graph.new():import_graph_def(graph_def)
   local data = graph:graph_def()
