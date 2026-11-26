@@ -133,6 +133,20 @@ function Checkpoint.load(graph, path, variables)
     if variable.dtype and saved_dtype ~= variable.dtype then
       error("checkpoint dtype mismatch for '" .. name .. "'", 2)
     end
+    if type(variable.shape) == "table" then
+      local compatible = #variable.shape == #saved.shape
+      if compatible then
+        for dimension = 1, #saved.shape do
+          if variable.shape[dimension] ~= saved.shape[dimension] then
+            compatible = false
+            break
+          end
+        end
+      end
+      if not compatible then
+        error("checkpoint shape mismatch for '" .. name .. "'", 2)
+      end
+    end
     local tensor = Tensor.from_bytes(saved.dtype, saved.shape, saved.bytes)
     local desc = graph:new_operation("Assign", name .. "/restore_" .. i)
     desc:add_input(variable.ref or variable)

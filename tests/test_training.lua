@@ -226,6 +226,24 @@ test("reads portable checkpoint metadata", function()
   os.remove(path)
 end)
 
+test("rejects portable checkpoint shape mismatches", function()
+  local path = os.tmpname()
+  local graph = tf.Graph.new()
+  local variable = tf.variable(graph, { 1, 2, 3 }, "shape_v")
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { variable.initializer })
+  tf.save_checkpoint(session, path, { { name = "shape_v",
+    variable = variable } })
+  session:close()
+  local graph2 = tf.Graph.new()
+  local wrong = tf.variable(graph2, { 1, 2 }, "shape_v")
+  assert_error(function()
+    tf.load_checkpoint(graph2, path, { { name = "shape_v",
+      variable = wrong } })
+  end, "shape mismatch")
+  os.remove(path)
+end)
+
 test("writes and restores a native TensorFlow V2 checkpoint", function()
   local prefix = "/tmp/tf-lua-save-v2/ckpt"
   os.execute("rm -rf /tmp/tf-lua-save-v2")
