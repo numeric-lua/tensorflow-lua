@@ -803,6 +803,24 @@ function Ops.tensor_scatter_nd_add(graph, tensor, indices, updates, name,
     updates, name, dtype, indices_dtype)
 end
 
+function Ops.tensor_scatter_nd_sub(graph, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  return tensor_scatter_nd(graph, "TensorScatterSub", tensor, indices,
+    updates, name, dtype, indices_dtype)
+end
+
+function Ops.tensor_scatter_nd_min(graph, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  return tensor_scatter_nd(graph, "TensorScatterMin", tensor, indices,
+    updates, name, dtype, indices_dtype)
+end
+
+function Ops.tensor_scatter_nd_max(graph, tensor, indices, updates, name,
+    dtype, indices_dtype)
+  return tensor_scatter_nd(graph, "TensorScatterMax", tensor, indices,
+    updates, name, dtype, indices_dtype)
+end
+
 local function comparison(graph, op_type, a, b, name, dtype)
   local value_dtype = input_dtype(a, dtype)
   local desc = graph:new_operation(op_type, name)

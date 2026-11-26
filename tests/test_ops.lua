@@ -464,7 +464,7 @@ test("gathers and scatters with ND indices", function()
   session:close()
 end)
 
-test("updates and adds into tensors with ND indices", function()
+test("scatters update, add, sub, min, and max with ND indices", function()
   local graph = tf.Graph.new()
   local tensor = tf.placeholder(graph, "float32", { 3, 2 }, "ts_tensor")
   local indices = tf.placeholder(graph, "int32", { 1, 1 }, "ts_indices")
@@ -473,17 +473,26 @@ test("updates and adds into tensors with ND indices", function()
     "ts_update")
   local added = tf.tensor_scatter_nd_add(graph, tensor, indices, updates,
     "ts_add")
+  local subtracted = tf.tensor_scatter_nd_sub(graph, tensor, indices, updates,
+    "ts_sub")
+  local minimal = tf.tensor_scatter_nd_min(graph, tensor, indices, updates,
+    "ts_min")
+  local maximal = tf.tensor_scatter_nd_max(graph, tensor, indices, updates,
+    "ts_max")
   local session = tf.Session.new(graph)
   local result = session:run({
     [tensor] = { { 1, 2 }, { 3, 4 }, { 5, 6 } },
     [indices] = { { 1 } },
     [updates] = { { 9, 9 } },
-  }, { updated, added })
+  }, { updated, added, subtracted, minimal, maximal })
   assert_eq(table.concat(result[1]:shape(), ","), "3,2")
   assert_eq(table.concat(result[1]:totable()[2], ","), "9,9")
   assert_eq(table.concat(result[1]:totable()[1], ","), "1,2")
   assert_eq(table.concat(result[2]:totable()[2], ","), "12,13")
   assert_eq(table.concat(result[2]:totable()[3], ","), "5,6")
+  assert_eq(table.concat(result[3]:totable()[2], ","), "-6,-5")
+  assert_eq(table.concat(result[4]:totable()[2], ","), "3,4")
+  assert_eq(table.concat(result[5]:totable()[2], ","), "9,9")
   session:close()
 end)
 
