@@ -423,6 +423,39 @@ test("converts between depth and spatial blocks", function()
   session:close()
 end)
 
+test("moves blocks between batch and space", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "float32", { 1, 2, 2, 1 }, "sbn_x")
+  local blocked = tf.space_to_batch_nd(graph, input, { 2, 2 },
+    { { 0, 0 }, { 0, 0 } }, "sbn_to_batch")
+  local restored = tf.batch_to_space_nd(graph, blocked, { 2, 2 },
+    { { 0, 0 }, { 0, 0 } }, "sbn_to_space")
+  local session = tf.Session.new(graph)
+  local source = { { { { 1 }, { 2 } }, { { 3 }, { 4 } } } }
+  local result = session:run({ [input] = source }, { blocked, restored })
+  assert_eq(table.concat(result[1]:shape(), ","), "4,1,1,1")
+  assert_eq(table.concat(result[2]:shape(), ","), "1,2,2,1")
+  local function flatten(value, output)
+    output = output or {}
+    if type(value) == "table" then
+      for _, item in ipairs(value) do flatten(item, output) end
+    else
+      output[#output + 1] = value
+    end
+    return output
+  end
+  assert_eq(table.concat(flatten(result[2]:totable()), ","),
+    table.concat(flatten(source), ","))
+  assert_error(function()
+    tf.space_to_batch_nd(graph, input, { 2, 2 }, { { 0, 0 } }, "sbn_bad")
+  end, "length")
+  assert_error(function()
+    tf.batch_to_space_nd(graph, blocked, { 0, 2 }, { { 0, 0 }, { 0, 0 } },
+      "sbn_bad_block")
+  end, "positive")
+  session:close()
+end)
+
 test("clips values to a range", function()
   local graph = tf.Graph.new()
   local x = tf.placeholder(graph, "float32", { 3 }, "clip_x")

@@ -634,6 +634,73 @@ function Ops.space_to_depth(graph, input, block_size, name, dtype, data_format)
     data_format)
 end
 
+local function block_shape_table(value)
+  if type(value) ~= "table" or #value == 0 then
+    error("block_shape must be a non-empty integer table", 3)
+  end
+  for i, dimension in ipairs(value) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 1 then
+      error("block_shape dimensions must be positive integers (index " ..
+        tostring(i) .. ")", 3)
+    end
+  end
+  return value
+end
+
+local function padding_table(value, label)
+  if type(value) ~= "table" or #value == 0 then
+    error(label .. " must be a non-empty table", 3)
+  end
+  for i, row in ipairs(value) do
+    if type(row) ~= "table" or #row ~= 2 then
+      error(label .. " rows must be pairs of integers (index " ..
+        tostring(i) .. ")", 3)
+    end
+    for _, amount in ipairs(row) do
+      if type(amount) ~= "number" or amount % 1 ~= 0 or amount < 0 then
+        error(label .. " amounts must be non-negative integers", 3)
+      end
+    end
+  end
+  return value
+end
+
+local function space_batch_op(graph, op_type, input, block_shape, table_value,
+    table_attr, name, dtype)
+  block_shape = block_shape_table(block_shape)
+  table_value = padding_table(table_value, op_type == "SpaceToBatchND" and
+    "paddings" or "crops")
+  if #table_value ~= #block_shape then
+    error(op_type:lower() .. " shape table length must match block_shape", 3)
+  end
+  name = name or op_type:lower()
+  local value_dtype = input_dtype(input, dtype)
+  local block_op = constant(graph, block_shape, name .. "/block_shape",
+    "int32")
+  local table_op = constant(graph, table_value, name .. "/" .. table_attr,
+    "int32")
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:add_input(block_op)
+  desc:add_input(table_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tblock_shape", "int32")
+  desc:set_type(table_attr == "paddings" and "Tpaddings" or "Tcrops", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.space_to_batch_nd(graph, input, block_shape, paddings, name, dtype)
+  return space_batch_op(graph, "SpaceToBatchND", input, block_shape, paddings,
+    "paddings", name, dtype)
+end
+
+function Ops.batch_to_space_nd(graph, input, block_shape, crops, name, dtype)
+  return space_batch_op(graph, "BatchToSpaceND", input, block_shape, crops,
+    "crops", name, dtype)
+end
+
 function Ops.reshape(graph, input, shape, name, dtype)
   if type(shape) ~= "table" then
     error("reshape expects a shape table", 3)
