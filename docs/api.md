@@ -244,6 +244,11 @@ local value = session:run({ ["left/x"] = 1, ["left/y"] = 2 }, outputs)[1]
 
 Each returned entry has `oper`, `index`, `name`, `dtype`, and `shape`.
 
+`opts.default_device` applies a device to imported operations.
+`opts.uniquify_names` renames conflicting operations, and
+`opts.uniquify_prefix` uniquifies the supplied namespace prefix so the same
+GraphDef can be imported repeatedly without manually changing names.
+
 ### `graph:import_file(path[, opts])`
 
 Reads and imports a `.pb` file, accepting the same options as
@@ -413,7 +418,8 @@ checkpoint. Run the returned target list after creating the session.
 ### `tf.load_checkpoint(graph, path, variables)`
 
 Builds `Assign` targets from a portable checkpoint saved by
-`tf.save_checkpoint`. Returns the target list for `session:run`.
+`tf.save_checkpoint`. Returns the target list for `session:run`. Variable dtype
+and shape metadata is validated during graph construction.
 
 ### `tf.checkpoint_metadata(path)`
 
@@ -955,8 +961,9 @@ or typed tables such as `{ int = 0 }`, `{ ints = { 0, 2 } }`,
 `{ num_outputs = N }`; `Context:split` uses it automatically. Convenience
 methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
-`concat`, `gather`, `boolean_mask`, `depth_to_space`, `space_to_depth`,
-`gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
+`concat`, `gather`, `boolean_mask`, `top_k`, `in_top_k`, `depth_to_space`,
+`space_to_depth`, `space_to_batch_nd`, `batch_to_space_nd`, `gather_nd`,
+`scatter_nd`, `tensor_scatter_nd_update`,
 `tensor_scatter_nd_add`, `tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
 `diag`, `diag_part`,
@@ -1049,6 +1056,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.reduce_logsumexp(graph, x, axes[, name[, dtype[, keep_dims]]])` | stable composed log-sum-exp |
 | `tf.argmax(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMax |
 | `tf.argmin(graph, x, axis[, name[, dtype[, output_dtype]]])` | ArgMin |
+| `tf.top_k(graph, x, k[, name[, dtype[, sorted]]])` | TopKV2 (values, indices) |
+| `tf.in_top_k(graph, predictions, targets, k[, name[, targets_dtype]])` | InTopK |
+| `tf.space_to_batch_nd(graph, x, block_shape, paddings[, name[, dtype]])` | SpaceToBatchND |
+| `tf.batch_to_space_nd(graph, x, block_shape, crops[, name[, dtype]])` | BatchToSpaceND |
 | `tf.one_hot(graph, indices, depth[, opts])` | OneHot |
 | `tf.cast(graph, x, src_dtype, dst_dtype, name)` | Cast |
 | `tf.clip_by_value(graph, x, min, max[, name[, dtype]])` | ClipByValue |
@@ -1075,7 +1086,10 @@ to the index/count outputs. `tf.boolean_mask` expects a rank-1 boolean mask and
 gathers matching slices along axis 0; `tf.depth_to_space` and
 `tf.space_to_depth` accept `NHWC` or `NCHW` and a positive `block_size`.
 `tf.sequence_mask` builds a `[batch, maxlen]` mask with a positive integer
-`maxlen` and casts the result to `dtype` (default `float32`). `tf.pad` accepts
+`maxlen` and casts the result to `dtype` (default `float32`). `tf.top_k` returns
+`{ values, indices }`; `tf.in_top_k` expects rank-2 prediction scores and a
+rank-1 target vector. `tf.space_to_batch_nd` and `tf.batch_to_space_nd` validate
+that the padding/crop rows match the block shape rank. `tf.pad` accepts
 `CONSTANT` (zero
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`

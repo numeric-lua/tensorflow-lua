@@ -7,6 +7,13 @@
 - add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
   bytes, add `Graph:version_def`, and add
   `Graph:operation_device`/`Graph:all_inputs`;
+- add GraphDef import `default_device`, `uniquify_names`, and
+  `uniquify_prefix` options;
+- add graph `tf.top_k`, `tf.in_top_k`, `tf.space_to_batch_nd`, and
+  `tf.batch_to_space_nd`;
+- add eager `Context:top_k`, `in_top_k`, `space_to_batch_nd`, and
+  `batch_to_space_nd`;
+- validate portable checkpoint tensor shapes during `tf.load_checkpoint`;
 - add graph `tf.tensor_scatter_nd_sub`, `tf.tensor_scatter_nd_min`,
   `tf.tensor_scatter_nd_max`, and `tf.sequence_mask`;
 - add eager `Context:tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
@@ -31,7 +38,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 252 dependency-free tests.
+- 257 dependency-free tests.
 
 ## 2.8.0
 
