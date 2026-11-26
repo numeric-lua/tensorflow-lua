@@ -106,6 +106,21 @@ local function read_entries(path)
   return entries
 end
 
+function Checkpoint.metadata(path)
+  local entries = read_entries(path)
+  local result = {}
+  for name, entry in pairs(entries) do
+    local shape = {}
+    for i, dimension in ipairs(entry.shape) do shape[i] = dimension end
+    result[name] = {
+      dtype = Tensor.dtype_info(entry.dtype),
+      shape = shape,
+      bytes = #entry.bytes,
+    }
+  end
+  return result
+end
+
 function Checkpoint.load(graph, path, variables)
   local entries = read_entries(path)
   local targets = {}

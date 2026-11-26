@@ -61,6 +61,10 @@ function tf.load_checkpoint(graph, path, variables)
   return Checkpoint.load(graph, path, variables)
 end
 
+function tf.checkpoint_metadata(path)
+  return Checkpoint.metadata(path)
+end
+
 tf.train = {
   Saver = Saver,
   gradient_descent = function(graph, loss, variables, lr, name, options)

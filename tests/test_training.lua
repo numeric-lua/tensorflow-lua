@@ -208,6 +208,24 @@ test("saves and restores variable values", function()
   os.remove(path)
 end)
 
+test("reads portable checkpoint metadata", function()
+  local path = os.tmpname()
+  local graph = tf.Graph.new()
+  local variable = tf.variable(graph, { 1, 2, 3 }, "meta_v")
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { variable.initializer })
+  tf.save_checkpoint(session, path, { { name = "meta_v",
+    variable = variable } })
+  session:close()
+  local metadata = tf.checkpoint_metadata(path)
+  assert_eq(metadata.meta_v.dtype, "float32")
+  assert_eq(table.concat(metadata.meta_v.shape, ","), "3")
+  assert_eq(metadata.meta_v.bytes, 12)
+  assert_error(function() tf.checkpoint_metadata(path .. ".missing") end,
+    "cannot open")
+  os.remove(path)
+end)
+
 test("writes and restores a native TensorFlow V2 checkpoint", function()
   local prefix = "/tmp/tf-lua-save-v2/ckpt"
   os.execute("rm -rf /tmp/tf-lua-save-v2")

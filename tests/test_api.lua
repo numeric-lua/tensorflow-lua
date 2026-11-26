@@ -23,7 +23,7 @@ test("exposes the public API surface", function()
     "logical_xor", "logical_not", "squared_difference",
     "log", "sqrt", "erf", "erfc", "is_nan", "is_inf", "is_finite", "floor",
     "ceil", "round", "sign", "rsqrt", "reciprocal",
-    "save_v2", "restore_v2", "save_checkpoint",
+    "save_v2", "restore_v2", "save_checkpoint", "checkpoint_metadata",
     "load_checkpoint", "load_saved_model", "version", "train", "nn", "layers",
     "losses", "metrics", "callbacks", "data", "eager", "schedules",
     "Functional",
