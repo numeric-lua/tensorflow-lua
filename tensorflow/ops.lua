@@ -1090,9 +1090,9 @@ function Ops.sequence_mask(graph, lengths, maxlen, name, dtype)
   local expanded = Ops.expand_dims(graph, lengths, 1, name .. "/lengths",
     "int32")
   expanded.dtype = "int32"
-  local comparison = Ops.less(graph, positions, expanded, name .. "/less")
+  local condition = Ops.less(graph, positions, expanded, name .. "/less")
   local mask_dtype = dtype_name(dtype or "float32")
-  local output = Ops.cast(graph, comparison, "bool", mask_dtype, name)
+  local output = Ops.cast(graph, condition, "bool", mask_dtype, name)
   output.dtype = mask_dtype
   return output
 end
