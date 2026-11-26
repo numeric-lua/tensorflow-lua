@@ -725,6 +725,16 @@ function Graph:version_def()
   return data
 end
 
+function Graph:debug_string()
+  local lib = capi.load()
+  local length = ffi.new("size_t[1]", 0)
+  local pointer = lib.TF_GraphDebugString(self:handle(), length)
+  if pointer == nil then error("TF_GraphDebugString returned no data", 2) end
+  local data = ffi.string(pointer, tonumber(length[0]))
+  ffi.C.free(ffi.cast("void*", pointer))
+  return data
+end
+
 function Graph:graph_def()
   local lib = capi.load()
   local buffer = capi.require(lib.TF_NewBuffer(), "TF_NewBuffer")
