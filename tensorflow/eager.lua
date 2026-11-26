@@ -505,6 +505,23 @@ function Context:argmin(a, axis, output_dtype)
   return arg_reduction(self, "ArgMin", a, axis, output_dtype)
 end
 
+function Context:top_k(a, k, sorted)
+  if type(k) ~= "number" or k % 1 ~= 0 or k < 1 then
+    error("eager top_k expects a positive integer k", 2)
+  end
+  local k_tensor = self:constant(k, "int32")
+  return self:execute("TopKV2", { a, k_tensor },
+    { attrs = { T = a:dtype(), sorted = sorted ~= false }, num_outputs = 2 })
+end
+
+function Context:in_top_k(predictions, targets, k)
+  if type(k) ~= "number" or k % 1 ~= 0 or k < 1 then
+    error("eager in_top_k expects a positive integer k", 2)
+  end
+  return self:execute("InTopK", { predictions, targets },
+    { attrs = { T = targets:dtype(), k = { int = k } } })[1]
+end
+
 function Context:relu(a)
   return unary(self, "Relu", a)
 end
@@ -789,6 +806,60 @@ end
 
 function Context:space_to_depth(a, block_size, data_format)
   return depth_space(self, "SpaceToDepth", a, block_size, data_format)
+end
+
+local function block_shape_value(value)
+  value = integer_table(value, "block_shape")
+  for i, dimension in ipairs(value) do
+    if dimension < 1 then
+      error("eager block_shape dimensions must be positive (index " ..
+        tostring(i) .. ")", 2)
+    end
+  end
+  return value
+end
+
+local function padding_value(value, label)
+  if type(value) ~= "table" or #value == 0 then
+    error("eager " .. label .. " must be a non-empty table", 2)
+  end
+  for i, row in ipairs(value) do
+    if type(row) ~= "table" or #row ~= 2 then
+      error("eager " .. label .. " rows must be pairs (index " ..
+        tostring(i) .. ")", 2)
+    end
+    for _, amount in ipairs(row) do
+      if type(amount) ~= "number" or amount % 1 ~= 0 or amount < 0 then
+        error("eager " .. label .. " amounts must be non-negative integers", 2)
+      end
+    end
+  end
+  return value
+end
+
+function Context:space_to_batch_nd(a, block_shape, paddings)
+  block_shape = block_shape_value(block_shape)
+  paddings = padding_value(paddings, "paddings")
+  if #paddings ~= #block_shape then
+    error("eager paddings length must match block_shape", 2)
+  end
+  local block_tensor = self:constant(block_shape, "int32")
+  local padding_tensor = self:constant(paddings, "int32")
+  return self:execute("SpaceToBatchND", { a, block_tensor, padding_tensor },
+    { attrs = { T = a:dtype(), Tblock_shape = "int32",
+      Tpaddings = "int32" } })[1]
+end
+
+function Context:batch_to_space_nd(a, block_shape, crops)
+  block_shape = block_shape_value(block_shape)
+  crops = padding_value(crops, "crops")
+  if #crops ~= #block_shape then
+    error("eager crops length must match block_shape", 2)
+  end
+  local block_tensor = self:constant(block_shape, "int32")
+  local crop_tensor = self:constant(crops, "int32")
+  return self:execute("BatchToSpaceND", { a, block_tensor, crop_tensor },
+    { attrs = { T = a:dtype(), Tblock_shape = "int32", Tcrops = "int32" } })[1]
 end
 
 function Context:slice(a, begin, size)

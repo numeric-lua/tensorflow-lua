@@ -328,6 +328,32 @@ test("executes eager tensor scatter variants and sequence masks", function()
   context:close()
 end)
 
+test("executes eager top-k and space/batch transforms", function()
+  local context = tf.eager.Context.new()
+  local top = context:top_k(context:constant({ 0.1, 0.5, 0.3, 0.2 }), 2)
+  assert_eq(#top, 2)
+  assert_eq(top[1]:totable()[1], 0.5)
+  assert_true(math.abs(top[1]:totable()[2] - 0.3) < 1e-6)
+  assert_eq(table.concat(top[2]:totable(), ","), "1,2")
+  local hits = context:in_top_k(
+    context:constant({ { 0.1, 0.5, 0.3, 0.2 }, { 0.9, 0.1, 0, 0 } }),
+    context:constant({ 1, 3 }, "int32"), 2)
+  assert_eq(tostring(hits:totable()[1]), "true")
+  assert_eq(tostring(hits:totable()[2]), "false")
+  local source = { { { { 1 }, { 2 } }, { { 3 }, { 4 } } } }
+  local blocked = context:space_to_batch_nd(context:constant(source),
+    { 2, 2 }, { { 0, 0 }, { 0, 0 } })
+  assert_eq(table.concat(blocked:shape(), ","), "4,1,1,1")
+  local restored = context:batch_to_space_nd(blocked, { 2, 2 },
+    { { 0, 0 }, { 0, 0 } })
+  assert_eq(table.concat(restored:shape(), ","), "1,2,2,1")
+  assert_eq(restored:totable()[1][2][1][1], 3)
+  assert_error(function()
+    context:batch_to_space_nd(blocked, { 2, 2 }, { { 0, 0 } })
+  end, "length")
+  context:close()
+end)
+
 test("handles eager strings and scalars", function()
   local context = tf.eager.Context.new()
   local text = context:constant({ "a", "b" })

@@ -75,7 +75,8 @@ test("exposes the public API surface", function()
     "reverse_sequence", "softsign", "selu", "gather_nd", "scatter_nd",
     "tensor_scatter_nd_update", "tensor_scatter_nd_add",
     "tensor_scatter_nd_sub", "tensor_scatter_nd_min", "tensor_scatter_nd_max",
-    "sequence_mask", "unique", "unique_with_counts", "erf",
+    "sequence_mask", "top_k", "in_top_k", "space_to_batch_nd",
+    "batch_to_space_nd", "unique", "unique_with_counts", "erf",
     "erfc", "is_nan", "is_inf", "is_finite",
     "reduce_variance", "reduce_stddev", "maximum", "minimum",
   }
