@@ -1141,4 +1141,41 @@ function Ops.argmin(graph, input, axis, name, dtype, output_dtype)
   return arg_reduction(graph, "ArgMin", input, axis, name, dtype, output_dtype)
 end
 
+function Ops.top_k(graph, input, k, name, dtype, sorted)
+  if type(k) ~= "number" or k % 1 ~= 0 or k < 1 then
+    error("top_k expects a positive integer k", 3)
+  end
+  name = name or "top_k"
+  local value_dtype = input_dtype(input, dtype)
+  local k_op = constant(graph, k, name .. "/k", "int32")
+  local desc = graph:new_operation("TopKV2", name)
+  desc:add_input(input)
+  desc:add_input(k_op)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("sorted", sorted ~= false)
+  local result = desc:finish()
+  return {
+    { oper = result.oper, index = 0, name = name .. ":0",
+      dtype = value_dtype },
+    { oper = result.oper, index = 1, name = name .. ":1", dtype = "int32" },
+  }
+end
+
+function Ops.in_top_k(graph, predictions, targets, k, name, targets_dtype)
+  if type(k) ~= "number" or k % 1 ~= 0 or k < 1 then
+    error("in_top_k expects a positive integer k", 3)
+  end
+  name = name or "in_top_k"
+  local target_dtype = dtype_name(targets_dtype or
+    (type(targets) == "table" and targets.dtype) or "int32")
+  local desc = graph:new_operation("InTopK", name)
+  desc:add_input(predictions)
+  desc:add_input(targets)
+  desc:set_type("T", target_dtype)
+  desc:set_int("k", k)
+  local output = desc:finish()
+  output.dtype = "bool"
+  return output
+end
+
 return Ops

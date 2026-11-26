@@ -40,6 +40,35 @@ test("runs ArgMin and Relu6 graph ops", function()
   session:close()
 end)
 
+test("finds top-k values and in-top-k targets", function()
+  local graph = tf.Graph.new()
+  local logits = tf.placeholder(graph, "float32", { 4 }, "topk_x")
+  local top = tf.top_k(graph, logits, 2, "topk")
+  local values, indices = top[1], top[2]
+  local predictions = tf.placeholder(graph, "float32", { 2, 4 }, "itk_p")
+  local targets = tf.placeholder(graph, "int32", { 2 }, "itk_t")
+  local hits = tf.in_top_k(graph, predictions, targets, 2, "itk")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [logits] = { 0.1, 0.5, 0.3, 0.2 },
+    [predictions] = {
+      { 0.1, 0.5, 0.3, 0.2 },
+      { 0.9, 0.1, 0.0, 0.0 },
+    },
+    [targets] = { 1, 3 },
+  }, { values, indices, hits })
+  assert_eq(result[1]:totable()[1], 0.5)
+  assert_true(math.abs(result[1]:totable()[2] - 0.3) < 1e-6)
+  assert_eq(result[2]:dtype(), "int32")
+  assert_eq(table.concat(result[2]:totable(), ","), "1,2")
+  assert_eq(result[3]:dtype(), "bool")
+  assert_eq(tostring(result[3]:totable()[1]), "true")
+  assert_eq(tostring(result[3]:totable()[2]), "false")
+  assert_error(function() tf.top_k(graph, logits, 0, "topk_bad") end,
+    "positive")
+  session:close()
+end)
+
 test("batches matrix multiplication and log-softmax", function()
   local graph = tf.Graph.new()
   local a = tf.placeholder(graph, "float32", { 2, 2, 3 }, "bmm_a")
