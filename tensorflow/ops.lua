@@ -1106,6 +1106,36 @@ function Ops.reduce_stddev(graph, input, axes, name, dtype, keep_dims)
   return output
 end
 
+local function square_value(graph, input, name, dtype)
+  local desc = graph:new_operation("Square", name)
+  desc:add_input(input)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
+function Ops.norm(graph, input, axes, ord, name, dtype, keep_dims)
+  axes = variance_axes(axes, "norm")
+  ord = string.lower(ord or "l2")
+  name = name or "norm"
+  local value_dtype = input_dtype(input, dtype)
+  local output
+  if ord == "l1" or ord == "manhattan" then
+    local absolute = Ops.abs(graph, input, name .. "/abs")
+    output = Ops.reduce_sum(graph, absolute, axes, name, value_dtype, keep_dims)
+  elseif ord == "l2" or ord == "euclidean" or ord == "fro" then
+    local squared = square_value(graph, input, name .. "/square", value_dtype)
+    local total = Ops.reduce_sum(graph, squared, axes, name .. "/sum",
+      value_dtype, keep_dims)
+    output = Ops.sqrt(graph, total, name, value_dtype)
+  else
+    error("norm ord must be l1, l2, euclidean, manhattan, or fro", 3)
+  end
+  output.dtype = value_dtype
+  return output
+end
+
 local function unique_outputs(result, name, value_dtype, index_dtype, count)
   local outputs = {
     { oper = result.oper, index = 0, name = name .. ":0", dtype = value_dtype },

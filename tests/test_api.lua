@@ -17,7 +17,7 @@ test("exposes the public API surface", function()
     "range",
     "linspace", "reduce_mean",
     "reduce_sum", "reduce_logsumexp", "reduce_prod", "reduce_max",
-    "reduce_min", "reduce_variance", "reduce_stddev", "reduce_all",
+    "reduce_min", "reduce_variance", "reduce_stddev", "norm", "reduce_all",
     "reduce_any", "argmax", "argmin", "top_k", "in_top_k", "one_hot", "exp",
     "equal", "not_equal",
     "greater",
