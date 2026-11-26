@@ -111,6 +111,11 @@ local schema = graph:op_def("AddV2")
 Returns the graph's serialized `VersionDef` protobuf bytes through
 `TF_GraphVersions`, with `TF_Status` error handling and buffer cleanup.
 
+### `graph:debug_string()`
+
+Returns the graph in TensorFlow's human-readable debug format. The format is
+not stable across TensorFlow releases and is intended for inspection.
+
 ### `graph:operation_device(output)` / `graph:all_inputs(output)`
 
 `operation_device` returns the device string assigned to an operation, or `nil`
@@ -320,6 +325,7 @@ options.
 
 Convenience SGD entry point accepting `learning_rate`/`lr` (default `0.01`),
 `name`, and the same clipping/weight-decay options as `gradient_descent`.
+Supplying `momentum`/`nesterov` routes through `tf.train.momentum`.
 
 ### `tf.train.optimizer(kind, graph, loss, variables[, opts])`
 
@@ -985,8 +991,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `scatter_nd`, `tensor_scatter_nd_update`,
 `tensor_scatter_nd_add`, `tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
-`diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `norm`,
-`slice`, `pad`, `tile`, `where`, `reverse`, `reverse_sequence`,
+`diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
+`matrix_set_diag`, `norm`, `broadcast_to`, `roll`, `slice`, `pad`, `tile`,
+`where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
 `logical_and`/`logical_or`/`logical_xor`/`logical_not`,
@@ -1060,7 +1067,11 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.diag_part(graph, x[, name[, dtype]])` | DiagPart |
 | `tf.matrix_diag(graph, x[, name[, dtype]])` | MatrixDiag |
 | `tf.matrix_diag_part(graph, x[, name[, dtype]])` | MatrixDiagPart |
+| `tf.matrix_band_part(graph, x, num_lower, num_upper[, name[, dtype]])` | MatrixBandPart |
+| `tf.matrix_set_diag(graph, x, diagonal[, name[, dtype]])` | MatrixSetDiag |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
+| `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
+| `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.reduce_prod(graph, x, axes[, name[, dtype[, keep_dims]]])` | Prod |

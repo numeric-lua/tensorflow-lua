@@ -7,10 +7,13 @@
 - add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
   bytes, add `Graph:version_def`, `Graph:attribute_proto`, and
   `Graph:operation_device`/`Graph:all_inputs`;
-- add graph `tf.norm`, `tf.matrix_diag`, and `tf.matrix_diag_part`, plus eager
-  `Context:norm`, `matrix_diag`, and `matrix_diag_part`;
+- add `Graph:debug_string` for human-readable graph dumps;
+- add graph `tf.norm`, `tf.matrix_diag`, `tf.matrix_diag_part`,
+  `tf.matrix_band_part`, `tf.matrix_set_diag`, `tf.broadcast_to`, and
+  `tf.roll`, plus eager equivalents;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
-  optimizer construction;
+  optimizer construction, with `tf.train.sgd` routing momentum/nesterov options
+  through the momentum optimizer;
 - add GraphDef import `default_device`, `uniquify_names`, and
   `uniquify_prefix` options;
 - add graph `tf.top_k`, `tf.in_top_k`, `tf.space_to_batch_nd`, and
@@ -42,7 +45,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 261 dependency-free tests.
+- 266 dependency-free tests.
 
 ## 2.8.0
 
