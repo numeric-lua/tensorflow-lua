@@ -5,8 +5,12 @@
 - decode scalar tensor attributes through `Graph:attribute` and include them in
   `Graph:attributes`;
 - add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
-  bytes, add `Graph:version_def`, and add
+  bytes, add `Graph:version_def`, `Graph:attribute_proto`, and
   `Graph:operation_device`/`Graph:all_inputs`;
+- add graph `tf.norm`, `tf.matrix_diag`, and `tf.matrix_diag_part`, plus eager
+  `Context:norm`, `matrix_diag`, and `matrix_diag_part`;
+- add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
+  optimizer construction;
 - add GraphDef import `default_device`, `uniquify_names`, and
   `uniquify_prefix` options;
 - add graph `tf.top_k`, `tf.in_top_k`, `tf.space_to_batch_nd`, and
@@ -38,7 +42,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 257 dependency-free tests.
+- 261 dependency-free tests.
 
 ## 2.8.0
 

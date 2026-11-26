@@ -186,6 +186,13 @@ for _, attribute in ipairs(graph:attributes("logits")) do
 end
 ```
 
+### `graph:attribute_proto(output, name)`
+
+Returns the raw serialized `AttrValue` protobuf bytes for an operation
+attribute, including tensor-list, placeholder, and function kinds that
+`graph:attribute` does not decode. Missing attributes raise TensorFlow status
+errors as Lua errors.
+
 ### `graph:input_list_length(output, name)` / `graph:output_list_length(output, name)`
 
 Return the number of tensors in a list-valued operation argument. `Pack`/`AddN`
@@ -308,6 +315,18 @@ weight decay, and `gradients` supplies precomputed gradients instead of calling
 positive). Every optimizer documented here accepts the same
 `clipnorm`/`clip_norm`, `clipvalue`/`clip_value`, and `weight_decay`/`wd`
 options.
+
+### `tf.train.sgd(graph, loss, variables[, opts])`
+
+Convenience SGD entry point accepting `learning_rate`/`lr` (default `0.01`),
+`name`, and the same clipping/weight-decay options as `gradient_descent`.
+
+### `tf.train.optimizer(kind, graph, loss, variables[, opts])`
+
+Builds an optimizer from a case-insensitive name. Supported kinds are `sgd`/
+`gradient_descent`, `adam`, `adamw`, `adamax`, `rmsprop`, `centered_rmsprop`,
+`adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and `momentum`. Unknown names
+raise a Lua error.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -966,7 +985,7 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `scatter_nd`, `tensor_scatter_nd_update`,
 `tensor_scatter_nd_add`, `tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
-`diag`, `diag_part`,
+`diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `norm`,
 `slice`, `pad`, `tile`, `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1039,6 +1058,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.unique_with_counts(graph, x[, name[, dtype[, out_idx]]])` | UniqueWithCounts (values, indices, counts) |
 | `tf.diag(graph, x[, name[, dtype]])` | Diag |
 | `tf.diag_part(graph, x[, name[, dtype]])` | DiagPart |
+| `tf.matrix_diag(graph, x[, name[, dtype]])` | MatrixDiag |
+| `tf.matrix_diag_part(graph, x[, name[, dtype]])` | MatrixDiagPart |
+| `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
 | `tf.reduce_sum`, `tf.reduce_max`, `tf.reduce_min` | Sum/Max/Min reductions |
 | `tf.reduce_prod(graph, x, axes[, name[, dtype[, keep_dims]]])` | Prod |
