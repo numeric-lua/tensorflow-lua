@@ -466,6 +466,19 @@ function Context:reduce_stddev(a, axes, keep_dims)
   return self:sqrt(self:reduce_variance(a, axes, keep_dims))
 end
 
+function Context:norm(a, axes, ord, keep_dims)
+  if type(axes) ~= "table" then
+    error("eager norm expects an axes table", 2)
+  end
+  ord = string.lower(ord or "l2")
+  if ord == "l1" or ord == "manhattan" then
+    return self:reduce_sum(self:abs(a), axes, keep_dims)
+  elseif ord == "l2" or ord == "euclidean" or ord == "fro" then
+    return self:sqrt(self:reduce_sum(self:square(a), axes, keep_dims))
+  end
+  error("eager norm ord must be l1, l2, euclidean, manhattan, or fro", 2)
+end
+
 function Context:reduce_logsumexp(a, axes, keep_dims)
   if type(axes) ~= "table" then
     error("eager reduce_logsumexp expects an axes table", 2)
@@ -592,6 +605,14 @@ end
 
 function Context:diag_part(a)
   return unary(self, "DiagPart", a)
+end
+
+function Context:matrix_diag(a)
+  return unary(self, "MatrixDiag", a)
+end
+
+function Context:matrix_diag_part(a)
+  return unary(self, "MatrixDiagPart", a)
 end
 
 function Context:stop_gradient(a)
