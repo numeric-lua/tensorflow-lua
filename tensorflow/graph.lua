@@ -470,6 +470,27 @@ function Graph:attribute(value, name)
     " attribute '" .. name .. "'", 2)
 end
 
+function Graph:attribute_proto(value, name)
+  if type(name) ~= "string" or name == "" then
+    error("attribute name must be a non-empty string", 2)
+  end
+  local lib = capi.load()
+  local operation = resolve_operation(self, value)
+  local buffer = ffi.gc(capi.require(lib.TF_NewBuffer(), "TF_NewBuffer"),
+    function(pointer) lib.TF_DeleteBuffer(pointer) end)
+  local status = capi.status()
+  lib.TF_OperationGetAttrValueProto(operation, name, buffer, status)
+  capi.check(status, "graph attribute proto")
+  local struct = lib.TF_GetBuffer(buffer)
+  if struct.length > 0 and struct.data == nil then
+    error("TF_OperationGetAttrValueProto returned no data", 2)
+  end
+  local data = struct.length > 0 and ffi.string(struct.data, struct.length) or ""
+  ffi.gc(buffer, nil)
+  lib.TF_DeleteBuffer(buffer)
+  return data
+end
+
 function Graph:operation_info(value)
   local lib = capi.load()
   local operation, index = resolve_operation(self, value)

@@ -526,6 +526,14 @@ test("reads graph operation attributes", function()
   assert_eq(value:dtype(), "int32")
   assert_eq(table.concat(value:totable(), ","), "1,2")
   value:destroy()
+  local proto = graph:attribute_proto("attr_pad", "mode")
+  assert_true(#proto > 0)
+  assert_true(proto:find("REFLECT", 1, true) ~= nil)
+  assert_true(#graph:attribute_proto("attr_const", "value") > 0)
+  assert_error(function() graph:attribute_proto("attr_x", "") end,
+    "non-empty")
+  assert_error(function() graph:attribute_proto("attr_x", "missing") end,
+    "attribute proto")
   assert_error(function() graph:attribute("attr_x", "missing") end,
     "attribute")
   assert_error(function() graph:attribute_info("attr_x", "") end,
