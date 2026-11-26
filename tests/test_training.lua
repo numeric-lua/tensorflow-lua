@@ -352,6 +352,26 @@ test("trains with named optimizer entrypoints", function()
   session2:close()
 end)
 
+test("trains sgd with momentum and nesterov", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.sgd(graph, loss, { w, b },
+    { learning_rate = 0.05, momentum = 0.9, nesterov = true,
+      name = "SGDN" })
+  assert_eq(graph:attribute("SGDN/update_1", "use_nesterov"), true)
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, initializer in ipairs(state.initializers) do
+    init[#init + 1] = initializer
+  end
+  session:run({}, {}, init)
+  for _ = 1, 300 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read })[1]:totable()
+  assert_true(math.abs(result - 2) < 0.4, tostring(result))
+  session:close()
+end)
+
 test("trains linear regression with Adagrad", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates, _, state = tf.train.adagrad(graph, loss, { w, b },

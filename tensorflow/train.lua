@@ -297,6 +297,11 @@ end
 
 function Train.sgd(graph, loss, variables, options)
   options = options or {}
+  local momentum = options.momentum
+  local nesterov = options.nesterov or options.use_nesterov
+  if (momentum ~= nil and momentum ~= 0) or nesterov then
+    return Train.momentum(graph, loss, variables, options)
+  end
   local learning_rate = options.learning_rate or options.lr or 0.01
   local name = options.name or "SGD"
   return Train.gradient_descent(graph, loss, variables, learning_rate, name,
