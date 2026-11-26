@@ -5,7 +5,14 @@
 - decode scalar tensor attributes through `Graph:attribute` and include them in
   `Graph:attributes`;
 - add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
-  bytes, and add `Graph:operation_device`/`Graph:all_inputs`;
+  bytes, add `Graph:version_def`, and add
+  `Graph:operation_device`/`Graph:all_inputs`;
+- add graph `tf.tensor_scatter_nd_sub`, `tf.tensor_scatter_nd_min`,
+  `tf.tensor_scatter_nd_max`, and `tf.sequence_mask`;
+- add eager `Context:tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
+  `tensor_scatter_nd_max`, and `sequence_mask`;
+- add `tf.checkpoint_metadata` for portable checkpoint dtype/shape/byte
+  metadata;
 - add graph `tf.boolean_mask`, `tf.depth_to_space`, and `tf.space_to_depth`;
 - add eager `Context:boolean_mask`, `depth_to_space`, and `space_to_depth`;
 - add `tf.train.Saver:size` and reject missing or duplicate Saver variable
@@ -24,7 +31,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 248 dependency-free tests.
+- 252 dependency-free tests.
 
 ## 2.8.0
 

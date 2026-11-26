@@ -106,6 +106,11 @@ Lua errors.
 local schema = graph:op_def("AddV2")
 ```
 
+### `graph:version_def()`
+
+Returns the graph's serialized `VersionDef` protobuf bytes through
+`TF_GraphVersions`, with `TF_Status` error handling and buffer cleanup.
+
 ### `graph:operation_device(output)` / `graph:all_inputs(output)`
 
 `operation_device` returns the device string assigned to an operation, or `nil`
@@ -409,6 +414,12 @@ checkpoint. Run the returned target list after creating the session.
 
 Builds `Assign` targets from a portable checkpoint saved by
 `tf.save_checkpoint`. Returns the target list for `session:run`.
+
+### `tf.checkpoint_metadata(path)`
+
+Reads a portable tensorflow-lua checkpoint without constructing graph
+operations and returns a map of variable names to `{ dtype, shape, bytes }`
+metadata. Missing or corrupt files raise Lua errors.
 
 ### `tf.CheckpointReader`
 
@@ -946,7 +957,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `clip_by_value`, `transpose`, `expand_dims`, `squeeze`, `stack`, `unstack`,
 `concat`, `gather`, `boolean_mask`, `depth_to_space`, `space_to_depth`,
 `gather_nd`, `scatter_nd`, `tensor_scatter_nd_update`,
-`tensor_scatter_nd_add`, `unique`, `unique_with_counts`, `diag`, `diag_part`,
+`tensor_scatter_nd_add`, `tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
+`tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
+`diag`, `diag_part`,
 `slice`, `pad`, `tile`, `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1011,6 +1024,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.scatter_nd(graph, indices, updates, shape[, name[, dtype[, indices_dtype]]])` | ScatterNd |
 | `tf.tensor_scatter_nd_update(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterUpdate |
 | `tf.tensor_scatter_nd_add(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterAdd |
+| `tf.tensor_scatter_nd_sub(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterSub |
+| `tf.tensor_scatter_nd_min(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterMin |
+| `tf.tensor_scatter_nd_max(graph, tensor, indices, updates[, name[, dtype[, indices_dtype]]])` | TensorScatterMax |
+| `tf.sequence_mask(graph, lengths, maxlen[, name[, dtype]])` | Range + Less + Cast |
 | `tf.unique(graph, x[, name[, dtype[, out_idx]]])` | Unique (values, indices) |
 | `tf.unique_with_counts(graph, x[, name[, dtype[, out_idx]]])` | UniqueWithCounts (values, indices, counts) |
 | `tf.diag(graph, x[, name[, dtype]])` | Diag |
@@ -1057,7 +1074,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 to the index/count outputs. `tf.boolean_mask` expects a rank-1 boolean mask and
 gathers matching slices along axis 0; `tf.depth_to_space` and
 `tf.space_to_depth` accept `NHWC` or `NCHW` and a positive `block_size`.
-`tf.pad` accepts `CONSTANT` (zero
+`tf.sequence_mask` builds a `[batch, maxlen]` mask with a positive integer
+`maxlen` and casts the result to `dtype` (default `float32`). `tf.pad` accepts
+`CONSTANT` (zero
 padding), `REFLECT`, or `SYMMETRIC`; `tf.where` uses broadcasting `SelectV2`.
 `tf.slice` accepts matching `begin` and `size` tables where a size of `-1`
 selects all remaining elements in that dimension. `tf.reverse` accepts an
