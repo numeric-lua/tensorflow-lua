@@ -727,6 +727,21 @@ function Context:tensor_scatter_nd_add(tensor, indices, updates)
     { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
 end
 
+function Context:tensor_scatter_nd_sub(tensor, indices, updates)
+  return self:execute("TensorScatterSub", { tensor, indices, updates },
+    { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
+end
+
+function Context:tensor_scatter_nd_min(tensor, indices, updates)
+  return self:execute("TensorScatterMin", { tensor, indices, updates },
+    { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
+end
+
+function Context:tensor_scatter_nd_max(tensor, indices, updates)
+  return self:execute("TensorScatterMax", { tensor, indices, updates },
+    { attrs = { T = tensor:dtype(), Tindices = indices:dtype() } })[1]
+end
+
 function Context:unique(a, out_idx)
   return self:execute("Unique", { a },
     { attrs = { T = a:dtype(), out_idx = out_idx or "int32" },
@@ -737,6 +752,20 @@ function Context:unique_with_counts(a, out_idx)
   return self:execute("UniqueWithCounts", { a },
     { attrs = { T = a:dtype(), out_idx = out_idx or "int32" },
       num_outputs = 3 })
+end
+
+function Context:sequence_mask(lengths, maxlen, dtype)
+  if type(maxlen) ~= "number" or maxlen % 1 ~= 0 or maxlen < 1 then
+    error("eager sequence_mask maxlen must be a positive integer", 2)
+  end
+  if lengths:dtype() ~= "int32" then
+    lengths = self:cast(lengths, "int32")
+  end
+  local positions = self:range(0, maxlen, 1, "int32")
+  positions = self:expand_dims(positions, 0)
+  local expanded = self:expand_dims(lengths, 1)
+  local mask = self:less(positions, expanded)
+  return self:cast(mask, dtype or "float32")
 end
 
 local function depth_space(context, op_type, a, block_size, data_format)

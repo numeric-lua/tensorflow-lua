@@ -302,6 +302,32 @@ test("executes eager boolean masks and depth/space transforms", function()
   context:close()
 end)
 
+test("executes eager tensor scatter variants and sequence masks", function()
+  local context = tf.eager.Context.new()
+  local tensor = context:constant({ { 1, 2 }, { 3, 4 }, { 5, 6 } })
+  local indices = context:constant({ { 1 } }, "int32")
+  local updates = context:constant({ { 9, 9 } })
+  assert_eq(table.concat(
+    context:tensor_scatter_nd_sub(tensor, indices, updates):totable()[2], ","),
+    "-6,-5")
+  assert_eq(table.concat(
+    context:tensor_scatter_nd_min(tensor, indices, updates):totable()[2], ","),
+    "3,4")
+  assert_eq(table.concat(
+    context:tensor_scatter_nd_max(tensor, indices, updates):totable()[2], ","),
+    "9,9")
+  local mask = context:sequence_mask(
+    context:constant({ 2, 0, 3 }, "int32"), 4)
+  assert_eq(table.concat(mask:shape(), ","), "3,4")
+  assert_eq(table.concat(mask:totable()[1], ","), "1,1,0,0")
+  assert_eq(table.concat(mask:totable()[2], ","), "0,0,0,0")
+  assert_eq(table.concat(mask:totable()[3], ","), "1,1,1,0")
+  assert_error(function()
+    context:sequence_mask(context:constant({ 1, 2 }, "int32"), 0)
+  end, "positive")
+  context:close()
+end)
+
 test("handles eager strings and scalars", function()
   local context = tf.eager.Context.new()
   local text = context:constant({ "a", "b" })

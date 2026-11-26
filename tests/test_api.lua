@@ -71,8 +71,9 @@ test("exposes the public API surface", function()
     "rsqrt", "reciprocal", "zeros_like", "ones_like", "identity",
     "stop_gradient", "diag", "diag_part", "invert_permutation",
     "reverse_sequence", "softsign", "selu", "gather_nd", "scatter_nd",
-    "tensor_scatter_nd_update", "tensor_scatter_nd_add", "unique",
-    "unique_with_counts", "erf",
+    "tensor_scatter_nd_update", "tensor_scatter_nd_add",
+    "tensor_scatter_nd_sub", "tensor_scatter_nd_min", "tensor_scatter_nd_max",
+    "sequence_mask", "unique", "unique_with_counts", "erf",
     "erfc", "is_nan", "is_inf", "is_finite",
     "reduce_variance", "reduce_stddev", "maximum", "minimum",
   }
