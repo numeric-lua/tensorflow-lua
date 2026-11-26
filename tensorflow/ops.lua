@@ -461,6 +461,62 @@ function Ops.tile(graph, input, multiples, name, dtype)
   return output
 end
 
+function Ops.broadcast_to(graph, input, shape, name, dtype)
+  if type(shape) ~= "table" or #shape == 0 then
+    error("broadcast_to expects a non-empty shape table", 3)
+  end
+  for i, dimension in ipairs(shape) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("broadcast_to dimensions must be non-negative integers (index " ..
+        tostring(i) .. ")", 3)
+    end
+  end
+  name = name or "broadcast_to"
+  local value_dtype = input_dtype(input, dtype)
+  local shape_op = constant(graph, shape, name .. "/shape", "int32")
+  local desc = graph:new_operation("BroadcastTo", name)
+  desc:add_input(input)
+  desc:add_input(shape_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tidx", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.roll(graph, input, shift, axis, name, dtype)
+  if type(shift) == "number" then shift = { shift } end
+  if type(axis) == "number" then axis = { axis } end
+  if type(shift) ~= "table" or #shift == 0 then
+    error("roll expects an integer shift or non-empty shift table", 3)
+  end
+  if type(axis) ~= "table" or #axis ~= #shift then
+    error("roll axis must be an integer or match the shift table length", 3)
+  end
+  for i = 1, #shift do
+    if type(shift[i]) ~= "number" or shift[i] % 1 ~= 0 then
+      error("roll shifts must be integers", 3)
+    end
+    if type(axis[i]) ~= "number" or axis[i] % 1 ~= 0 then
+      error("roll axes must be integers", 3)
+    end
+  end
+  name = name or "roll"
+  local value_dtype = input_dtype(input, dtype)
+  local shift_op = constant(graph, shift, name .. "/shift", "int32")
+  local axis_op = constant(graph, axis, name .. "/axis", "int32")
+  local desc = graph:new_operation("Roll", name)
+  desc:add_input(input)
+  desc:add_input(shift_op)
+  desc:add_input(axis_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tshift", "int32")
+  desc:set_type("Taxis", "int32")
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.where(graph, condition, x, y, name, dtype)
   name = name or "where"
   local value_dtype = input_dtype(x, dtype)

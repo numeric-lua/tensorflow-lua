@@ -715,6 +715,30 @@ test("pads, tiles, and selects graph tensors", function()
   session:close()
 end)
 
+test("broadcasts tensors and rolls elements", function()
+  local graph = tf.Graph.new()
+  local vector = tf.placeholder(graph, "float32", { 2 }, "br_x")
+  local broadcast = tf.broadcast_to(graph, vector, { 3, 2 }, "br")
+  local sequence = tf.placeholder(graph, "int32", { 4 }, "roll_x")
+  local rolled = tf.roll(graph, sequence, 1, 0, "roll")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [vector] = { 7, 8 },
+    [sequence] = { 1, 2, 3, 4 },
+  }, { broadcast, rolled })
+  assert_eq(table.concat(result[1]:shape(), ","), "3,2")
+  assert_eq(table.concat(result[1]:totable()[2], ","), "7,8")
+  assert_eq(result[1]:totable()[3][2], 8)
+  assert_eq(table.concat(result[2]:totable(), ","), "4,1,2,3")
+  assert_error(function()
+    tf.broadcast_to(graph, vector, {}, "br_bad")
+  end, "non-empty")
+  assert_error(function()
+    tf.roll(graph, sequence, { 1, 2 }, 0, "roll_bad")
+  end, "match")
+  session:close()
+end)
+
 test("squeezes all singleton dimensions and validates axes", function()
   local graph = tf.Graph.new()
   local value = tf.constant(graph, { { { 1 }, { 2 }, { 3 } } }, "squeeze_value",
