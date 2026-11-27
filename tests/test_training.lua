@@ -612,6 +612,13 @@ test("validates reusable Saver entries", function()
   })
   assert_eq(saver:size(), 2)
   assert_eq(table.concat(saver:names(), ","), "left,right")
+  local metadata = saver:metadata()
+  assert_eq(#metadata, 2)
+  assert_eq(metadata[1].name, "left")
+  assert_eq(metadata[1].dtype, "float32")
+  assert_eq(#metadata[1].shape, 0)
+  assert_eq(saver:has("right"), true)
+  assert_eq(saver:has("missing"), false)
   assert_error(function()
     tf.train.Saver.new(graph, {
       { name = "same", variable = v },

@@ -39,6 +39,30 @@ function Saver:names()
   return result
 end
 
+function Saver:has(name)
+  for _, entry in ipairs(self.entries) do
+    if entry.name == name then return true end
+  end
+  return false
+end
+
+function Saver:metadata()
+  local result = {}
+  for i, entry in ipairs(self.entries) do
+    local variable = entry.variable
+    local shape = {}
+    for j, dimension in ipairs(variable.shape or { }) do
+      shape[j] = dimension
+    end
+    result[i] = {
+      name = entry.name,
+      dtype = variable.dtype or "float32",
+      shape = shape,
+    }
+  end
+  return result
+end
+
 function Saver:save(session, prefix, name)
   local tf = require("tensorflow")
   local target = tf.save_v2(self.graph, prefix, self.entries, name)
