@@ -397,6 +397,15 @@ function Context:cumprod(a, axis, exclusive, reverse)
   return cumulative(self, "Cumprod", a, axis, exclusive, reverse)
 end
 
+function Context:random_shuffle(a, seed)
+  if seed ~= nil and (type(seed) ~= "number" or seed % 1 ~= 0) then
+    error("eager random_shuffle seed must be an integer", 2)
+  end
+  return self:execute("RandomShuffle", { a },
+    { attrs = { T = a:dtype(), seed = { int = seed or 0 },
+      seed2 = { int = 0 } } })[1]
+end
+
 function Context:range(start, limit, delta, dtype)
   local value_dtype = dtype or "float32"
   local start_tensor = self:constant(start, value_dtype)
@@ -739,6 +748,16 @@ end
 function Context:matrix_solve(matrix, rhs, adjoint)
   return self:execute("MatrixSolve", { matrix, rhs },
     { attrs = { T = matrix:dtype(), adjoint = adjoint == true } })[1]
+end
+
+function Context:matrix_solve_ls(matrix, rhs, l2_regularizer, fast)
+  l2_regularizer = l2_regularizer or 0
+  if type(l2_regularizer) ~= "number" or l2_regularizer < 0 then
+    error("eager matrix_solve_ls l2_regularizer must be non-negative", 2)
+  end
+  local regularizer = self:constant(l2_regularizer, "float64")
+  return self:execute("MatrixSolveLs", { matrix, rhs, regularizer },
+    { attrs = { T = matrix:dtype(), fast = fast ~= false } })[1]
 end
 
 function Context:cholesky(a)

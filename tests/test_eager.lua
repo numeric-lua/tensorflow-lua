@@ -255,6 +255,14 @@ test("executes eager linear algebra and zero/one constructors", function()
     context:constant({ { 2 }, { 8 } }))
   assert_true(math.abs(solution:totable()[1][1] - 1) < 1e-5)
   assert_true(math.abs(solution:totable()[2][1] - 2) < 1e-5)
+  local least_squares = context:matrix_solve_ls(
+    context:constant({ { 2, 0 }, { 0, 4 } }),
+    context:constant({ { 2 }, { 8 } }), 0)
+  assert_true(math.abs(least_squares:totable()[1][1] - 1) < 1e-5)
+  assert_true(math.abs(least_squares:totable()[2][1] - 2) < 1e-5)
+  assert_error(function()
+    context:matrix_solve_ls(matrix, matrix, -1)
+  end, "non-negative")
   local zeros = context:zeros({ 2, 3 }, "int32")
   assert_eq(zeros:dtype(), "int32")
   assert_eq(table.concat(zeros:totable()[1], ","), "0,0,0")
@@ -308,9 +316,21 @@ test("executes eager eigen, SVD, and random tensors", function()
   end
   local normal = context:random_normal({ 2, 2 })
   assert_eq(table.concat(normal:shape(), ","), "2,2")
+  local shuffled = context:random_shuffle(
+    context:constant({ 1, 2, 3, 4 }, "int32"), 3):totable()
+  local seen, total = {}, 0
+  for _, value in ipairs(shuffled) do
+    seen[value] = true
+    total = total + value
+  end
+  assert_eq(total, 10)
+  for value = 1, 4 do assert_true(seen[value], tostring(value)) end
   assert_error(function() context:random_uniform({}) end, "non-empty")
   assert_error(function() context:random_normal({ 2 }, "float32", 1.5) end,
     "integer")
+  assert_error(function()
+    context:random_shuffle(context:constant({ 1 }, "int32"), 1.5)
+  end, "integer")
   context:close()
 end)
 
