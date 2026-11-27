@@ -236,6 +236,52 @@ function Ops.svd(graph, input, compute_uv, full_matrices, name, dtype)
   return outputs
 end
 
+local function complex_part(graph, op_type, input, name, out_dtype)
+  local value_dtype = dtype_name((type(input) == "table" and input.dtype) or
+    "complex64")
+  local output_dtype = dtype_name(out_dtype or
+    (value_dtype == "complex128" and "float64" or "float32"))
+  name = name or op_type:lower()
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tout", output_dtype)
+  local output = desc:finish()
+  output.dtype = output_dtype
+  return output
+end
+
+function Ops.real(graph, input, name, out_dtype)
+  return complex_part(graph, "Real", input, name, out_dtype)
+end
+
+function Ops.imag(graph, input, name, out_dtype)
+  return complex_part(graph, "Imag", input, name, out_dtype)
+end
+
+local function complex_transform(graph, op_type, input, name, dtype)
+  local value_dtype = dtype_name(dtype or
+    (type(input) == "table" and input.dtype) or "complex64")
+  if value_dtype ~= "complex64" and value_dtype ~= "complex128" then
+    error(op_type:lower() .. " expects complex64 or complex128", 3)
+  end
+  name = name or op_type:lower()
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:set_type("Tcomplex", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.fft(graph, input, name, dtype)
+  return complex_transform(graph, "FFT", input, name, dtype)
+end
+
+function Ops.ifft(graph, input, name, dtype)
+  return complex_transform(graph, "IFFT", input, name, dtype)
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end
