@@ -12,11 +12,12 @@
   `Graph:operation_info`;
 - add graph `tf.norm`, `tf.matrix_diag`, `tf.matrix_diag_part`,
   `tf.matrix_band_part`, `tf.matrix_set_diag`, `tf.matrix_inverse`,
-  `tf.matrix_determinant`, `tf.matrix_solve`, `tf.cholesky`,
-  `tf.matrix_triangular_solve`, `tf.qr`, `tf.self_adjoint_eig`, `tf.svd`,
-  `tf.bincount`, `tf.broadcast_to`, `tf.roll`, `tf.zeros`, `tf.ones`,
-  `tf.random_uniform`, `tf.random_normal`, `tf.cumsum`, `tf.cumprod`,
-  `tf.real`, `tf.imag`, `tf.fft`, and `tf.ifft`, plus eager equivalents;
+  `tf.matrix_determinant`, `tf.matrix_solve`, `tf.matrix_solve_ls`,
+  `tf.cholesky`, `tf.matrix_triangular_solve`, `tf.qr`, `tf.self_adjoint_eig`,
+  `tf.svd`, `tf.bincount`, `tf.broadcast_to`, `tf.roll`, `tf.zeros`, `tf.ones`,
+  `tf.random_uniform`, `tf.random_normal`, `tf.random_shuffle`, `tf.cumsum`,
+  `tf.cumprod`, `tf.real`, `tf.imag`, `tf.fft`, `tf.ifft`, and
+  `tf.l2_normalize`, plus eager equivalents;
 - add `rmsprop` `centered` option routing to centered RMSProp;
 - add `tf.train.exponential_moving_average` with synced shadow variables and
   update targets;
@@ -24,6 +25,7 @@
   gradient targets;
 - add `tf.train.apply_gradients` for applying precomputed gradients through a
   named optimizer;
+- add `Saver:metadata` and `Saver:has` for reusable checkpoint metadata;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
   optimizer construction, with `tf.train.sgd` routing momentum/nesterov options
   through the momentum optimizer;
@@ -58,7 +60,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 285 dependency-free tests.
+- 288 dependency-free tests.
 
 ## 2.8.0
 

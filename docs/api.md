@@ -407,8 +407,9 @@ Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 
 Reusable native V2 checkpoint saver. `variables` is a list of
 `{ name = ..., variable = ... }` entries. Names must be non-empty and unique.
-Methods: `save(session, prefix)`, `restore(session, prefix)`, `names()`, and
-`size()`.
+Methods: `save(session, prefix)`, `restore(session, prefix)`, `names()`,
+`size()`, `has(name)`, and `metadata()`; `metadata` returns `{ name, dtype,
+shape }` records.
 
 ### `tf.train.centered_rmsprop(graph, loss, variables[, opts])`
 
@@ -1020,8 +1021,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
 `diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
 `matrix_set_diag`, `matrix_inverse`, `matrix_determinant`, `matrix_solve`,
-`cholesky`, `matrix_triangular_solve`, `qr`, `self_adjoint_eig`, `svd`,
-`bincount`, `norm`, `random_uniform`, `random_normal`, `cumsum`, `cumprod`,
+`matrix_solve_ls`, `cholesky`, `matrix_triangular_solve`, `qr`,
+`self_adjoint_eig`, `svd`, `bincount`, `norm`, `l2_normalize`,
+`random_uniform`, `random_normal`, `random_shuffle`, `cumsum`, `cumprod`,
 `real`, `imag`, `fft`, `ifft`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`,
 `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
@@ -1103,6 +1105,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.matrix_inverse(graph, x[, name[, dtype[, adjoint]]])` | MatrixInverse |
 | `tf.matrix_determinant(graph, x[, name[, dtype]])` | MatrixDeterminant |
 | `tf.matrix_solve(graph, matrix, rhs[, name[, dtype[, adjoint]]])` | MatrixSolve |
+| `tf.matrix_solve_ls(graph, matrix, rhs[, l2_regularizer[, name[, dtype[, fast]]]])` | MatrixSolveLs |
 | `tf.cholesky(graph, x[, name[, dtype]])` | Cholesky |
 | `tf.matrix_triangular_solve(graph, matrix, rhs[, lower[, adjoint[, name[, dtype]]]])` | MatrixTriangularSolve |
 | `tf.qr(graph, x[, full_matrices[, name[, dtype]]])` | Qr (q, r) |
@@ -1111,6 +1114,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.bincount(graph, values, size[, weights[, name[, dtype]]])` | Bincount |
 | `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
 | `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
+| `tf.random_shuffle(graph, x[, name[, seed]])` | RandomShuffle |
 | `tf.cumsum(graph, x, axis[, name[, dtype[, exclusive[, reverse]]]])` | Cumsum |
 | `tf.cumprod(graph, x, axis[, name[, dtype[, exclusive[, reverse]]]])` | Cumprod |
 | `tf.real(graph, x[, name[, out_dtype]])` | Real |
@@ -1118,6 +1122,7 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.fft(graph, x[, name[, dtype]])` | FFT |
 | `tf.ifft(graph, x[, name[, dtype]])` | IFFT |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
+| `tf.l2_normalize(graph, x[, axis[, name[, dtype[, epsilon]]]])` | composed L2 normalization |
 | `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
 | `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |
 | `tf.reduce_mean(graph, x, axes[, name[, dtype[, keep_dims]]])` | Mean |
