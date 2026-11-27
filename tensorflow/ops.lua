@@ -182,6 +182,22 @@ function Ops.matrix_triangular_solve(graph, matrix, rhs, lower, adjoint, name,
   return output
 end
 
+function Ops.qr(graph, input, full_matrices, name, dtype)
+  name = name or "qr"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("Qr", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("full_matrices", full_matrices ~= false)
+  local result = desc:finish()
+  return {
+    { oper = result.oper, index = 0, name = name .. ":0",
+      dtype = value_dtype },
+    { oper = result.oper, index = 1, name = name .. ":1",
+      dtype = value_dtype },
+  }
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end

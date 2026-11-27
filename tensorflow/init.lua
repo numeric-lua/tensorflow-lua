@@ -231,6 +231,7 @@ tf.matrix_determinant = Ops.matrix_determinant
 tf.matrix_solve = Ops.matrix_solve
 tf.cholesky = Ops.cholesky
 tf.matrix_triangular_solve = Ops.matrix_triangular_solve
+tf.qr = Ops.qr
 tf.identity = Ops.identity
 tf.stop_gradient = Ops.stop_gradient
 tf.batch_matmul = Ops.batch_matmul
