@@ -582,6 +582,22 @@ function Graph:import_graph_def(data, options)
       end
     end
   end
+  local return_operations = options and options.return_operations
+  if return_operations ~= nil then
+    if return_elements ~= nil then
+      error("GraphDef import cannot combine return_elements and " ..
+        "return_operations", 2)
+    end
+    if type(return_operations) ~= "table" then
+      error("GraphDef import return_operations must be a table", 2)
+    end
+    for i, spec in ipairs(return_operations) do
+      if type(spec) ~= "string" then
+        error("GraphDef import return_operations[" .. i ..
+          "] must be a string", 2)
+      end
+    end
+  end
   local mappings = {}
   if input_map ~= nil then
     local resolve_output = require("tensorflow.graph_builder").resolve_output
@@ -641,6 +657,13 @@ function Graph:import_graph_def(data, options)
   ffi.gc(import_options, nil)
   lib.TF_DeleteImportGraphDefOptions(import_options)
   if not ok then error(err, 2) end
+  if return_operations ~= nil then
+    local operations = {}
+    for i, spec in ipairs(return_operations) do
+      operations[i] = self:operation_info(spec)
+    end
+    return operations
+  end
   if return_elements ~= nil then
     local outputs = {}
     for i, spec in ipairs(return_elements) do

@@ -245,6 +245,28 @@ test("reports consumers and control edges", function()
   assert_error(function() graph:control_inputs("missing") end, "no operation")
 end)
 
+test("returns imported operation metadata", function()
+  local graph = tf.Graph.new()
+  local operations = graph:import_graph_def(graph_def, {
+    return_operations = { "x", "z" },
+  })
+  assert_eq(#operations, 2)
+  assert_eq(operations[1].name, "x")
+  assert_eq(operations[1].op_type, "Placeholder")
+  assert_eq(operations[2].name, "z")
+  assert_eq(operations[2].op_type, "AddV2")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, {
+      return_operations = { "x" }, return_elements = { "z:0" },
+    })
+  end, "cannot combine")
+  assert_error(function()
+    tf.Graph.new():import_graph_def(graph_def, {
+      return_operations = { 1 },
+    })
+  end, "must be a string")
+end)
+
 test("rejects invalid GraphDef input mappings", function()
   local graph = tf.Graph.new()
   local replacement = tf.constant(graph, { 1 }, "replacement")
