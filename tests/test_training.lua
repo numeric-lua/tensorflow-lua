@@ -346,6 +346,27 @@ local function linear_problem()
   return graph, x, target, w, b, loss
 end
 
+test("routes rmsprop centered option to centered rmsprop", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.rmsprop(graph, loss, { w, b },
+    { learning_rate = 0.01, centered = true, name = "CR" })
+  assert_eq(graph:operation_info("CR/update_1").op_type,
+    "ApplyCenteredRMSProp")
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, initializer in ipairs(state.initializers) do
+    init[#init + 1] = initializer
+  end
+  session:run({}, {}, init)
+  session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  local value = session:run({}, { w.read })[1]:totable()
+  assert_true(value == value, tostring(value))
+  assert_error(function()
+    tf.train.rmsprop(graph, loss, { w, b }, { centered = "yes" })
+  end, "boolean")
+  session:close()
+end)
+
 test("trains with named optimizer entrypoints", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates = tf.train.sgd(graph, loss, { w, b },

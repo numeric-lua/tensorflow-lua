@@ -590,6 +590,12 @@ end
 
 function Train.rmsprop(graph, loss, variables, options)
   options = options or {}
+  if options.centered ~= nil and type(options.centered) ~= "boolean" then
+    error("rmsprop centered must be a boolean", 3)
+  end
+  if options.centered then
+    return Train.centered_rmsprop(graph, loss, variables, options)
+  end
   local learning_rate = options.learning_rate or options.lr or 0.001
   local rho = options.rho or 0.9
   local momentum = options.momentum or 0
