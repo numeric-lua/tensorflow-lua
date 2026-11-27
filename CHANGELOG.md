@@ -7,10 +7,14 @@
 - add `Graph:node_def`/`Graph:op_def` for exporting operation NodeDef and OpDef
   bytes, add `Graph:version_def`, `Graph:attribute_proto`, and
   `Graph:operation_device`/`Graph:all_inputs`;
-- add `Graph:debug_string` for human-readable graph dumps;
+- add `Graph:debug_string` for human-readable graph dumps and decode reference
+  dtypes in `Graph:operation_info`;
 - add graph `tf.norm`, `tf.matrix_diag`, `tf.matrix_diag_part`,
-  `tf.matrix_band_part`, `tf.matrix_set_diag`, `tf.broadcast_to`, and
-  `tf.roll`, plus eager equivalents;
+  `tf.matrix_band_part`, `tf.matrix_set_diag`, `tf.matrix_inverse`,
+  `tf.matrix_determinant`, `tf.matrix_solve`, `tf.broadcast_to`, `tf.roll`,
+  `tf.zeros`, and `tf.ones`, plus eager equivalents;
+- add `tf.train.exponential_moving_average` with synced shadow variables and
+  update targets;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
   optimizer construction, with `tf.train.sgd` routing momentum/nesterov options
   through the momentum optimizer;
@@ -45,7 +49,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 266 dependency-free tests.
+- 271 dependency-free tests.
 
 ## 2.8.0
 

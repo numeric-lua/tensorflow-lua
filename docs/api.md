@@ -146,6 +146,7 @@ Returns `{ name, op_type, inputs, outputs, control_inputs, control_outputs }`
 for an operation or output. Each input has `input`, `name`, `output`, and
 `dtype`; each output has `name`, `index`, `dtype`, `shape` (as returned by
 `graph:shape`), `consumers` (a count), and `consumer_ops` (operation names).
+Reference dtypes are normalized to their value dtype names.
 `control_inputs` and `control_outputs` list the control-edge operation names.
 
 ### `graph:attribute_info(output, name)` / `graph:attribute(output, name)`
@@ -333,6 +334,13 @@ Builds an optimizer from a case-insensitive name. Supported kinds are `sgd`/
 `gradient_descent`, `adam`, `adamw`, `adamax`, `rmsprop`, `centered_rmsprop`,
 `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and `momentum`. Unknown names
 raise a Lua error.
+
+### `tf.train.exponential_moving_average(graph, variables, decay[, opts])`
+
+Creates shadow variables for each variable, `initializers` that zero and then
+sync each shadow from its variable, and `updates` targets that apply
+`shadow = shadow * decay + variable * (1 - decay)`. `decay` must be between 0
+and 1. Run variable initializers before `initializers`.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -992,7 +1000,8 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `tensor_scatter_nd_add`, `tensor_scatter_nd_sub`, `tensor_scatter_nd_min`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
 `diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
-`matrix_set_diag`, `norm`, `broadcast_to`, `roll`, `slice`, `pad`, `tile`,
+`matrix_set_diag`, `matrix_inverse`, `matrix_determinant`, `matrix_solve`,
+`norm`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1069,6 +1078,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.matrix_diag_part(graph, x[, name[, dtype]])` | MatrixDiagPart |
 | `tf.matrix_band_part(graph, x, num_lower, num_upper[, name[, dtype]])` | MatrixBandPart |
 | `tf.matrix_set_diag(graph, x, diagonal[, name[, dtype]])` | MatrixSetDiag |
+| `tf.matrix_inverse(graph, x[, name[, dtype[, adjoint]]])` | MatrixInverse |
+| `tf.matrix_determinant(graph, x[, name[, dtype]])` | MatrixDeterminant |
+| `tf.matrix_solve(graph, matrix, rhs[, name[, dtype[, adjoint]]])` | MatrixSolve |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
 | `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
 | `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |
@@ -1084,6 +1096,8 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.add_n(graph, inputs[, name[, dtype]])` | AddN |
 | `tf.batch_matmul(graph, a, b[, name[, dtype[, opts]]])` | BatchMatMulV2 |
 | `tf.fill(graph, dims, value[, name[, dtype]])` | Fill |
+| `tf.zeros(graph, shape[, name[, dtype]])` | Fill(0) |
+| `tf.ones(graph, shape[, name[, dtype]])` | Fill(1) |
 | `tf.range(graph, start, limit, delta[, name[, dtype]])` | Range |
 | `tf.linspace(graph, start, stop, num[, name[, dtype]])` | LinSpace |
 | `tf.reduce_logsumexp(graph, x, axes[, name[, dtype[, keep_dims]]])` | stable composed log-sum-exp |
