@@ -534,6 +534,17 @@ function Context:norm(a, axes, ord, keep_dims)
   error("eager norm ord must be l1, l2, euclidean, manhattan, or fro", 2)
 end
 
+function Context:l2_normalize(a, axis, epsilon)
+  axis = axis or { 0 }
+  if type(axis) == "number" then axis = { axis } end
+  if type(axis) ~= "table" then
+    error("eager l2_normalize expects an axis or axes table", 2)
+  end
+  local norm = self:norm(a, axis, "l2", true)
+  local eps = self:constant(epsilon or 1e-12, a:dtype())
+  return self:div(a, self:maximum(norm, eps))
+end
+
 function Context:reduce_logsumexp(a, axes, keep_dims)
   if type(axes) ~= "table" then
     error("eager reduce_logsumexp expects an axes table", 2)

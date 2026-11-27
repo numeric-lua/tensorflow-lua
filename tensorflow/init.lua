@@ -266,6 +266,7 @@ tf.reduce_min = Ops.reduce_min
 tf.reduce_variance = Ops.reduce_variance
 tf.reduce_stddev = Ops.reduce_stddev
 tf.norm = Ops.norm
+tf.l2_normalize = Ops.l2_normalize
 tf.reduce_all = Ops.reduce_all
 tf.reduce_any = Ops.reduce_any
 tf.argmax = Ops.argmax

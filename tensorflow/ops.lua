@@ -1457,6 +1457,23 @@ function Ops.norm(graph, input, axes, ord, name, dtype, keep_dims)
   return output
 end
 
+function Ops.l2_normalize(graph, input, axis, name, dtype, epsilon)
+  if type(axis) == "number" then axis = { axis } end
+  local axes = variance_axes(axis or { 0 }, "l2_normalize")
+  name = name or "l2_normalize"
+  local value_dtype = input_dtype(input, dtype)
+  local norm = Ops.norm(graph, input, axes, "l2", name .. "/norm",
+    value_dtype, true)
+  local epsilon_op = constant(graph, epsilon or 1e-12,
+    name .. "/epsilon", value_dtype)
+  local denominator = Ops.maximum(graph, norm, epsilon_op,
+    name .. "/maximum", value_dtype)
+  denominator.dtype = value_dtype
+  local output = Ops.div(graph, input, denominator, name, value_dtype)
+  output.dtype = value_dtype
+  return output
+end
+
 local function unique_outputs(result, name, value_dtype, index_dtype, count)
   local outputs = {
     { oper = result.oper, index = 0, name = name .. ":0", dtype = value_dtype },
