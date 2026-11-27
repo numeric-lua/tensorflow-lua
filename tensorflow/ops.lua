@@ -198,6 +198,44 @@ function Ops.qr(graph, input, full_matrices, name, dtype)
   }
 end
 
+function Ops.self_adjoint_eig(graph, input, compute_v, name, dtype)
+  name = name or "self_adjoint_eig"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("SelfAdjointEigV2", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("compute_v", compute_v ~= false)
+  local result = desc:finish()
+  return {
+    { oper = result.oper, index = 0, name = name .. ":0",
+      dtype = value_dtype },
+    { oper = result.oper, index = 1, name = name .. ":1",
+      dtype = value_dtype },
+  }
+end
+
+function Ops.svd(graph, input, compute_uv, full_matrices, name, dtype)
+  name = name or "svd"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("Svd", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("compute_uv", compute_uv ~= false)
+  desc:set_bool("full_matrices", full_matrices == true)
+  local result = desc:finish()
+  local outputs = {
+    { oper = result.oper, index = 0, name = name .. ":0",
+      dtype = value_dtype },
+    { oper = result.oper, index = 1, name = name .. ":1",
+      dtype = value_dtype },
+  }
+  if compute_uv ~= false then
+    outputs[3] = { oper = result.oper, index = 2, name = name .. ":2",
+      dtype = value_dtype }
+  end
+  return outputs
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end
