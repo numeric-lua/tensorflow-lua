@@ -381,8 +381,8 @@ before training. The state table also exposes `state.beta1_power`.
 
 Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 (default `0.001`), `rho` (0.9), `momentum` (0), `epsilon` (1e-10),
-`weight_decay`/`wd`, `name`. Returns `targets, gradients, state`; initialize
-`state.initializers`.
+`weight_decay`/`wd`, `centered` (route to centered RMSProp), `name`. Returns
+`targets, gradients, state`; initialize `state.initializers`.
 
 ### `tf.train.Saver.new(graph, variables)`
 
@@ -1001,7 +1001,8 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
 `diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
 `matrix_set_diag`, `matrix_inverse`, `matrix_determinant`, `matrix_solve`,
-`norm`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
+`cholesky`, `matrix_triangular_solve`, `qr`, `bincount`, `norm`,
+`broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1081,6 +1082,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.matrix_inverse(graph, x[, name[, dtype[, adjoint]]])` | MatrixInverse |
 | `tf.matrix_determinant(graph, x[, name[, dtype]])` | MatrixDeterminant |
 | `tf.matrix_solve(graph, matrix, rhs[, name[, dtype[, adjoint]]])` | MatrixSolve |
+| `tf.cholesky(graph, x[, name[, dtype]])` | Cholesky |
+| `tf.matrix_triangular_solve(graph, matrix, rhs[, lower[, adjoint[, name[, dtype]]]])` | MatrixTriangularSolve |
+| `tf.qr(graph, x[, full_matrices[, name[, dtype]]])` | Qr (q, r) |
+| `tf.bincount(graph, values, size[, weights[, name[, dtype]]])` | Bincount |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
 | `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
 | `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |

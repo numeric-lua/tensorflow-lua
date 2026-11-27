@@ -11,8 +11,10 @@
   dtypes in `Graph:operation_info`;
 - add graph `tf.norm`, `tf.matrix_diag`, `tf.matrix_diag_part`,
   `tf.matrix_band_part`, `tf.matrix_set_diag`, `tf.matrix_inverse`,
-  `tf.matrix_determinant`, `tf.matrix_solve`, `tf.broadcast_to`, `tf.roll`,
-  `tf.zeros`, and `tf.ones`, plus eager equivalents;
+  `tf.matrix_determinant`, `tf.matrix_solve`, `tf.cholesky`,
+  `tf.matrix_triangular_solve`, `tf.qr`, `tf.bincount`, `tf.broadcast_to`,
+  `tf.roll`, `tf.zeros`, and `tf.ones`, plus eager equivalents;
+- add `rmsprop` `centered` option routing to centered RMSProp;
 - add `tf.train.exponential_moving_average` with synced shadow variables and
   update targets;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
@@ -49,7 +51,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 271 dependency-free tests.
+- 275 dependency-free tests.
 
 ## 2.8.0
 
