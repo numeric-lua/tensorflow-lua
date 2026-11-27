@@ -27,8 +27,9 @@ local function resolve_operation(graph, value)
 end
 
 local function dtype_name(code)
-  local name = Tensor.dtype_info(tonumber(code))
-  return name
+  code = tonumber(code)
+  if code ~= nil and code > 100 then code = code - 100 end
+  return Tensor.dtype_info(code)
 end
 
 function Graph.new()
