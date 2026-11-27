@@ -342,6 +342,14 @@ function Context:fill(dims, value, dtype)
     { attrs = { T = value_tensor:dtype(), index_type = "int32" } })[1]
 end
 
+function Context:zeros(shape, dtype)
+  return self:fill(shape, 0, dtype)
+end
+
+function Context:ones(shape, dtype)
+  return self:fill(shape, 1, dtype)
+end
+
 function Context:range(start, limit, delta, dtype)
   local value_dtype = dtype or "float32"
   local start_tensor = self:constant(start, value_dtype)
@@ -631,6 +639,20 @@ end
 function Context:matrix_set_diag(a, diagonal)
   return self:execute("MatrixSetDiag", { a, diagonal },
     { attrs = { T = a:dtype() } })[1]
+end
+
+function Context:matrix_inverse(a, adjoint)
+  return self:execute("MatrixInverse", { a },
+    { attrs = { T = a:dtype(), adjoint = adjoint == true } })[1]
+end
+
+function Context:matrix_determinant(a)
+  return unary(self, "MatrixDeterminant", a)
+end
+
+function Context:matrix_solve(matrix, rhs, adjoint)
+  return self:execute("MatrixSolve", { matrix, rhs },
+    { attrs = { T = matrix:dtype(), adjoint = adjoint == true } })[1]
 end
 
 function Context:stop_gradient(a)
