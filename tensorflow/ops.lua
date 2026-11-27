@@ -474,6 +474,22 @@ function Ops.cumprod(graph, input, axis, name, dtype, exclusive, reverse)
     reverse)
 end
 
+function Ops.random_shuffle(graph, input, name, seed)
+  if seed ~= nil and (type(seed) ~= "number" or seed % 1 ~= 0) then
+    error("random_shuffle seed must be an integer", 3)
+  end
+  name = name or "random_shuffle"
+  local value_dtype = input_dtype(input, nil)
+  local desc = graph:new_operation("RandomShuffle", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_int("seed", seed or 0)
+  desc:set_int("seed2", 0)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.range(graph, start, limit, delta, name, dtype)
   name = name or "range"
   local value_dtype = dtype_name(dtype)

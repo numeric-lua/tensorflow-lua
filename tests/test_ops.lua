@@ -180,6 +180,27 @@ test("generates random uniform and normal tensors", function()
   session:close()
 end)
 
+test("shuffles tensors without changing their elements", function()
+  local graph = tf.Graph.new()
+  local input = tf.placeholder(graph, "int32", { 4 }, "shuffle_x")
+  local shuffled = tf.random_shuffle(graph, input, "shuffle", 3)
+  local session = tf.Session.new(graph)
+  local values = session:run({ [input] = { 1, 2, 3, 4 } },
+    { shuffled })[1]:totable()
+  assert_eq(#values, 4)
+  local seen, total = {}, 0
+  for _, value in ipairs(values) do
+    seen[value] = true
+    total = total + value
+  end
+  assert_eq(total, 10)
+  for value = 1, 4 do assert_true(seen[value], tostring(value)) end
+  assert_error(function()
+    tf.random_shuffle(graph, input, "shuffle_bad", 1.5)
+  end, "integer")
+  session:close()
+end)
+
 test("computes cumulative sums and products", function()
   local graph = tf.Graph.new()
   local value = tf.placeholder(graph, "int32", { 3 }, "cum_x")

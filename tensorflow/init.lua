@@ -253,6 +253,7 @@ tf.zeros = Ops.zeros
 tf.ones = Ops.ones
 tf.random_uniform = Ops.random_uniform
 tf.random_normal = Ops.random_normal
+tf.random_shuffle = Ops.random_shuffle
 tf.cumsum = Ops.cumsum
 tf.cumprod = Ops.cumprod
 tf.range = Ops.range
