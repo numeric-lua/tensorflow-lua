@@ -45,7 +45,7 @@ test("exposes the public API surface", function()
     "rmsprop", "centered_rmsprop",
     "adagrad", "adadelta", "clip_by_norm", "clip_by_global_norm",
     "ftrl", "proximal_adagrad", "momentum", "exponential_moving_average",
-    "Saver",
+    "gradient_accumulation", "Saver",
   }
   for _, name in ipairs(train_functions) do
     assert_true(tf.train[name] ~= nil, "missing tf.train." .. name)

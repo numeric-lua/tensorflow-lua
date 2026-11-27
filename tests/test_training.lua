@@ -185,6 +185,36 @@ test("applies exponential moving averages", function()
   session:close()
 end)
 
+test("accumulates and averages gradients over steps", function()
+  local graph = tf.Graph.new()
+  local variable = tf.variable(graph, { 0, 0 }, "acc_v")
+  local gradient = tf.constant(graph, { 2, 4 }, "acc_grad", "float32")
+  local state = tf.train.gradient_accumulation(graph, { variable },
+    { gradient }, 2, { name = "ACC" })
+  local session = tf.Session.new(graph)
+  local init = { variable.initializer }
+  for _, initializer in ipairs(state.initializers) do
+    init[#init + 1] = initializer
+  end
+  session:run({}, {}, init)
+  session:run({}, {}, state.accumulate)
+  assert_eq(table.concat(session:run({}, { state.gradients[1] })[1]:totable(),
+    ","), "1,2")
+  session:run({}, {}, state.accumulate)
+  assert_eq(table.concat(session:run({}, { state.gradients[1] })[1]:totable(),
+    ","), "2,4")
+  session:run({}, {}, state.reset)
+  assert_eq(table.concat(session:run({}, { state.gradients[1] })[1]:totable(),
+    ","), "0,0")
+  assert_error(function()
+    tf.train.gradient_accumulation(graph, { variable }, { gradient }, 0)
+  end, "positive")
+  assert_error(function()
+    tf.train.gradient_accumulation(graph, { variable }, {}, 1)
+  end, "match")
+  session:close()
+end)
+
 test("applies decoupled weight decay to accumulator optimizers", function()
   local optimizers = {
     { "adagrad", "AGW" },

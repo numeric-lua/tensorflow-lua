@@ -999,6 +999,57 @@ function Train.exponential_moving_average(graph, variables, decay, options)
     updates = updates }
 end
 
+function Train.gradient_accumulation(graph, variables, gradients, steps, options)
+  options = options or {}
+  if type(steps) ~= "number" or steps % 1 ~= 0 or steps < 1 then
+    error("gradient_accumulation steps must be a positive integer", 3)
+  end
+  if type(variables) ~= "table" or #variables == 0 then
+    error("gradient_accumulation expects a non-empty variable list", 3)
+  end
+  if type(gradients) ~= "table" or #gradients ~= #variables then
+    error("gradient_accumulation gradients must match variables", 3)
+  end
+  local name = options.name or "GradientAccumulation"
+  local accumulators, initializers, accumulate, reset = {}, {}, {}, {}
+  local averages = {}
+  for i, variable in ipairs(variables) do
+    local gradient = gradients[i]
+    if type(gradient) ~= "table" or gradient.oper == nil then
+      error("gradient_accumulation gradient " .. i .. " must be a graph output",
+        3)
+    end
+    local dtype = variable.dtype or "float32"
+    local shape = variable.shape or { }
+    local accumulator = Train.variable(graph, zeros(shape),
+      name .. "/accumulator_" .. i, { dtype = dtype })
+    initializers[#initializers + 1] = accumulator.initializer
+    local add = graph:new_operation("AssignAdd", name .. "/add_" .. i)
+    add:add_input(accumulator.ref)
+    add:add_input(gradient)
+    add:set_type("T", dtype)
+    add:set_bool("use_locking", false)
+    accumulate[#accumulate + 1] = add:finish()
+    local zero = Train.constant(graph, zeros(shape), name .. "/zero_" .. i,
+      dtype)
+    reset[#reset + 1] = assign(graph, accumulator, zero,
+      name .. "/reset_" .. i)
+    local average = Ops.div(graph, accumulator.read,
+      Train.constant(graph, steps, name .. "/steps_" .. i, dtype),
+      name .. "/average_" .. i, dtype)
+    average.dtype = dtype
+    averages[#averages + 1] = average
+    accumulators[#accumulators + 1] = accumulator
+  end
+  return {
+    variables = accumulators,
+    initializers = initializers,
+    accumulate = accumulate,
+    reset = reset,
+    gradients = averages,
+  }
+end
+
 local optimizer_functions = {
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)

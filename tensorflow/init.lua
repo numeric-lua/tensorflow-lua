@@ -79,6 +79,10 @@ tf.train = {
   exponential_moving_average = function(graph, variables, decay, options)
     return Train.exponential_moving_average(graph, variables, decay, options)
   end,
+  gradient_accumulation = function(graph, variables, gradients, steps, options)
+    return Train.gradient_accumulation(graph, variables, gradients, steps,
+      options)
+  end,
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,
