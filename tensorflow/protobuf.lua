@@ -106,4 +106,7 @@ function Proto.saved_model_signatures(meta_graph_def)
   return signatures
 end
 
+Proto.fields = fields
+Proto.varint = varint
+
 return Proto

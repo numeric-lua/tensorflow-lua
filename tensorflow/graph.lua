@@ -4,6 +4,7 @@
 local ffi = require("ffi")
 local capi = require("tensorflow.capi")
 local Tensor = require("tensorflow.tensor")
+local Protobuf = require("tensorflow.protobuf")
 
 local Graph = {}
 Graph.__index = Graph
@@ -724,6 +725,29 @@ function Graph:version_def()
   ffi.gc(buffer, nil)
   lib.TF_DeleteBuffer(buffer)
   return data
+end
+
+function Graph:version_info()
+  local info = { producer = 0, min_consumer = 0, bad_consumers = {} }
+  for _, field in ipairs(Protobuf.fields(self:version_def())) do
+    if field.number == 1 then
+      info.producer = tonumber(field.value)
+    elseif field.number == 2 then
+      info.min_consumer = tonumber(field.value)
+    elseif field.number == 3 then
+      if field.wire == 0 then
+        info.bad_consumers[#info.bad_consumers + 1] = tonumber(field.value)
+      elseif field.wire == 2 then
+        local position = 1
+        while position <= #field.value do
+          local value
+          value, position = Protobuf.varint(field.value, position)
+          info.bad_consumers[#info.bad_consumers + 1] = value
+        end
+      end
+    end
+  end
+  return info
 end
 
 function Graph:debug_string()
