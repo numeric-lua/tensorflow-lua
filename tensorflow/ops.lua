@@ -280,6 +280,14 @@ function Ops.fill(graph, dims, value, name, dtype)
   return output
 end
 
+function Ops.zeros(graph, shape, name, dtype)
+  return Ops.fill(graph, shape, 0, name or "zeros", dtype)
+end
+
+function Ops.ones(graph, shape, name, dtype)
+  return Ops.fill(graph, shape, 1, name or "ones", dtype)
+end
+
 function Ops.range(graph, start, limit, delta, name, dtype)
   name = name or "range"
   local value_dtype = dtype_name(dtype)

@@ -17,7 +17,7 @@ test("exposes the public API surface", function()
     "identity", "stop_gradient", "diag", "diag_part", "matrix_diag",
     "matrix_diag_part", "matrix_band_part", "matrix_set_diag",
     "matrix_inverse", "matrix_determinant", "matrix_solve", "batch_matmul",
-    "fill",
+    "fill", "zeros", "ones",
     "range",
     "linspace", "reduce_mean",
     "reduce_sum", "reduce_logsumexp", "reduce_prod", "reduce_max",
