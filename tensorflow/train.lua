@@ -317,10 +317,12 @@ local function zeros(shape, depth)
 end
 
 local function assign(graph, variable, value, name, control)
+  local ref = variable.ref or variable
+  local dtype = type(variable) == "table" and variable.dtype or "float32"
   local desc = graph:new_operation("Assign", name)
-  desc:add_input(variable)
+  desc:add_input(ref)
   desc:add_input(value)
-  desc:set_type("T", variable.dtype or "float32")
+  desc:set_type("T", dtype)
   desc:set_bool("use_locking", true)
   if control then desc:add_control_input(control) end
   return desc:finish()
@@ -953,6 +955,42 @@ function Train.momentum(graph, loss, variables, options)
   end
   return targets, gradients, { initializers = initializers,
     variables = state_variables }
+end
+
+function Train.exponential_moving_average(graph, variables, decay, options)
+  options = options or {}
+  if type(decay) ~= "number" or decay < 0 or decay > 1 then
+    error("exponential_moving_average decay must be between 0 and 1", 3)
+  end
+  if type(variables) ~= "table" or #variables == 0 then
+    error("exponential_moving_average expects a non-empty variable list", 3)
+  end
+  local name = options.name or "ExponentialMovingAverage"
+  local averages, initializers, updates = {}, {}, {}
+  for i, variable in ipairs(variables) do
+    local var_dtype = variable.dtype or "float32"
+    local average = Train.variable(graph, zeros(variable.shape or { }),
+      name .. "/average_" .. i, { dtype = var_dtype })
+    initializers[#initializers + 1] = average.initializer
+    initializers[#initializers + 1] = assign(graph, average,
+      variable.read or variable.ref, name .. "/sync_" .. i,
+      average.initializer)
+    local decay_op = Train.constant(graph, decay, name .. "/decay_" .. i,
+      var_dtype)
+    local one_minus = Train.constant(graph, 1 - decay,
+      name .. "/one_minus_decay_" .. i, var_dtype)
+    local weighted_average = multiply(graph, average.read, decay_op,
+      name .. "/weighted_average_" .. i, var_dtype)
+    local weighted_value = multiply(graph, variable.read or variable.ref,
+      one_minus, name .. "/weighted_value_" .. i, var_dtype)
+    local next_average = add(graph, weighted_average, weighted_value,
+      name .. "/next_" .. i, var_dtype)
+    updates[#updates + 1] = assign(graph, average, next_average,
+      name .. "/update_" .. i)
+    averages[#averages + 1] = average
+  end
+  return { averages = averages, initializers = initializers,
+    updates = updates }
 end
 
 local optimizer_functions = {

@@ -159,6 +159,32 @@ test("applies decoupled weight decay to adaptive optimizers", function()
   end
 end)
 
+test("applies exponential moving averages", function()
+  local graph, variable = weight_decay_problem("ema")
+  local state = tf.train.exponential_moving_average(graph, { variable }, 0.5,
+    { name = "EMA" })
+  local ten = tf.constant(graph, 10, "ema_ten", "float32")
+  local set_desc = graph:new_operation("Assign", "ema_set")
+  set_desc:add_input(variable.ref)
+  set_desc:add_input(ten)
+  set_desc:set_type("T", "float32")
+  set_desc:set_bool("use_locking", true)
+  local set = set_desc:finish()
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { variable.initializer })
+  session:run({}, {}, state.initializers)
+  assert_eq(state.averages[1].read.oper ~= nil, true)
+  assert_eq(session:run({}, { state.averages[1].read })[1]:totable(), 5)
+  session:run({}, {}, { set })
+  session:run({}, {}, state.updates)
+  local average = session:run({}, { state.averages[1].read })[1]:totable()
+  assert_true(math.abs(average - 7.5) < 1e-6, tostring(average))
+  assert_error(function()
+    tf.train.exponential_moving_average(graph, { variable }, 1.5)
+  end, "between 0 and 1")
+  session:close()
+end)
+
 test("applies decoupled weight decay to accumulator optimizers", function()
   local optimizers = {
     { "adagrad", "AGW" },
