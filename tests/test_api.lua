@@ -92,8 +92,8 @@ test("exposes the public API surface", function()
     "matrix_diag_part", "matrix_band_part", "matrix_set_diag",
     "matrix_inverse", "matrix_determinant", "matrix_solve", "cholesky",
     "matrix_triangular_solve", "qr", "self_adjoint_eig", "svd",
-    "random_uniform", "random_normal", "bincount", "zeros", "ones",
-    "broadcast_to",
+    "random_uniform", "random_normal", "bincount", "cumsum", "cumprod",
+    "real", "imag", "fft", "ifft", "zeros", "ones", "broadcast_to",
     "roll", "maximum", "minimum",
   }
   for _, name in ipairs(eager_methods) do

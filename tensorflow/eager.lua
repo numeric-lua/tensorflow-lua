@@ -378,6 +378,25 @@ function Context:random_normal(shape, dtype, seed)
   return random_tensor(self, "RandomStandardNormal", shape, dtype, seed)
 end
 
+local function cumulative(context, op_type, a, axis, exclusive, reverse)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error("eager " .. op_type:lower() .. " expects an integer axis", 2)
+  end
+  local axis_tensor = context:constant(axis, "int32")
+  return context:execute(op_type, { a, axis_tensor },
+    { attrs = { T = a:dtype(), Tidx = "int32", exclusive = exclusive == true,
+      reverse = reverse == true } })[1]
+end
+
+function Context:cumsum(a, axis, exclusive, reverse)
+  return cumulative(self, "Cumsum", a, axis, exclusive, reverse)
+end
+
+function Context:cumprod(a, axis, exclusive, reverse)
+  return cumulative(self, "Cumprod", a, axis, exclusive, reverse)
+end
+
 function Context:range(start, limit, delta, dtype)
   local value_dtype = dtype or "float32"
   local start_tensor = self:constant(start, value_dtype)
@@ -633,6 +652,34 @@ end
 
 function Context:identity(a)
   return unary(self, "Identity", a)
+end
+
+local function complex_part(context, op_type, a, out_dtype)
+  local dtype = out_dtype or
+    (a:dtype() == "complex128" and "float64" or "float32")
+  return context:execute(op_type, { a },
+    { attrs = { T = a:dtype(), Tout = dtype } })[1]
+end
+
+function Context:real(a, out_dtype)
+  return complex_part(self, "Real", a, out_dtype)
+end
+
+function Context:imag(a, out_dtype)
+  return complex_part(self, "Imag", a, out_dtype)
+end
+
+local function complex_transform(context, op_type, a)
+  return context:execute(op_type, { a },
+    { attrs = { Tcomplex = a:dtype() } })[1]
+end
+
+function Context:fft(a)
+  return complex_transform(self, "FFT", a)
+end
+
+function Context:ifft(a)
+  return complex_transform(self, "IFFT", a)
 end
 
 function Context:diag(a)
