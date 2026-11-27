@@ -1024,12 +1024,12 @@ function Train.gradient_accumulation(graph, variables, gradients, steps, options
     local accumulator = Train.variable(graph, zeros(shape),
       name .. "/accumulator_" .. i, { dtype = dtype })
     initializers[#initializers + 1] = accumulator.initializer
-    local add = graph:new_operation("AssignAdd", name .. "/add_" .. i)
-    add:add_input(accumulator.ref)
-    add:add_input(gradient)
-    add:set_type("T", dtype)
-    add:set_bool("use_locking", false)
-    accumulate[#accumulate + 1] = add:finish()
+    local add_op = graph:new_operation("AssignAdd", name .. "/add_" .. i)
+    add_op:add_input(accumulator.ref)
+    add_op:add_input(gradient)
+    add_op:set_type("T", dtype)
+    add_op:set_bool("use_locking", false)
+    accumulate[#accumulate + 1] = add_op:finish()
     local zero = Train.constant(graph, zeros(shape), name .. "/zero_" .. i,
       dtype)
     reset[#reset + 1] = assign(graph, accumulator, zero,
