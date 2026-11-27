@@ -265,6 +265,8 @@ Each returned entry has `oper`, `index`, `name`, `dtype`, and `shape`.
 `opts.uniquify_names` renames conflicting operations, and
 `opts.uniquify_prefix` uniquifies the supplied namespace prefix so the same
 GraphDef can be imported repeatedly without manually changing names.
+`opts.return_operations` returns `operation_info` records for selected imported
+operations and cannot be combined with `return_elements`.
 
 ### `graph:import_file(path[, opts])`
 
@@ -352,6 +354,12 @@ Creates accumulator variables initialized to zero plus `accumulate`, `reset`, an
 `gradients` targets. `gradients` exposes the accumulated gradients divided by
 `steps`, suitable for an optimizer's `gradients` option. `steps` must be a
 positive integer and `gradients` must match `variables` in length.
+
+### `tf.train.apply_gradients(kind, graph, variables, gradients[, opts])`
+
+Applies a named optimizer to precomputed gradient graph outputs. `gradients`
+must match `variables` in length. The optimizer name accepts the same values as
+`tf.train.optimizer`.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -1013,8 +1021,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
 `matrix_set_diag`, `matrix_inverse`, `matrix_determinant`, `matrix_solve`,
 `cholesky`, `matrix_triangular_solve`, `qr`, `self_adjoint_eig`, `svd`,
-`bincount`, `norm`, `random_uniform`, `random_normal`, `broadcast_to`, `roll`,
-`zeros`, `ones`, `slice`, `pad`, `tile`,
+`bincount`, `norm`, `random_uniform`, `random_normal`, `cumsum`, `cumprod`,
+`real`, `imag`, `fft`, `ifft`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`,
+`pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1102,6 +1111,12 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.bincount(graph, values, size[, weights[, name[, dtype]]])` | Bincount |
 | `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
 | `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
+| `tf.cumsum(graph, x, axis[, name[, dtype[, exclusive[, reverse]]]])` | Cumsum |
+| `tf.cumprod(graph, x, axis[, name[, dtype[, exclusive[, reverse]]]])` | Cumprod |
+| `tf.real(graph, x[, name[, out_dtype]])` | Real |
+| `tf.imag(graph, x[, name[, out_dtype]])` | Imag |
+| `tf.fft(graph, x[, name[, dtype]])` | FFT |
+| `tf.ifft(graph, x[, name[, dtype]])` | IFFT |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
 | `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
 | `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |

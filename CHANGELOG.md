@@ -15,17 +15,20 @@
   `tf.matrix_determinant`, `tf.matrix_solve`, `tf.cholesky`,
   `tf.matrix_triangular_solve`, `tf.qr`, `tf.self_adjoint_eig`, `tf.svd`,
   `tf.bincount`, `tf.broadcast_to`, `tf.roll`, `tf.zeros`, `tf.ones`,
-  `tf.random_uniform`, and `tf.random_normal`, plus eager equivalents;
+  `tf.random_uniform`, `tf.random_normal`, `tf.cumsum`, `tf.cumprod`,
+  `tf.real`, `tf.imag`, `tf.fft`, and `tf.ifft`, plus eager equivalents;
 - add `rmsprop` `centered` option routing to centered RMSProp;
 - add `tf.train.exponential_moving_average` with synced shadow variables and
   update targets;
 - add `tf.train.gradient_accumulation` for accumulator, reset, and averaged
   gradient targets;
+- add `tf.train.apply_gradients` for applying precomputed gradients through a
+  named optimizer;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
   optimizer construction, with `tf.train.sgd` routing momentum/nesterov options
   through the momentum optimizer;
-- add GraphDef import `default_device`, `uniquify_names`, and
-  `uniquify_prefix` options;
+- add GraphDef import `default_device`, `uniquify_names`, `uniquify_prefix`,
+  and `return_operations` options;
 - add graph `tf.top_k`, `tf.in_top_k`, `tf.space_to_batch_nd`, and
   `tf.batch_to_space_nd`;
 - add eager `Context:top_k`, `in_top_k`, `space_to_batch_nd`, and
@@ -55,7 +58,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 280 dependency-free tests.
+- 285 dependency-free tests.
 
 ## 2.8.0
 
