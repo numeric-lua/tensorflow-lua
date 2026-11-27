@@ -215,6 +215,26 @@ test("accumulates and averages gradients over steps", function()
   session:close()
 end)
 
+test("applies precomputed gradients through named optimizers", function()
+  local graph = tf.Graph.new()
+  local variable = tf.variable(graph, { 0, 0 }, "ag_v")
+  local gradient = tf.constant(graph, { 1, 2 }, "ag_grad", "float32")
+  local updates = tf.train.apply_gradients("sgd", graph, { variable },
+    { gradient }, { learning_rate = 0.5, name = "AG" })
+  local session = tf.Session.new(graph)
+  session:run({}, {}, { variable.initializer })
+  session:run({}, {}, updates)
+  assert_eq(table.concat(session:run({}, { variable.read })[1]:totable(), ","),
+    "-0.5,-1")
+  assert_error(function()
+    tf.train.apply_gradients("sgd", graph, { variable }, {}, {})
+  end, "non-empty")
+  assert_error(function()
+    tf.train.apply_gradients("sgd", graph, { variable }, { 1 }, {})
+  end, "graph output")
+  session:close()
+end)
+
 test("applies decoupled weight decay to accumulator optimizers", function()
   local optimizers = {
     { "adagrad", "AGW" },

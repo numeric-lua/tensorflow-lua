@@ -83,6 +83,9 @@ tf.train = {
     return Train.gradient_accumulation(graph, variables, gradients, steps,
       options)
   end,
+  apply_gradients = function(kind, graph, variables, gradients, options)
+    return Train.apply_gradients(kind, graph, variables, gradients, options)
+  end,
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,

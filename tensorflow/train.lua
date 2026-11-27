@@ -1098,4 +1098,22 @@ function Train.optimizer(kind, graph, loss, variables, options)
   return factory(graph, loss, variables, options or {})
 end
 
+function Train.apply_gradients(kind, graph, variables, gradients, options)
+  if type(gradients) ~= "table" or #gradients == 0 then
+    error("apply_gradients expects a non-empty gradient list", 3)
+  end
+  if type(variables) ~= "table" or #variables ~= #gradients then
+    error("apply_gradients gradients must match variables", 3)
+  end
+  for i, gradient in ipairs(gradients) do
+    if type(gradient) ~= "table" or gradient.oper == nil then
+      error("apply_gradients gradient " .. i .. " must be a graph output", 3)
+    end
+  end
+  local opts = {}
+  for key, value in pairs(options or {}) do opts[key] = value end
+  opts.gradients = gradients
+  return Train.optimizer(kind, graph, nil, variables, opts)
+end
+
 return Train
