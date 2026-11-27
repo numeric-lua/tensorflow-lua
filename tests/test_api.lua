@@ -90,7 +90,8 @@ test("exposes the public API surface", function()
     "reduce_variance", "reduce_stddev", "norm", "matrix_diag",
     "matrix_diag_part", "matrix_band_part", "matrix_set_diag",
     "matrix_inverse", "matrix_determinant", "matrix_solve", "cholesky",
-    "matrix_triangular_solve", "qr", "bincount", "zeros", "ones",
+    "matrix_triangular_solve", "qr", "self_adjoint_eig", "svd",
+    "random_uniform", "random_normal", "bincount", "zeros", "ones",
     "broadcast_to",
     "roll", "maximum", "minimum",
   }

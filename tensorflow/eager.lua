@@ -350,6 +350,34 @@ function Context:ones(shape, dtype)
   return self:fill(shape, 1, dtype)
 end
 
+local function random_tensor(context, op_type, shape, dtype, seed)
+  if type(shape) ~= "table" or #shape == 0 then
+    error("eager " .. op_type:lower() .. " expects a non-empty shape table", 2)
+  end
+  for i, dimension in ipairs(shape) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error("eager " .. op_type:lower() ..
+        " dimensions must be non-negative integers (index " ..
+        tostring(i) .. ")", 2)
+    end
+  end
+  if seed ~= nil and (type(seed) ~= "number" or seed % 1 ~= 0) then
+    error("eager " .. op_type:lower() .. " seed must be an integer", 2)
+  end
+  local shape_tensor = context:constant(shape, "int32")
+  return context:execute(op_type, { shape_tensor },
+    { attrs = { T = "int32", dtype = dtype or "float32",
+      seed = { int = seed or 0 }, seed2 = { int = 0 } } })[1]
+end
+
+function Context:random_uniform(shape, dtype, seed)
+  return random_tensor(self, "RandomUniform", shape, dtype, seed)
+end
+
+function Context:random_normal(shape, dtype, seed)
+  return random_tensor(self, "RandomStandardNormal", shape, dtype, seed)
+end
+
 function Context:range(start, limit, delta, dtype)
   local value_dtype = dtype or "float32"
   local start_tensor = self:constant(start, value_dtype)
@@ -669,6 +697,19 @@ function Context:qr(a, full_matrices)
   return self:execute("Qr", { a },
     { attrs = { T = a:dtype(), full_matrices = full_matrices ~= false },
       num_outputs = 2 })
+end
+
+function Context:self_adjoint_eig(a, compute_v)
+  return self:execute("SelfAdjointEigV2", { a },
+    { attrs = { T = a:dtype(), compute_v = compute_v ~= false },
+      num_outputs = 2 })
+end
+
+function Context:svd(a, compute_uv, full_matrices)
+  local count = compute_uv ~= false and 3 or 1
+  return self:execute("Svd", { a },
+    { attrs = { T = a:dtype(), compute_uv = compute_uv ~= false,
+      full_matrices = full_matrices == true }, num_outputs = count })
 end
 
 function Context:stop_gradient(a)

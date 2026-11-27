@@ -275,6 +275,31 @@ test("executes eager cholesky, triangular solve, QR, and bincount", function()
   context:close()
 end)
 
+test("executes eager eigen, SVD, and random tensors", function()
+  local context = tf.eager.Context.new()
+  local eig = context:self_adjoint_eig(
+    context:constant({ { 4, 1 }, { 1, 3 } }), true)
+  assert_eq(#eig, 2)
+  local eigenvalues = eig[1]:totable()
+  assert_true(math.abs(eigenvalues[1] + eigenvalues[2] - 7) < 1e-5)
+  assert_eq(table.concat(eig[2]:shape(), ","), "2,2")
+  local svd = context:svd(context:constant({ { 1, 2 }, { 3, 4 } }), true, false)
+  assert_eq(#svd, 3)
+  assert_eq(table.concat(svd[1]:shape(), ","), "2")
+  assert_true(svd[1]:totable()[1] >= svd[1]:totable()[2])
+  local uniform = context:random_uniform({ 4 }, "float32", 7)
+  assert_eq(table.concat(uniform:shape(), ","), "4")
+  for _, value in ipairs(uniform:totable()) do
+    assert_true(value >= 0 and value < 1, tostring(value))
+  end
+  local normal = context:random_normal({ 2, 2 })
+  assert_eq(table.concat(normal:shape(), ","), "2,2")
+  assert_error(function() context:random_uniform({}) end, "non-empty")
+  assert_error(function() context:random_normal({ 2 }, "float32", 1.5) end,
+    "integer")
+  context:close()
+end)
+
 test("executes eager zero/one, identity, error, and predicate ops", function()
   local context = tf.eager.Context.new()
   local x = context:constant({ { 1, 2 }, { 3, 4 } })
