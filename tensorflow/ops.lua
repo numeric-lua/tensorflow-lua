@@ -397,6 +397,37 @@ function Ops.random_normal(graph, shape, name, dtype, seed)
   return random_tensor(graph, "RandomStandardNormal", shape, name, dtype, seed)
 end
 
+local function cumulative(graph, op_type, input, axis, name, dtype, exclusive,
+    reverse)
+  axis = axis or 0
+  if type(axis) ~= "number" or axis % 1 ~= 0 then
+    error(op_type:lower() .. " expects an integer axis", 3)
+  end
+  name = name or op_type:lower()
+  local value_dtype = input_dtype(input, dtype)
+  local axis_op = constant(graph, axis, name .. "/axis", "int32")
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(input)
+  desc:add_input(axis_op)
+  desc:set_type("T", value_dtype)
+  desc:set_type("Tidx", "int32")
+  desc:set_bool("exclusive", exclusive == true)
+  desc:set_bool("reverse", reverse == true)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.cumsum(graph, input, axis, name, dtype, exclusive, reverse)
+  return cumulative(graph, "Cumsum", input, axis, name, dtype, exclusive,
+    reverse)
+end
+
+function Ops.cumprod(graph, input, axis, name, dtype, exclusive, reverse)
+  return cumulative(graph, "Cumprod", input, axis, name, dtype, exclusive,
+    reverse)
+end
+
 function Ops.range(graph, start, limit, delta, name, dtype)
   name = name or "range"
   local value_dtype = dtype_name(dtype)

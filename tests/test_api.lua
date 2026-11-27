@@ -19,7 +19,7 @@ test("exposes the public API surface", function()
     "matrix_inverse", "matrix_determinant", "matrix_solve", "cholesky",
     "matrix_triangular_solve", "qr", "self_adjoint_eig", "svd",
     "batch_matmul", "fill", "zeros", "ones", "random_uniform",
-    "random_normal",
+    "random_normal", "cumsum", "cumprod",
     "range",
     "linspace", "reduce_mean",
     "reduce_sum", "reduce_logsumexp", "reduce_prod", "reduce_max",
