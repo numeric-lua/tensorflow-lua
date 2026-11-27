@@ -655,6 +655,22 @@ function Context:matrix_solve(matrix, rhs, adjoint)
     { attrs = { T = matrix:dtype(), adjoint = adjoint == true } })[1]
 end
 
+function Context:cholesky(a)
+  return unary(self, "Cholesky", a)
+end
+
+function Context:matrix_triangular_solve(matrix, rhs, lower, adjoint)
+  return self:execute("MatrixTriangularSolve", { matrix, rhs },
+    { attrs = { T = matrix:dtype(), lower = lower ~= false,
+      adjoint = adjoint == true } })[1]
+end
+
+function Context:qr(a, full_matrices)
+  return self:execute("Qr", { a },
+    { attrs = { T = a:dtype(), full_matrices = full_matrices ~= false },
+      num_outputs = 2 })
+end
+
 function Context:stop_gradient(a)
   return unary(self, "StopGradient", a)
 end
@@ -1086,6 +1102,29 @@ function Context:unstack(a, num, axis)
   return self:execute("Unpack", { a },
     { attrs = { T = a:dtype(), num = { int = num }, axis = { int = axis } },
       num_outputs = num })
+end
+
+function Context:bincount(values, size, weights, dtype)
+  if type(size) ~= "number" or size % 1 ~= 0 or size < 1 then
+    error("eager bincount expects a positive integer size", 2)
+  end
+  local value_tensor = values
+  if values:dtype() ~= "int32" then
+    value_tensor = self:cast(values, "int32")
+  end
+  local size_tensor = self:constant(size, "int32")
+  local weight_dtype = dtype or
+    (getmetatable(weights) == ETensor and weights:dtype()) or "int32"
+  local weight_tensor
+  if weights == nil then
+    weight_tensor = self:constant(1, weight_dtype)
+  elseif getmetatable(weights) == ETensor then
+    weight_tensor = weights
+  else
+    weight_tensor = self:constant(weights, weight_dtype)
+  end
+  return self:execute("Bincount", { value_tensor, size_tensor, weight_tensor },
+    { attrs = { T = weight_tensor:dtype() } })[1]
 end
 
 function Context:one_hot(indices, depth, options)
