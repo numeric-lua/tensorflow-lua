@@ -448,6 +448,30 @@ test("masks matrix bands and replaces diagonals", function()
   session:close()
 end)
 
+test("inverts, solves, and takes determinants of matrices", function()
+  local graph = tf.Graph.new()
+  local matrix = tf.placeholder(graph, "float32", { 2, 2 }, "lin_x")
+  local inverse = tf.matrix_inverse(graph, matrix, "lin_inverse")
+  local determinant = tf.matrix_determinant(graph, matrix, "lin_det")
+  local solve_matrix = tf.placeholder(graph, "float32", { 2, 2 }, "solve_m")
+  local rhs = tf.placeholder(graph, "float32", { 2, 1 }, "solve_rhs")
+  local solution = tf.matrix_solve(graph, solve_matrix, rhs, "solve")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [matrix] = { { 4, 7 }, { 2, 6 } },
+    [solve_matrix] = { { 2, 0 }, { 0, 4 } },
+    [rhs] = { { 2 }, { 8 } },
+  }, { inverse, determinant, solution })
+  assert_true(math.abs(result[1]:totable()[1][1] - 0.6) < 1e-5)
+  assert_true(math.abs(result[1]:totable()[1][2] + 0.7) < 1e-5)
+  assert_true(math.abs(result[1]:totable()[2][1] + 0.2) < 1e-5)
+  assert_true(math.abs(result[1]:totable()[2][2] - 0.4) < 1e-5)
+  assert_true(math.abs(result[2]:totable() - 10) < 1e-5)
+  assert_true(math.abs(result[3]:totable()[1][1] - 1) < 1e-5)
+  assert_true(math.abs(result[3]:totable()[2][1] - 2) < 1e-5)
+  session:close()
+end)
+
 test("converts between depth and spatial blocks", function()
   local graph = tf.Graph.new()
   local input = tf.placeholder(graph, "float32", { 1, 2, 2, 4 }, "space_x")

@@ -134,6 +134,35 @@ function Ops.matrix_set_diag(graph, input, diagonal, name, dtype)
   return output
 end
 
+function Ops.matrix_inverse(graph, input, name, dtype, adjoint)
+  name = name or "matrix_inverse"
+  local value_dtype = input_dtype(input, dtype)
+  local desc = graph:new_operation("MatrixInverse", name)
+  desc:add_input(input)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("adjoint", adjoint == true)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.matrix_determinant(graph, input, name, dtype)
+  return typed_unary(graph, "MatrixDeterminant", input, name, dtype)
+end
+
+function Ops.matrix_solve(graph, matrix, rhs, name, dtype, adjoint)
+  name = name or "matrix_solve"
+  local value_dtype = input_dtype(matrix, dtype)
+  local desc = graph:new_operation("MatrixSolve", name)
+  desc:add_input(matrix)
+  desc:add_input(rhs)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("adjoint", adjoint == true)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end
