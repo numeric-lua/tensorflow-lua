@@ -163,6 +163,25 @@ function Ops.matrix_solve(graph, matrix, rhs, name, dtype, adjoint)
   return output
 end
 
+function Ops.cholesky(graph, input, name, dtype)
+  return typed_unary(graph, "Cholesky", input, name, dtype)
+end
+
+function Ops.matrix_triangular_solve(graph, matrix, rhs, lower, adjoint, name,
+    dtype)
+  name = name or "matrix_triangular_solve"
+  local value_dtype = input_dtype(matrix, dtype)
+  local desc = graph:new_operation("MatrixTriangularSolve", name)
+  desc:add_input(matrix)
+  desc:add_input(rhs)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("lower", lower ~= false)
+  desc:set_bool("adjoint", adjoint == true)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.identity(graph, input, name, dtype)
   return typed_unary(graph, "Identity", input, name, dtype)
 end

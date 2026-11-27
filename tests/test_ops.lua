@@ -470,12 +470,21 @@ test("inverts, solves, and takes determinants of matrices", function()
   local solve_matrix = tf.placeholder(graph, "float32", { 2, 2 }, "solve_m")
   local rhs = tf.placeholder(graph, "float32", { 2, 1 }, "solve_rhs")
   local solution = tf.matrix_solve(graph, solve_matrix, rhs, "solve")
+  local spd = tf.placeholder(graph, "float32", { 2, 2 }, "chol_x")
+  local cholesky = tf.cholesky(graph, spd, "chol")
+  local lower = tf.placeholder(graph, "float32", { 2, 2 }, "tri_l")
+  local tri_rhs = tf.placeholder(graph, "float32", { 2, 1 }, "tri_rhs")
+  local triangular = tf.matrix_triangular_solve(graph, lower, tri_rhs, true,
+    false, "tri_solve")
   local session = tf.Session.new(graph)
   local result = session:run({
     [matrix] = { { 4, 7 }, { 2, 6 } },
     [solve_matrix] = { { 2, 0 }, { 0, 4 } },
     [rhs] = { { 2 }, { 8 } },
-  }, { inverse, determinant, solution })
+    [spd] = { { 4, 2 }, { 2, 3 } },
+    [lower] = { { 2, 0 }, { 1, 2 } },
+    [tri_rhs] = { { 2 }, { 3 } },
+  }, { inverse, determinant, solution, cholesky, triangular })
   assert_true(math.abs(result[1]:totable()[1][1] - 0.6) < 1e-5)
   assert_true(math.abs(result[1]:totable()[1][2] + 0.7) < 1e-5)
   assert_true(math.abs(result[1]:totable()[2][1] + 0.2) < 1e-5)
@@ -483,6 +492,11 @@ test("inverts, solves, and takes determinants of matrices", function()
   assert_true(math.abs(result[2]:totable() - 10) < 1e-5)
   assert_true(math.abs(result[3]:totable()[1][1] - 1) < 1e-5)
   assert_true(math.abs(result[3]:totable()[2][1] - 2) < 1e-5)
+  assert_true(math.abs(result[4]:totable()[1][1] - 2) < 1e-5)
+  assert_true(math.abs(result[4]:totable()[2][1] - 1) < 1e-5)
+  assert_true(math.abs(result[4]:totable()[2][2] - math.sqrt(2)) < 1e-5)
+  assert_true(math.abs(result[5]:totable()[1][1] - 1) < 1e-5)
+  assert_true(math.abs(result[5]:totable()[2][1] - 1) < 1e-5)
   session:close()
 end)
 
