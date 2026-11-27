@@ -1364,6 +1364,38 @@ function Ops.sequence_mask(graph, lengths, maxlen, name, dtype)
   return output
 end
 
+function Ops.bincount(graph, values, size, weights, name, dtype)
+  if type(size) ~= "number" or size % 1 ~= 0 or size < 1 then
+    error("bincount expects a positive integer size", 3)
+  end
+  name = name or "bincount"
+  local values_dtype = input_dtype(values, nil)
+  local values_op = values
+  if values_dtype ~= "int32" then
+    values_op = Ops.cast(graph, values, values_dtype, "int32",
+      name .. "/values")
+  end
+  local weight_dtype = dtype_name(dtype or
+    (type(weights) == "table" and weights.dtype) or "int32")
+  local size_op = constant(graph, size, name .. "/size", "int32")
+  local weights_op
+  if weights == nil then
+    weights_op = constant(graph, 1, name .. "/weights", weight_dtype)
+  elseif type(weights) == "table" and weights.oper ~= nil then
+    weights_op = weights
+  else
+    weights_op = constant(graph, weights, name .. "/weights", weight_dtype)
+  end
+  local desc = graph:new_operation("Bincount", name)
+  desc:add_input(values_op)
+  desc:add_input(size_op)
+  desc:add_input(weights_op)
+  desc:set_type("T", weight_dtype)
+  local output = desc:finish()
+  output.dtype = weight_dtype
+  return output
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")

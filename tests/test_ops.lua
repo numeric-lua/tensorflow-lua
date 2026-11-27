@@ -252,6 +252,24 @@ test("builds one-hot tensors", function()
   session:close()
 end)
 
+test("counts values into weighted bins", function()
+  local graph = tf.Graph.new()
+  local values = tf.placeholder(graph, "int32", { 4 }, "bc_values")
+  local weights = tf.placeholder(graph, "int32", { 4 }, "bc_weights")
+  local bins = tf.bincount(graph, values, 5, weights, "bc")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [values] = { 0, 1, 1, 3 },
+    [weights] = { 1, 2, 3, 4 },
+  }, { bins })[1]
+  assert_eq(result:dtype(), "int32")
+  assert_eq(table.concat(result:totable(), ","), "1,5,0,4,0")
+  assert_error(function()
+    tf.bincount(graph, values, 0, weights, "bc_bad")
+  end, "positive")
+  session:close()
+end)
+
 test("casts and concatenates graph outputs", function()
   local graph = tf.Graph.new()
   local a = tf.placeholder(graph, "int32", { 2 }, "ca")

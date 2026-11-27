@@ -255,6 +255,7 @@ tf.argmax = Ops.argmax
 tf.argmin = Ops.argmin
 tf.top_k = Ops.top_k
 tf.in_top_k = Ops.in_top_k
+tf.bincount = Ops.bincount
 tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
 tf.log = Ops.log
