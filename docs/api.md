@@ -111,6 +111,10 @@ local schema = graph:op_def("AddV2")
 Returns the graph's serialized `VersionDef` protobuf bytes through
 `TF_GraphVersions`, with `TF_Status` error handling and buffer cleanup.
 
+### `graph:version_info()`
+
+Decodes `Graph:version_def()` into `{ producer, min_consumer, bad_consumers }`.
+
 ### `graph:debug_string()`
 
 Returns the graph in TensorFlow's human-readable debug format. The format is
@@ -341,6 +345,13 @@ Creates shadow variables for each variable, `initializers` that zero and then
 sync each shadow from its variable, and `updates` targets that apply
 `shadow = shadow * decay + variable * (1 - decay)`. `decay` must be between 0
 and 1. Run variable initializers before `initializers`.
+
+### `tf.train.gradient_accumulation(graph, variables, gradients, steps[, opts])`
+
+Creates accumulator variables initialized to zero plus `accumulate`, `reset`, and
+`gradients` targets. `gradients` exposes the accumulated gradients divided by
+`steps`, suitable for an optimizer's `gradients` option. `steps` must be a
+positive integer and `gradients` must match `variables` in length.
 
 ### `tf.train.clip_by_norm(graph, gradient, clip_norm[, name[, dtype]])`
 
@@ -1001,8 +1012,9 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `tensor_scatter_nd_max`, `unique`, `unique_with_counts`, `sequence_mask`,
 `diag`, `diag_part`, `matrix_diag`, `matrix_diag_part`, `matrix_band_part`,
 `matrix_set_diag`, `matrix_inverse`, `matrix_determinant`, `matrix_solve`,
-`cholesky`, `matrix_triangular_solve`, `qr`, `bincount`, `norm`,
-`broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
+`cholesky`, `matrix_triangular_solve`, `qr`, `self_adjoint_eig`, `svd`,
+`bincount`, `norm`, `random_uniform`, `random_normal`, `broadcast_to`, `roll`,
+`zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1085,7 +1097,11 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.cholesky(graph, x[, name[, dtype]])` | Cholesky |
 | `tf.matrix_triangular_solve(graph, matrix, rhs[, lower[, adjoint[, name[, dtype]]]])` | MatrixTriangularSolve |
 | `tf.qr(graph, x[, full_matrices[, name[, dtype]]])` | Qr (q, r) |
+| `tf.self_adjoint_eig(graph, x[, compute_v[, name[, dtype]]])` | SelfAdjointEigV2 (values, vectors) |
+| `tf.svd(graph, x[, compute_uv[, full_matrices[, name[, dtype]]]])` | Svd (s, u, v) |
 | `tf.bincount(graph, values, size[, weights[, name[, dtype]]])` | Bincount |
+| `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
+| `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
 | `tf.norm(graph, x, axes[, ord[, name[, dtype[, keep_dims]]]])` | composed L1/L2 norm |
 | `tf.broadcast_to(graph, x, shape[, name[, dtype]])` | BroadcastTo |
 | `tf.roll(graph, x, shift, axis[, name[, dtype]])` | Roll |
