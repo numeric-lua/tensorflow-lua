@@ -236,6 +236,7 @@ tf.matrix_set_diag = Ops.matrix_set_diag
 tf.matrix_inverse = Ops.matrix_inverse
 tf.matrix_determinant = Ops.matrix_determinant
 tf.matrix_solve = Ops.matrix_solve
+tf.matrix_solve_ls = Ops.matrix_solve_ls
 tf.cholesky = Ops.cholesky
 tf.matrix_triangular_solve = Ops.matrix_triangular_solve
 tf.qr = Ops.qr

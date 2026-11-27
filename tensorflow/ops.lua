@@ -163,6 +163,27 @@ function Ops.matrix_solve(graph, matrix, rhs, name, dtype, adjoint)
   return output
 end
 
+function Ops.matrix_solve_ls(graph, matrix, rhs, l2_regularizer, name, dtype,
+    fast)
+  l2_regularizer = l2_regularizer or 0
+  if type(l2_regularizer) ~= "number" or l2_regularizer < 0 then
+    error("matrix_solve_ls l2_regularizer must be non-negative", 3)
+  end
+  name = name or "matrix_solve_ls"
+  local value_dtype = input_dtype(matrix, dtype)
+  local regularizer = constant(graph, l2_regularizer,
+    name .. "/l2_regularizer", "float64")
+  local desc = graph:new_operation("MatrixSolveLs", name)
+  desc:add_input(matrix)
+  desc:add_input(rhs)
+  desc:add_input(regularizer)
+  desc:set_type("T", value_dtype)
+  desc:set_bool("fast", fast ~= false)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.cholesky(graph, input, name, dtype)
   return typed_unary(graph, "Cholesky", input, name, dtype)
 end
