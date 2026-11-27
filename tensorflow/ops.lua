@@ -361,6 +361,42 @@ function Ops.ones(graph, shape, name, dtype)
   return Ops.fill(graph, shape, 1, name or "ones", dtype)
 end
 
+local function random_tensor(graph, op_type, shape, name, dtype, seed)
+  if type(shape) ~= "table" or #shape == 0 then
+    error(op_type:lower() .. " expects a non-empty shape table", 3)
+  end
+  for i, dimension in ipairs(shape) do
+    if type(dimension) ~= "number" or dimension % 1 ~= 0 or dimension < 0 then
+      error(op_type:lower() ..
+        " dimensions must be non-negative integers (index " ..
+        tostring(i) .. ")", 3)
+    end
+  end
+  if seed ~= nil and (type(seed) ~= "number" or seed % 1 ~= 0) then
+    error(op_type:lower() .. " seed must be an integer", 3)
+  end
+  name = name or op_type:lower()
+  local value_dtype = dtype_name(dtype or "float32")
+  local shape_op = constant(graph, shape, name .. "/shape", "int32")
+  local desc = graph:new_operation(op_type, name)
+  desc:add_input(shape_op)
+  desc:set_type("T", "int32")
+  desc:set_type("dtype", value_dtype)
+  desc:set_int("seed", seed or 0)
+  desc:set_int("seed2", 0)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
+function Ops.random_uniform(graph, shape, name, dtype, seed)
+  return random_tensor(graph, "RandomUniform", shape, name, dtype, seed)
+end
+
+function Ops.random_normal(graph, shape, name, dtype, seed)
+  return random_tensor(graph, "RandomStandardNormal", shape, name, dtype, seed)
+end
+
 function Ops.range(graph, start, limit, delta, name, dtype)
   name = name or "range"
   local value_dtype = dtype_name(dtype)

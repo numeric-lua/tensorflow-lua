@@ -155,6 +155,31 @@ test("builds zero and one tensors", function()
   session:close()
 end)
 
+test("generates random uniform and normal tensors", function()
+  local graph = tf.Graph.new()
+  local uniform = tf.random_uniform(graph, { 4 }, "rand_uniform", "float32", 7)
+  local normal = tf.random_normal(graph, { 2, 2 }, "rand_normal")
+  local session = tf.Session.new(graph)
+  local result = session:run({}, { uniform, normal })
+  assert_eq(table.concat(result[1]:shape(), ","), "4")
+  for _, value in ipairs(result[1]:totable()) do
+    assert_true(value >= 0 and value < 1, tostring(value))
+  end
+  assert_eq(table.concat(result[2]:shape(), ","), "2,2")
+  for _, row in ipairs(result[2]:totable()) do
+    for _, value in ipairs(row) do
+      assert_true(value == value, tostring(value))
+    end
+  end
+  assert_error(function()
+    tf.random_uniform(graph, {}, "rand_bad")
+  end, "non-empty")
+  assert_error(function()
+    tf.random_normal(graph, { 2 }, "rand_bad_seed", "float32", 1.5)
+  end, "integer")
+  session:close()
+end)
+
 test("reduces variance and standard deviation", function()
   local graph = tf.Graph.new()
   local matrix = tf.placeholder(graph, "float32", { 2, 3 }, "var_x")
