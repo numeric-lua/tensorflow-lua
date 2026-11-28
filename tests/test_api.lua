@@ -27,7 +27,7 @@ test("exposes the public API surface", function()
     "reduce_min", "reduce_variance", "reduce_stddev", "norm", "l2_normalize",
     "reduce_all",
     "reduce_any", "argmax", "argmin", "top_k", "in_top_k", "one_hot",
-    "bincount", "exp",
+    "bincount", "string_length", "substr", "string_to_number", "exp",
     "equal", "not_equal",
     "greater",
     "greater_equal", "less", "less_equal", "logical_and", "logical_or",

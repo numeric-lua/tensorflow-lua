@@ -1601,6 +1601,69 @@ function Ops.bincount(graph, values, size, weights, name, dtype)
   return output
 end
 
+local function string_unit(unit)
+  unit = unit or "BYTE"
+  if unit ~= "BYTE" and unit ~= "UTF8_CHAR" then
+    error("string unit must be BYTE or UTF8_CHAR", 3)
+  end
+  return unit
+end
+
+local function string_dtype(input)
+  return type(input) == "table" and input.dtype or "string"
+end
+
+function Ops.string_length(graph, input, name, unit)
+  if string_dtype(input) ~= "string" then
+    error("string_length expects a string input", 3)
+  end
+  name = name or "string_length"
+  local desc = graph:new_operation("StringLength", name)
+  desc:add_input(input)
+  desc:set_string("unit", string_unit(unit))
+  local output = desc:finish()
+  output.dtype = "int32"
+  return output
+end
+
+function Ops.substr(graph, input, pos, len, name, unit)
+  if string_dtype(input) ~= "string" then
+    error("substr expects a string input", 3)
+  end
+  if type(pos) ~= "number" or pos % 1 ~= 0 then
+    error("substr position must be an integer", 3)
+  end
+  if type(len) ~= "number" or len % 1 ~= 0 then
+    error("substr length must be an integer", 3)
+  end
+  name = name or "substr"
+  local position = constant(graph, pos, name .. "/position", "int32")
+  local length = constant(graph, len, name .. "/length", "int32")
+  local desc = graph:new_operation("Substr", name)
+  desc:add_input(input)
+  desc:add_input(position)
+  desc:add_input(length)
+  desc:set_type("T", "int32")
+  desc:set_string("unit", string_unit(unit))
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
+function Ops.string_to_number(graph, input, name, out_dtype)
+  if string_dtype(input) ~= "string" then
+    error("string_to_number expects a string input", 3)
+  end
+  name = name or "string_to_number"
+  local output_dtype = dtype_name(out_dtype or "float32")
+  local desc = graph:new_operation("StringToNumber", name)
+  desc:add_input(input)
+  desc:set_type("out_type", output_dtype)
+  local output = desc:finish()
+  output.dtype = output_dtype
+  return output
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")
