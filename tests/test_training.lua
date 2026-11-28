@@ -417,6 +417,34 @@ test("routes rmsprop centered option to centered rmsprop", function()
   session:close()
 end)
 
+test("trains linear regression with AMSGrad", function()
+  local graph, x, target, w, b, loss = linear_problem()
+  local updates, _, state = tf.train.amsgrad(graph, loss, { w, b },
+    { learning_rate = 0.05, name = "AMS" })
+  assert_eq(graph:operation_info("AMS/update_1").op_type, "Assign")
+  local session = tf.Session.new(graph)
+  local init = { w.initializer, b.initializer }
+  for _, initializer in ipairs(state.initializers) do
+    init[#init + 1] = initializer
+  end
+  session:run({}, {}, init)
+  for _ = 1, 500 do
+    session:run({ [x] = { 0, 1, 2, 3 }, [target] = { 1, 3, 5, 7 } }, {}, updates)
+  end
+  local result = session:run({}, { w.read, b.read })
+  assert_true(math.abs(result[1]:totable() - 2) < 0.3,
+    tostring(result[1]:totable()))
+  assert_true(math.abs(result[2]:totable() - 1) < 0.3,
+    tostring(result[2]:totable()))
+  assert_error(function()
+    tf.train.amsgrad(graph, loss, { w, b }, { beta1 = 1.5 })
+  end, "beta1")
+  assert_error(function()
+    tf.train.amsgrad(graph, loss, { w, b }, { epsilon = 0 })
+  end, "epsilon")
+  session:close()
+end)
+
 test("trains with named optimizer entrypoints", function()
   local graph, x, target, w, b, loss = linear_problem()
   local updates = tf.train.sgd(graph, loss, { w, b },

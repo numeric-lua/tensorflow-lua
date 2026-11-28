@@ -97,6 +97,16 @@ local function add(graph, a, b, name, dtype)
   return output
 end
 
+local function subtract(graph, a, b, name, dtype)
+  local desc = graph:new_operation("Sub", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", dtype)
+  local output = desc:finish()
+  output.dtype = dtype
+  return output
+end
+
 local function weight_decay_value(options)
   local weight_decay = options.weight_decay or options.wd or 0
   if type(weight_decay) ~= "number" or weight_decay < 0 then
@@ -1050,12 +1060,110 @@ function Train.gradient_accumulation(graph, variables, gradients, steps, options
   }
 end
 
+function Train.amsgrad(graph, loss, variables, options)
+  options = options or {}
+  local learning_rate = options.learning_rate or options.lr or 0.001
+  local beta1 = options.beta1 or 0.9
+  local beta2 = options.beta2 or 0.999
+  local epsilon = options.epsilon or 1e-8
+  local name = options.name or "AMSGrad"
+  if beta1 < 0 or beta1 > 1 then
+    error("amsgrad beta1 must be between 0 and 1", 3)
+  end
+  if beta2 < 0 or beta2 > 1 then
+    error("amsgrad beta2 must be between 0 and 1", 3)
+  end
+  if epsilon <= 0 then
+    error("amsgrad epsilon must be positive", 3)
+  end
+  if type(variables) ~= "table" or #variables == 0 then
+    error("amsgrad expects a non-empty variable list", 3)
+  end
+  local refs = {}
+  for i, variable in ipairs(variables) do refs[i] = variable.ref or variable end
+  local gradients = options.gradients or
+    train_gradients(graph, loss, refs, options, name)
+  if #gradients ~= #variables then
+    error("amsgrad gradients must match variables", 3)
+  end
+  local dtype = variables[1].dtype or "float32"
+  local lr = Train.constant(graph, learning_rate, name .. "/learning_rate",
+    dtype)
+  local b1 = Train.constant(graph, beta1, name .. "/beta1", dtype)
+  local b2 = Train.constant(graph, beta2, name .. "/beta2", dtype)
+  local one_minus_b1 = Train.constant(graph, 1 - beta1,
+    name .. "/one_minus_beta1", dtype)
+  local one_minus_b2 = Train.constant(graph, 1 - beta2,
+    name .. "/one_minus_beta2", dtype)
+  local eps = Train.constant(graph, epsilon, name .. "/epsilon", dtype)
+  local initializers, state_variables, targets = {}, {}, {}
+  for i, variable in ipairs(variables) do
+    local ref = variable.ref or variable
+    local var_dtype = variable.dtype or dtype
+    local shape = variable.shape or { }
+    local m = Train.variable(graph, zeros(shape), name .. "/m_" .. i,
+      { dtype = var_dtype })
+    local v = Train.variable(graph, zeros(shape), name .. "/v_" .. i,
+      { dtype = var_dtype })
+    local vhat = Train.variable(graph, zeros(shape), name .. "/vhat_" .. i,
+      { dtype = var_dtype })
+    initializers[#initializers + 1] = m.initializer
+    initializers[#initializers + 1] = v.initializer
+    initializers[#initializers + 1] = vhat.initializer
+    state_variables[#state_variables + 1] = m
+    state_variables[#state_variables + 1] = v
+    state_variables[#state_variables + 1] = vhat
+    local gradient = gradients[i]
+    local m_next = add(graph, multiply(graph, m.read, b1,
+      name .. "/m_scaled_" .. i, var_dtype), multiply(graph, gradient,
+      one_minus_b1, name .. "/m_input_" .. i, var_dtype),
+      name .. "/m_next_" .. i, var_dtype)
+    local v_next = add(graph, multiply(graph, v.read, b2,
+      name .. "/v_scaled_" .. i, var_dtype), multiply(graph,
+      square(graph, gradient, name .. "/gradient_squared_" .. i, var_dtype),
+      one_minus_b2, name .. "/v_input_" .. i, var_dtype),
+      name .. "/v_next_" .. i, var_dtype)
+    local vhat_next = maximum(graph, vhat.read, v_next,
+      name .. "/vhat_next_" .. i, var_dtype)
+    vhat_next.dtype = var_dtype
+    local m_assign = assign(graph, m, m_next, name .. "/m_assign_" .. i)
+    local v_assign = assign(graph, v, v_next, name .. "/v_assign_" .. i)
+    local vhat_assign = assign(graph, vhat, vhat_next,
+      name .. "/vhat_assign_" .. i)
+    local denominator = add(graph, Ops.sqrt(graph, vhat_next,
+      name .. "/sqrt_vhat_" .. i, var_dtype), eps,
+      name .. "/denominator_" .. i, var_dtype)
+    local step = Ops.div(graph, m_next, denominator,
+      name .. "/step_" .. i, var_dtype)
+    step.dtype = var_dtype
+    local scaled = multiply(graph, lr, step, name .. "/scaled_" .. i,
+      var_dtype)
+    local next_value = subtract(graph, variable.read or ref, scaled,
+      name .. "/next_" .. i, var_dtype)
+    next_value.dtype = var_dtype
+    local desc = graph:new_operation("Assign", name .. "/update_" .. i)
+    desc:add_input(ref)
+    desc:add_input(next_value)
+    desc:set_type("T", var_dtype)
+    desc:set_bool("use_locking", false)
+    desc:add_control_input(m_assign)
+    desc:add_control_input(v_assign)
+    desc:add_control_input(vhat_assign)
+    targets[#targets + 1] = desc:finish()
+  end
+  return targets, gradients, { initializers = initializers,
+    variables = state_variables }
+end
+
 local optimizer_functions = {
   adam = function(graph, loss, variables, options)
     return Train.adam(graph, loss, variables, options)
   end,
   adamw = function(graph, loss, variables, options)
     return Train.adamw(graph, loss, variables, options)
+  end,
+  amsgrad = function(graph, loss, variables, options)
+    return Train.amsgrad(graph, loss, variables, options)
   end,
   adamax = function(graph, loss, variables, options)
     return Train.adamax(graph, loss, variables, options)

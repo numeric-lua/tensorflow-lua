@@ -43,7 +43,8 @@ test("exposes the public API surface", function()
     assert_true(tf[name] ~= nil, "missing tf." .. name)
   end
   local train_functions = {
-    "gradient_descent", "sgd", "optimizer", "adam", "adamw", "adamax",
+    "gradient_descent", "sgd", "optimizer", "adam", "adamw", "amsgrad",
+    "adamax",
     "rmsprop", "centered_rmsprop",
     "adagrad", "adadelta", "clip_by_norm", "clip_by_global_norm",
     "ftrl", "proximal_adagrad", "momentum", "exponential_moving_average",
