@@ -1286,6 +1286,10 @@ function Context:string_to_number(a, out_dtype)
     { attrs = { out_type = output_dtype } })[1]
 end
 
+function Context:cross(a, b)
+  return self:execute("Cross", { a, b }, { attrs = { T = a:dtype() } })[1]
+end
+
 function Context:one_hot(indices, depth, options)
   options = options or {}
   if type(depth) ~= "number" or depth % 1 ~= 0 or depth < 1 then

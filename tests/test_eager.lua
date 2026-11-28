@@ -371,6 +371,14 @@ test("executes eager string operations", function()
   context:close()
 end)
 
+test("computes eager cross products", function()
+  local context = tf.eager.Context.new()
+  local product = context:cross(context:constant({ 1, 0, 0 }),
+    context:constant({ 0, 1, 0 }))
+  assert_eq(table.concat(product:totable(), ","), "0,0,1")
+  context:close()
+end)
+
 test("executes eager zero/one, identity, error, and predicate ops", function()
   local context = tf.eager.Context.new()
   local x = context:constant({ { 1, 2 }, { 3, 4 } })
