@@ -1664,6 +1664,50 @@ function Ops.string_to_number(graph, input, name, out_dtype)
   return output
 end
 
+function Ops.string_lower(graph, input, name)
+  if string_dtype(input) ~= "string" then
+    error("string_lower expects a string input", 3)
+  end
+  name = name or "string_lower"
+  local desc = graph:new_operation("StringLower", name)
+  desc:add_input(input)
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
+function Ops.string_upper(graph, input, name)
+  if string_dtype(input) ~= "string" then
+    error("string_upper expects a string input", 3)
+  end
+  name = name or "string_upper"
+  local desc = graph:new_operation("StringUpper", name)
+  desc:add_input(input)
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
+function Ops.regex_replace(graph, input, pattern, rewrite, replace_global, name)
+  if string_dtype(input) ~= "string" then
+    error("regex_replace expects a string input", 3)
+  end
+  if type(pattern) ~= "string" or type(rewrite) ~= "string" then
+    error("regex_replace pattern and rewrite must be strings", 3)
+  end
+  name = name or "regex_replace"
+  local pattern_op = constant(graph, pattern, name .. "/pattern", "string")
+  local rewrite_op = constant(graph, rewrite, name .. "/rewrite", "string")
+  local desc = graph:new_operation("RegexReplace", name)
+  desc:add_input(input)
+  desc:add_input(pattern_op)
+  desc:add_input(rewrite_op)
+  desc:set_bool("replace_global", replace_global ~= false)
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
 function Ops.cross(graph, a, b, name, dtype)
   name = name or "cross"
   local value_dtype = input_dtype(a, dtype)
