@@ -19,9 +19,11 @@
   `tf.cumprod`, `tf.real`, `tf.imag`, `tf.fft`, `tf.ifft`,
   `tf.l2_normalize`, `tf.string_length`, `tf.substr`, `tf.string_to_number`,
   `tf.string_lower`, `tf.string_upper`, `tf.regex_replace`, `tf.string_join`,
-  and `tf.cross`, plus eager equivalents;
+  `tf.as_string`, `tf.string_strip`, `tf.string_to_hash_bucket_fast`, and
+  `tf.cross`, plus eager equivalents;
 - add `rmsprop` `centered` option routing to centered RMSProp;
 - add `tf.train.amsgrad` with momentum, variance, and max-variance state;
+- add `tf.train.nadam` with bias-corrected Nesterov Adam updates;
 - add `tf.train.exponential_moving_average` with synced shadow variables and
   update targets;
 - add `tf.train.gradient_accumulation` for accumulator, reset, and averaged
@@ -64,7 +66,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 293 dependency-free tests.
+- 294 dependency-free tests.
 
 ## 2.8.0
 
