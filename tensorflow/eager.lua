@@ -1336,6 +1336,34 @@ function Context:string_join(inputs, separator)
   })[1]
 end
 
+function Context:as_string(a, options)
+  options = options or {}
+  local precision = options.precision or -1
+  local width = options.width or -1
+  local fill = options.fill or ""
+  if type(precision) ~= "number" or precision % 1 ~= 0 then
+    error("eager as_string precision must be an integer", 2)
+  end
+  if type(width) ~= "number" or width % 1 ~= 0 then
+    error("eager as_string width must be an integer", 2)
+  end
+  if type(fill) ~= "string" then
+    error("eager as_string fill must be a string", 2)
+  end
+  return self:execute("AsString", { a }, {
+    attrs = { T = a:dtype(), precision = { int = precision },
+      scientific = options.scientific == true, shortest = options.shortest == true,
+      width = { int = width }, fill = { string = fill } },
+  })[1]
+end
+
+function Context:string_strip(a)
+  if a:dtype() ~= "string" then
+    error("eager string_strip expects a string input", 2)
+  end
+  return self:execute("StringStrip", { a })[1]
+end
+
 function Context:cross(a, b)
   return self:execute("Cross", { a, b }, { attrs = { T = a:dtype() } })[1]
 end
