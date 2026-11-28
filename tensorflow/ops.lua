@@ -1730,6 +1730,46 @@ function Ops.string_join(graph, inputs, separator, name)
   return output
 end
 
+function Ops.as_string(graph, input, name, options)
+  options = options or {}
+  local precision = options.precision or -1
+  local width = options.width or -1
+  local fill = options.fill or ""
+  if type(precision) ~= "number" or precision % 1 ~= 0 then
+    error("as_string precision must be an integer", 3)
+  end
+  if type(width) ~= "number" or width % 1 ~= 0 then
+    error("as_string width must be an integer", 3)
+  end
+  if type(fill) ~= "string" then
+    error("as_string fill must be a string", 3)
+  end
+  name = name or "as_string"
+  local desc = graph:new_operation("AsString", name)
+  desc:add_input(input)
+  desc:set_type("T", input_dtype(input, nil))
+  desc:set_int("precision", precision)
+  desc:set_bool("scientific", options.scientific == true)
+  desc:set_bool("shortest", options.shortest == true)
+  desc:set_int("width", width)
+  desc:set_string("fill", fill)
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
+function Ops.string_strip(graph, input, name)
+  if string_dtype(input) ~= "string" then
+    error("string_strip expects a string input", 3)
+  end
+  name = name or "string_strip"
+  local desc = graph:new_operation("StringStrip", name)
+  desc:add_input(input)
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
 function Ops.cross(graph, a, b, name, dtype)
   name = name or "cross"
   local value_dtype = input_dtype(a, dtype)
