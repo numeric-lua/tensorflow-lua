@@ -1708,6 +1708,28 @@ function Ops.regex_replace(graph, input, pattern, rewrite, replace_global, name)
   return output
 end
 
+function Ops.string_join(graph, inputs, separator, name)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("string_join expects a non-empty input list", 3)
+  end
+  for i, input in ipairs(inputs) do
+    if string_dtype(input) ~= "string" then
+      error("string_join input " .. i .. " must be a string", 3)
+    end
+  end
+  if separator ~= nil and type(separator) ~= "string" then
+    error("string_join separator must be a string", 3)
+  end
+  name = name or "string_join"
+  local desc = graph:new_operation("StringJoin", name)
+  desc:add_inputs(inputs)
+  desc:set_int("N", #inputs)
+  desc:set_string("separator", separator or "")
+  local output = desc:finish()
+  output.dtype = "string"
+  return output
+end
+
 function Ops.cross(graph, a, b, name, dtype)
   name = name or "cross"
   local value_dtype = input_dtype(a, dtype)

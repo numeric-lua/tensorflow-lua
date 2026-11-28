@@ -285,6 +285,7 @@ tf.string_to_number = Ops.string_to_number
 tf.string_lower = Ops.string_lower
 tf.string_upper = Ops.string_upper
 tf.regex_replace = Ops.regex_replace
+tf.string_join = Ops.string_join
 tf.cross = Ops.cross
 tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
