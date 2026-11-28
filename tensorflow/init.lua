@@ -290,6 +290,7 @@ tf.string_lower = Ops.string_lower
 tf.string_upper = Ops.string_upper
 tf.regex_replace = Ops.regex_replace
 tf.string_join = Ops.string_join
+tf.string_split = Ops.string_split
 tf.as_string = Ops.as_string
 tf.string_strip = Ops.string_strip
 tf.string_to_hash_bucket_fast = Ops.string_to_hash_bucket_fast

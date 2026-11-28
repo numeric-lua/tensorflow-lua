@@ -1749,6 +1749,28 @@ function Ops.string_join(graph, inputs, separator, name)
   return output
 end
 
+function Ops.string_split(graph, input, separator, skip_empty, name)
+  if string_dtype(input) ~= "string" then
+    error("string_split expects a string input", 3)
+  end
+  if type(separator) ~= "string" then
+    error("string_split separator must be a string", 3)
+  end
+  name = name or "string_split"
+  local separator_op = constant(graph, separator, name .. "/separator",
+    "string")
+  local desc = graph:new_operation("StringSplit", name)
+  desc:add_input(input)
+  desc:add_input(separator_op)
+  desc:set_bool("skip_empty", skip_empty ~= false)
+  local result = desc:finish()
+  return {
+    { oper = result.oper, index = 0, name = name .. ":0", dtype = "int64" },
+    { oper = result.oper, index = 1, name = name .. ":1", dtype = "string" },
+    { oper = result.oper, index = 2, name = name .. ":2", dtype = "int64" },
+  }
+end
+
 function Ops.as_string(graph, input, name, options)
   options = options or {}
   local precision = options.precision or -1

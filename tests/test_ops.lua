@@ -411,6 +411,8 @@ test("measures, slices, and parses strings", function()
   local hash_values = tf.placeholder(graph, "string", { 3 }, "str_hashes")
   local buckets = tf.string_to_hash_bucket_fast(graph, hash_values, 10,
     "str_bucket")
+  local split_values = tf.placeholder(graph, "string", { 2 }, "str_splits")
+  local split = tf.string_split(graph, split_values, "-", true, "str_split")
   local session = tf.Session.new(graph)
   local result = session:run({
     [text] = { "abc", "hello" },
@@ -418,8 +420,9 @@ test("measures, slices, and parses strings", function()
     [ints] = { 1, 2 },
     [spaced] = { "  a  ", " b " },
     [hash_values] = { "a", "b", "a" },
+    [split_values] = { "a-b", "c" },
   }, { lengths, slice, parsed, lower, upper, replaced, joined, formatted,
-    stripped, buckets })
+    stripped, buckets, split[1], split[2], split[3] })
   assert_eq(table.concat(result[1]:totable(), ","), "3,5")
   assert_eq(result[2]:totable()[1], "bc")
   assert_eq(result[2]:totable()[2], "el")
@@ -436,6 +439,9 @@ test("measures, slices, and parses strings", function()
   assert_eq(hashes[1], hashes[3])
   assert_true(hashes[1] >= 0 and hashes[1] < 10, tostring(hashes[1]))
   assert_true(hashes[2] >= 0 and hashes[2] < 10, tostring(hashes[2]))
+  assert_eq(table.concat(result[11]:shape(), ","), "3,2")
+  assert_eq(table.concat(result[12]:totable(), ","), "a,b,c")
+  assert_eq(table.concat(result[13]:totable(), ","), "2,2")
   assert_error(function()
     tf.string_length(graph, tf.constant(graph, 1, "str_bad"), "str_bad")
   end, "string input")
@@ -457,6 +463,9 @@ test("measures, slices, and parses strings", function()
   assert_error(function()
     tf.string_to_hash_bucket_fast(graph, hash_values, 0, "str_bucket_bad")
   end, "positive")
+  assert_error(function()
+    tf.string_split(graph, split_values, 1, true, "str_split_bad")
+  end, "separator")
   session:close()
 end)
 
