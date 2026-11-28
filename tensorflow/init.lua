@@ -288,6 +288,7 @@ tf.regex_replace = Ops.regex_replace
 tf.string_join = Ops.string_join
 tf.as_string = Ops.as_string
 tf.string_strip = Ops.string_strip
+tf.string_to_hash_bucket_fast = Ops.string_to_hash_bucket_fast
 tf.cross = Ops.cross
 tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp

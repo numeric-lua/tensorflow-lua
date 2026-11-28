@@ -1770,6 +1770,24 @@ function Ops.string_strip(graph, input, name)
   return output
 end
 
+function Ops.string_to_hash_bucket_fast(graph, input, num_buckets, name)
+  if string_dtype(input) ~= "string" then
+    error("string_to_hash_bucket_fast expects a string input", 3)
+  end
+  if type(num_buckets) ~= "number" or num_buckets % 1 ~= 0 or
+      num_buckets < 1 then
+    error("string_to_hash_bucket_fast num_buckets must be a positive integer",
+      3)
+  end
+  name = name or "string_to_hash_bucket_fast"
+  local desc = graph:new_operation("StringToHashBucketFast", name)
+  desc:add_input(input)
+  desc:set_int("num_buckets", num_buckets)
+  local output = desc:finish()
+  output.dtype = "int64"
+  return output
+end
+
 function Ops.cross(graph, a, b, name, dtype)
   name = name or "cross"
   local value_dtype = input_dtype(a, dtype)
