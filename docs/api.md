@@ -337,9 +337,9 @@ Supplying `momentum`/`nesterov` routes through `tf.train.momentum`.
 ### `tf.train.optimizer(kind, graph, loss, variables[, opts])`
 
 Builds an optimizer from a case-insensitive name. Supported kinds are `sgd`/
-`gradient_descent`, `adam`, `adamw`, `adamax`, `rmsprop`, `centered_rmsprop`,
-`adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and `momentum`. Unknown names
-raise a Lua error.
+`gradient_descent`, `adam`, `adamw`, `amsgrad`, `adamax`, `rmsprop`,
+`centered_rmsprop`, `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and
+`momentum`. Unknown names raise a Lua error.
 
 ### `tf.train.exponential_moving_average(graph, variables, decay[, opts])`
 
@@ -381,6 +381,14 @@ Adds `ApplyAdam` updates and slot variables. Options: `learning_rate`/`lr`
 `targets, gradients, state`.
 Initialize each variable and every entry in `state.initializers` before
 training.
+
+### `tf.train.amsgrad(graph, loss, variables[, opts])`
+
+Adds AMSGrad updates using momentum, variance, and max-variance state variables.
+Options: `learning_rate`/`lr` (default `0.001`), `beta1` (0.9), `beta2`
+(0.999), `epsilon` (1e-8), and `name`. Returns `targets, gradients, state`;
+initialize each variable and every `state.initializers` entry before training.
+This implementation does not apply bias correction or weight decay.
 
 ### `tf.train.adamw(graph, loss, variables[, opts])`
 
@@ -1024,8 +1032,8 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `matrix_solve_ls`, `cholesky`, `matrix_triangular_solve`, `qr`,
 `self_adjoint_eig`, `svd`, `bincount`, `norm`, `l2_normalize`,
 `random_uniform`, `random_normal`, `random_shuffle`, `cumsum`, `cumprod`,
-`real`, `imag`, `fft`, `ifft`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`,
-`pad`, `tile`,
+`real`, `imag`, `fft`, `ifft`, `string_length`, `substr`, `string_to_number`,
+`cross`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1112,6 +1120,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.self_adjoint_eig(graph, x[, compute_v[, name[, dtype]]])` | SelfAdjointEigV2 (values, vectors) |
 | `tf.svd(graph, x[, compute_uv[, full_matrices[, name[, dtype]]]])` | Svd (s, u, v) |
 | `tf.bincount(graph, values, size[, weights[, name[, dtype]]])` | Bincount |
+| `tf.string_length(graph, x[, name[, unit]])` | StringLength |
+| `tf.substr(graph, x, pos, len[, name[, unit]])` | Substr |
+| `tf.string_to_number(graph, x[, name[, out_dtype]])` | StringToNumber |
+| `tf.cross(graph, a, b[, name[, dtype]])` | Cross |
 | `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
 | `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
 | `tf.random_shuffle(graph, x[, name[, seed]])` | RandomShuffle |

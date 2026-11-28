@@ -16,9 +16,11 @@
   `tf.cholesky`, `tf.matrix_triangular_solve`, `tf.qr`, `tf.self_adjoint_eig`,
   `tf.svd`, `tf.bincount`, `tf.broadcast_to`, `tf.roll`, `tf.zeros`, `tf.ones`,
   `tf.random_uniform`, `tf.random_normal`, `tf.random_shuffle`, `tf.cumsum`,
-  `tf.cumprod`, `tf.real`, `tf.imag`, `tf.fft`, `tf.ifft`, and
-  `tf.l2_normalize`, plus eager equivalents;
+  `tf.cumprod`, `tf.real`, `tf.imag`, `tf.fft`, `tf.ifft`,
+  `tf.l2_normalize`, `tf.string_length`, `tf.substr`, `tf.string_to_number`,
+  and `tf.cross`, plus eager equivalents;
 - add `rmsprop` `centered` option routing to centered RMSProp;
+- add `tf.train.amsgrad` with momentum, variance, and max-variance state;
 - add `tf.train.exponential_moving_average` with synced shadow variables and
   update targets;
 - add `tf.train.gradient_accumulation` for accumulator, reset, and averaged
@@ -60,7 +62,7 @@
   `tf.train.momentum`, `tf.train.adamax`, `tf.train.rmsprop`,
   `tf.train.centered_rmsprop`, `tf.train.adagrad`, `tf.train.adadelta`,
   `tf.train.proximal_adagrad`, and `tf.train.ftrl`;
-- 288 dependency-free tests.
+- 293 dependency-free tests.
 
 ## 2.8.0
 
