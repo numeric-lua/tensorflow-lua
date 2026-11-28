@@ -1286,6 +1286,33 @@ function Context:string_to_number(a, out_dtype)
     { attrs = { out_type = output_dtype } })[1]
 end
 
+function Context:string_lower(a)
+  if a:dtype() ~= "string" then
+    error("eager string_lower expects a string input", 2)
+  end
+  return self:execute("StringLower", { a })[1]
+end
+
+function Context:string_upper(a)
+  if a:dtype() ~= "string" then
+    error("eager string_upper expects a string input", 2)
+  end
+  return self:execute("StringUpper", { a })[1]
+end
+
+function Context:regex_replace(a, pattern, rewrite, replace_global)
+  if a:dtype() ~= "string" then
+    error("eager regex_replace expects a string input", 2)
+  end
+  if type(pattern) ~= "string" or type(rewrite) ~= "string" then
+    error("eager regex_replace pattern and rewrite must be strings", 2)
+  end
+  local pattern_tensor = self:constant(pattern, "string")
+  local rewrite_tensor = self:constant(rewrite, "string")
+  return self:execute("RegexReplace", { a, pattern_tensor, rewrite_tensor },
+    { attrs = { replace_global = replace_global ~= false } })[1]
+end
+
 function Context:cross(a, b)
   return self:execute("Cross", { a, b }, { attrs = { T = a:dtype() } })[1]
 end
