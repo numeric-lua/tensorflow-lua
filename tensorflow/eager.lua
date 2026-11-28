@@ -1355,6 +1355,18 @@ function Context:string_join(inputs, separator)
   })[1]
 end
 
+function Context:string_split(a, separator, skip_empty)
+  if a:dtype() ~= "string" then
+    error("eager string_split expects a string input", 2)
+  end
+  if type(separator) ~= "string" then
+    error("eager string_split separator must be a string", 2)
+  end
+  local separator_tensor = self:constant(separator, "string")
+  return self:execute("StringSplit", { a, separator_tensor },
+    { attrs = { skip_empty = skip_empty ~= false }, num_outputs = 3 })
+end
+
 function Context:as_string(a, options)
   options = options or {}
   local precision = options.precision or -1
