@@ -279,6 +279,7 @@ tf.bincount = Ops.bincount
 tf.string_length = Ops.string_length
 tf.substr = Ops.substr
 tf.string_to_number = Ops.string_to_number
+tf.cross = Ops.cross
 tf.one_hot = Ops.one_hot
 tf.exp = Ops.exp
 tf.log = Ops.log

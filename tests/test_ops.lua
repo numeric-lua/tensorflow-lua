@@ -399,6 +399,20 @@ test("measures, slices, and parses strings", function()
   session:close()
 end)
 
+test("computes vector cross products", function()
+  local graph = tf.Graph.new()
+  local a = tf.placeholder(graph, "float32", { 3 }, "cross_a")
+  local b = tf.placeholder(graph, "float32", { 3 }, "cross_b")
+  local product = tf.cross(graph, a, b, "cross")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [a] = { 1, 0, 0 },
+    [b] = { 0, 1, 0 },
+  }, { product })[1]
+  assert_eq(table.concat(result:totable(), ","), "0,0,1")
+  session:close()
+end)
+
 test("casts and concatenates graph outputs", function()
   local graph = tf.Graph.new()
   local a = tf.placeholder(graph, "int32", { 2 }, "ca")

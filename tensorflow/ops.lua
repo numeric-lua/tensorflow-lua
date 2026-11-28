@@ -1664,6 +1664,18 @@ function Ops.string_to_number(graph, input, name, out_dtype)
   return output
 end
 
+function Ops.cross(graph, a, b, name, dtype)
+  name = name or "cross"
+  local value_dtype = input_dtype(a, dtype)
+  local desc = graph:new_operation("Cross", name)
+  desc:add_input(a)
+  desc:add_input(b)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.one_hot(graph, indices, depth, options)
   options = options or {}
   local dtype = dtype_name(options.dtype or "float32")
