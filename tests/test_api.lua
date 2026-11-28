@@ -46,7 +46,7 @@ test("exposes the public API surface", function()
   end
   local train_functions = {
     "gradient_descent", "sgd", "optimizer", "adam", "adamw", "amsgrad",
-    "adamax",
+    "nadam", "adamax",
     "rmsprop", "centered_rmsprop",
     "adagrad", "adadelta", "clip_by_norm", "clip_by_global_norm",
     "ftrl", "proximal_adagrad", "momentum", "exponential_moving_average",

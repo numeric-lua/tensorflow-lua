@@ -95,6 +95,9 @@ tf.train = {
   amsgrad = function(graph, loss, variables, options)
     return Train.amsgrad(graph, loss, variables, options)
   end,
+  nadam = function(graph, loss, variables, options)
+    return Train.nadam(graph, loss, variables, options)
+  end,
   adamax = function(graph, loss, variables, options)
     return Train.adamax(graph, loss, variables, options)
   end,
