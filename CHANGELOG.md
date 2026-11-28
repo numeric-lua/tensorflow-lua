@@ -18,6 +18,7 @@
   `tf.random_uniform`, `tf.random_normal`, `tf.random_shuffle`, `tf.cumsum`,
   `tf.cumprod`, `tf.real`, `tf.imag`, `tf.fft`, `tf.ifft`,
   `tf.l2_normalize`, `tf.string_length`, `tf.substr`, `tf.string_to_number`,
+  `tf.string_lower`, `tf.string_upper`, `tf.regex_replace`, `tf.string_join`,
   and `tf.cross`, plus eager equivalents;
 - add `rmsprop` `centered` option routing to centered RMSProp;
 - add `tf.train.amsgrad` with momentum, variance, and max-variance state;
@@ -27,7 +28,8 @@
   gradient targets;
 - add `tf.train.apply_gradients` for applying precomputed gradients through a
   named optimizer;
-- add `Saver:metadata` and `Saver:has` for reusable checkpoint metadata;
+- add `Saver:metadata`, `Saver:has`, `Saver:entry`, and `Saver:variable` for
+  reusable checkpoint metadata and lookup;
 - add `tf.train.sgd` and `tf.train.optimizer` for option-table and named
   optimizer construction, with `tf.train.sgd` routing momentum/nesterov options
   through the momentum optimizer;

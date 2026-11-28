@@ -416,8 +416,8 @@ Adds `ApplyRMSProp` updates and slot variables. Options: `learning_rate`/`lr`
 Reusable native V2 checkpoint saver. `variables` is a list of
 `{ name = ..., variable = ... }` entries. Names must be non-empty and unique.
 Methods: `save(session, prefix)`, `restore(session, prefix)`, `names()`,
-`size()`, `has(name)`, and `metadata()`; `metadata` returns `{ name, dtype,
-shape }` records.
+`size()`, `has(name)`, `metadata()`, `entry(name)`, and `variable(name)`;
+`metadata`/`entry` return `{ name, dtype, shape }` records.
 
 ### `tf.train.centered_rmsprop(graph, loss, variables[, opts])`
 
@@ -1033,7 +1033,8 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `self_adjoint_eig`, `svd`, `bincount`, `norm`, `l2_normalize`,
 `random_uniform`, `random_normal`, `random_shuffle`, `cumsum`, `cumprod`,
 `real`, `imag`, `fft`, `ifft`, `string_length`, `substr`, `string_to_number`,
-`cross`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
+`string_lower`, `string_upper`, `regex_replace`, `string_join`, `cross`,
+`broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1123,6 +1124,10 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.string_length(graph, x[, name[, unit]])` | StringLength |
 | `tf.substr(graph, x, pos, len[, name[, unit]])` | Substr |
 | `tf.string_to_number(graph, x[, name[, out_dtype]])` | StringToNumber |
+| `tf.string_lower(graph, x[, name])` | StringLower |
+| `tf.string_upper(graph, x[, name])` | StringUpper |
+| `tf.regex_replace(graph, x, pattern, rewrite[, replace_global[, name]])` | RegexReplace |
+| `tf.string_join(graph, inputs[, separator[, name]])` | StringJoin |
 | `tf.cross(graph, a, b[, name[, dtype]])` | Cross |
 | `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
 | `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
