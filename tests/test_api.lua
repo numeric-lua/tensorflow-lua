@@ -97,7 +97,7 @@ test("exposes the public API surface", function()
     "cholesky", "matrix_triangular_solve", "qr", "self_adjoint_eig", "svd",
     "random_uniform", "random_normal", "random_shuffle", "bincount",
     "string_length", "substr", "string_to_number", "string_lower",
-    "string_upper", "regex_replace", "cross", "cumsum",
+    "string_upper", "regex_replace", "string_join", "cross", "cumsum",
     "cumprod",
     "real", "imag", "fft", "ifft", "zeros", "ones", "broadcast_to",
     "roll", "maximum", "minimum",

@@ -212,6 +212,7 @@ TF_Tensor* TFE_TensorHandleResolve(TFE_TensorHandle*, TF_Status*);
 TFE_Op* TFE_NewOp(TFE_Context*, const char*, TF_Status*);
 void TFE_DeleteOp(TFE_Op*);
 void TFE_OpAddInput(TFE_Op*, TFE_TensorHandle*, TF_Status*);
+void TFE_OpAddInputList(TFE_Op*, TFE_TensorHandle**, int, TF_Status*);
 void TFE_OpSetAttrString(TFE_Op*, const char*, const void*, size_t);
 void TFE_OpSetAttrInt(TFE_Op*, const char*, int64_t);
 void TFE_OpSetAttrFloat(TFE_Op*, const char*, float);

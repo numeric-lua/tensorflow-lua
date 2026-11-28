@@ -165,6 +165,11 @@ function Context:execute(op_type, inputs, options)
     for _, input in ipairs(inputs or {}) do
       lib.TFE_OpAddInput(op, input:handle(), input_status)
     end
+    for _, list in ipairs(options.input_lists or {}) do
+      local handles = ffi.new("TFE_TensorHandle*[?]", #list)
+      for i, input in ipairs(list) do handles[i - 1] = input:handle() end
+      lib.TFE_OpAddInputList(op, handles, #list, input_status)
+    end
     capi.check(input_status, "eager op input")
     for name, value in pairs(options.attrs or {}) do
       if type(value) == "boolean" then
@@ -1311,6 +1316,24 @@ function Context:regex_replace(a, pattern, rewrite, replace_global)
   local rewrite_tensor = self:constant(rewrite, "string")
   return self:execute("RegexReplace", { a, pattern_tensor, rewrite_tensor },
     { attrs = { replace_global = replace_global ~= false } })[1]
+end
+
+function Context:string_join(inputs, separator)
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("eager string_join expects a non-empty input list", 2)
+  end
+  for i, input in ipairs(inputs) do
+    if getmetatable(input) ~= ETensor then
+      error("eager string_join input " .. i .. " must be a tensor", 2)
+    end
+  end
+  if separator ~= nil and type(separator) ~= "string" then
+    error("eager string_join separator must be a string", 2)
+  end
+  return self:execute("StringJoin", { }, {
+    input_lists = { inputs },
+    attrs = { N = { int = #inputs }, separator = { string = separator or "" } },
+  })[1]
 end
 
 function Context:cross(a, b)
