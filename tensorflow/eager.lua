@@ -411,6 +411,25 @@ function Context:random_shuffle(a, seed)
       seed2 = { int = 0 } } })[1]
 end
 
+function Context:einsum(equation, inputs)
+  if type(equation) ~= "string" or equation == "" then
+    error("eager einsum expects a non-empty equation", 2)
+  end
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("eager einsum expects a non-empty input list", 2)
+  end
+  for i, input in ipairs(inputs) do
+    if getmetatable(input) ~= ETensor then
+      error("eager einsum input " .. i .. " must be a tensor", 2)
+    end
+  end
+  return self:execute("Einsum", { }, {
+    input_lists = { inputs },
+    attrs = { N = { int = #inputs }, T = inputs[1]:dtype(),
+      equation = { string = equation } },
+  })[1]
+end
+
 function Context:range(start, limit, delta, dtype)
   local value_dtype = dtype or "float32"
   local start_tensor = self:constant(start, value_dtype)
