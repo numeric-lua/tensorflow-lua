@@ -46,21 +46,34 @@ function Saver:has(name)
   return false
 end
 
+local function describe(entry)
+  local variable = entry.variable
+  local shape = {}
+  for i, dimension in ipairs(variable.shape or { }) do
+    shape[i] = dimension
+  end
+  return { name = entry.name, dtype = variable.dtype or "float32",
+    shape = shape }
+end
+
 function Saver:metadata()
   local result = {}
-  for i, entry in ipairs(self.entries) do
-    local variable = entry.variable
-    local shape = {}
-    for j, dimension in ipairs(variable.shape or { }) do
-      shape[j] = dimension
-    end
-    result[i] = {
-      name = entry.name,
-      dtype = variable.dtype or "float32",
-      shape = shape,
-    }
-  end
+  for i, entry in ipairs(self.entries) do result[i] = describe(entry) end
   return result
+end
+
+function Saver:entry(name)
+  for _, entry in ipairs(self.entries) do
+    if entry.name == name then return describe(entry) end
+  end
+  return nil
+end
+
+function Saver:variable(name)
+  for _, entry in ipairs(self.entries) do
+    if entry.name == name then return entry.variable end
+  end
+  return nil
 end
 
 function Saver:save(session, prefix, name)
