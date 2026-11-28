@@ -98,6 +98,9 @@ tf.train = {
   nadam = function(graph, loss, variables, options)
     return Train.nadam(graph, loss, variables, options)
   end,
+  radam = function(graph, loss, variables, options)
+    return Train.radam(graph, loss, variables, options)
+  end,
   adamax = function(graph, loss, variables, options)
     return Train.adamax(graph, loss, variables, options)
   end,
