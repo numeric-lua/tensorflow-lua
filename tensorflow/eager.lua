@@ -1364,6 +1364,18 @@ function Context:string_strip(a)
   return self:execute("StringStrip", { a })[1]
 end
 
+function Context:string_to_hash_bucket_fast(a, num_buckets)
+  if a:dtype() ~= "string" then
+    error("eager string_to_hash_bucket_fast expects a string input", 2)
+  end
+  if type(num_buckets) ~= "number" or num_buckets % 1 ~= 0 or
+      num_buckets < 1 then
+    error("eager string_to_hash_bucket_fast num_buckets must be positive", 2)
+  end
+  return self:execute("StringToHashBucketFast", { a },
+    { attrs = { num_buckets = { int = num_buckets } } })[1]
+end
+
 function Context:cross(a, b)
   return self:execute("Cross", { a, b }, { attrs = { T = a:dtype() } })[1]
 end

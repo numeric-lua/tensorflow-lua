@@ -99,7 +99,7 @@ test("exposes the public API surface", function()
     "random_uniform", "random_normal", "random_shuffle", "bincount",
     "string_length", "substr", "string_to_number", "string_lower",
     "string_upper", "regex_replace", "string_join", "as_string",
-    "string_strip", "cross", "cumsum",
+    "string_strip", "string_to_hash_bucket_fast", "cross", "cumsum",
     "cumprod",
     "real", "imag", "fft", "ifft", "zeros", "ones", "broadcast_to",
     "roll", "maximum", "minimum",
