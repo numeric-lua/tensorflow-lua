@@ -337,9 +337,9 @@ Supplying `momentum`/`nesterov` routes through `tf.train.momentum`.
 ### `tf.train.optimizer(kind, graph, loss, variables[, opts])`
 
 Builds an optimizer from a case-insensitive name. Supported kinds are `sgd`/
-`gradient_descent`, `adam`, `adamw`, `amsgrad`, `nadam`, `adamax`, `rmsprop`,
-`centered_rmsprop`, `adagrad`, `adadelta`, `ftrl`, `proximal_adagrad`, and
-`momentum`. Unknown names raise a Lua error.
+`gradient_descent`, `adam`, `adamw`, `amsgrad`, `nadam`, `radam`, `adamax`,
+`rmsprop`, `centered_rmsprop`, `adagrad`, `adadelta`, `ftrl`,
+`proximal_adagrad`, and `momentum`. Unknown names raise a Lua error.
 
 ### `tf.train.exponential_moving_average(graph, variables, decay[, opts])`
 
@@ -397,6 +397,14 @@ Options: `learning_rate`/`lr` (default `0.001`), `beta1` (0.9), `beta2`
 (0.999), `epsilon` (1e-8), and `name`. Returns `targets, gradients, state`;
 initialize each variable and every `state.initializers` entry before training.
 Weight decay is not applied.
+
+### `tf.train.radam(graph, loss, variables[, opts])`
+
+Adds rectified Adam updates with bias-corrected momentum/variance and adaptive
+rectification. Options: `learning_rate`/`lr` (default `0.001`), `beta1` (0.9),
+`beta2` (0.999), `epsilon` (1e-8), and `name`. Returns
+`targets, gradients, state`; initialize each variable and every
+`state.initializers` entry before training. Weight decay is not applied.
 
 ### `tf.train.adamw(graph, loss, variables[, opts])`
 
@@ -1042,8 +1050,8 @@ methods: `add`, `sub`, `mul`, `div`, `matmul`, `maximum`, `minimum`, `cast`,
 `random_uniform`, `random_normal`, `random_shuffle`, `cumsum`, `cumprod`,
 `real`, `imag`, `fft`, `ifft`, `string_length`, `substr`, `string_to_number`,
 `string_lower`, `string_upper`, `regex_replace`, `string_join`, `as_string`,
-`string_strip`, `string_to_hash_bucket_fast`, `cross`, `broadcast_to`, `roll`,
-`zeros`, `ones`, `slice`, `pad`, `tile`,
+`string_strip`, `string_to_hash_bucket_fast`, `string_split`, `cross`,
+`einsum`, `broadcast_to`, `roll`, `zeros`, `ones`, `slice`, `pad`, `tile`,
 `where`, `reverse`, `reverse_sequence`,
 `invert_permutation`, `split`,
 `one_hot`, `equal`/`not_equal`/`greater`/`greater_equal`/`less`/`less_equal`,
@@ -1140,7 +1148,9 @@ Graph-output arguments can be operation results or `"name:index"` strings.
 | `tf.as_string(graph, x[, name[, opts]])` | AsString |
 | `tf.string_strip(graph, x[, name])` | StringStrip |
 | `tf.string_to_hash_bucket_fast(graph, x, num_buckets[, name])` | StringToHashBucketFast |
+| `tf.string_split(graph, x, separator[, skip_empty[, name]])` | StringSplit (indices, values, shape) |
 | `tf.cross(graph, a, b[, name[, dtype]])` | Cross |
+| `tf.einsum(graph, equation, inputs[, name[, dtype]])` | Einsum |
 | `tf.random_uniform(graph, shape[, name[, dtype[, seed]]])` | RandomUniform |
 | `tf.random_normal(graph, shape[, name[, dtype[, seed]]])` | RandomStandardNormal |
 | `tf.random_shuffle(graph, x[, name[, seed]])` | RandomShuffle |
