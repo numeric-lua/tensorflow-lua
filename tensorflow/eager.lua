@@ -1245,6 +1245,47 @@ function Context:bincount(values, size, weights, dtype)
     { attrs = { T = weight_tensor:dtype() } })[1]
 end
 
+local function string_unit(unit)
+  unit = unit or "BYTE"
+  if unit ~= "BYTE" and unit ~= "UTF8_CHAR" then
+    error("eager string unit must be BYTE or UTF8_CHAR", 2)
+  end
+  return unit
+end
+
+function Context:string_length(a, unit)
+  if a:dtype() ~= "string" then
+    error("eager string_length expects a string input", 2)
+  end
+  return self:execute("StringLength", { a },
+    { attrs = { unit = { string = string_unit(unit) } } })[1]
+end
+
+function Context:substr(a, pos, len, unit)
+  if a:dtype() ~= "string" then
+    error("eager substr expects a string input", 2)
+  end
+  if type(pos) ~= "number" or pos % 1 ~= 0 then
+    error("eager substr position must be an integer", 2)
+  end
+  if type(len) ~= "number" or len % 1 ~= 0 then
+    error("eager substr length must be an integer", 2)
+  end
+  local position = self:constant(pos, "int32")
+  local length = self:constant(len, "int32")
+  return self:execute("Substr", { a, position, length },
+    { attrs = { T = "int32", unit = { string = string_unit(unit) } } })[1]
+end
+
+function Context:string_to_number(a, out_dtype)
+  if a:dtype() ~= "string" then
+    error("eager string_to_number expects a string input", 2)
+  end
+  local output_dtype = out_dtype or "float32"
+  return self:execute("StringToNumber", { a },
+    { attrs = { out_type = output_dtype } })[1]
+end
+
 function Context:one_hot(indices, depth, options)
   options = options or {}
   if type(depth) ~= "number" or depth % 1 ~= 0 or depth < 1 then
