@@ -255,6 +255,7 @@ tf.fft = Ops.fft
 tf.ifft = Ops.ifft
 tf.stop_gradient = Ops.stop_gradient
 tf.batch_matmul = Ops.batch_matmul
+tf.einsum = Ops.einsum
 tf.fill = Ops.fill
 tf.zeros = Ops.zeros
 tf.ones = Ops.ones

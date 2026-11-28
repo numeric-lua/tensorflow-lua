@@ -575,6 +575,25 @@ function Ops.batch_matmul(graph, a, b, name, dtype, options)
   return output
 end
 
+function Ops.einsum(graph, equation, inputs, name, dtype)
+  if type(equation) ~= "string" or equation == "" then
+    error("einsum expects a non-empty equation", 3)
+  end
+  if type(inputs) ~= "table" or #inputs == 0 then
+    error("einsum expects a non-empty input list", 3)
+  end
+  name = name or "einsum"
+  local value_dtype = input_dtype(inputs[1], dtype)
+  local desc = graph:new_operation("Einsum", name)
+  desc:add_inputs(inputs)
+  desc:set_string("equation", equation)
+  desc:set_int("N", #inputs)
+  desc:set_type("T", value_dtype)
+  local output = desc:finish()
+  output.dtype = value_dtype
+  return output
+end
+
 function Ops.shape(graph, input, name, dtype)
   local desc = graph:new_operation("Shape", name)
   desc:add_input(input)

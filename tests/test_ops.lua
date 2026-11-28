@@ -113,6 +113,26 @@ test("batches matrix multiplication and log-softmax", function()
   session:close()
 end)
 
+test("evaluates einsum equations", function()
+  local graph = tf.Graph.new()
+  local a = tf.placeholder(graph, "float32", { 2, 3 }, "einsum_a")
+  local b = tf.placeholder(graph, "float32", { 3, 2 }, "einsum_b")
+  local product = tf.einsum(graph, "ij,jk->ik", { a, b }, "einsum")
+  local session = tf.Session.new(graph)
+  local result = session:run({
+    [a] = { { 1, 2, 3 }, { 4, 5, 6 } },
+    [b] = { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+  }, { product })[1]:totable()
+  assert_eq(result[1][1], 22)
+  assert_eq(result[1][2], 28)
+  assert_eq(result[2][1], 49)
+  assert_eq(result[2][2], 64)
+  assert_error(function()
+    tf.einsum(graph, "", { a }, "einsum_bad")
+  end, "equation")
+  session:close()
+end)
+
 test("fills tensors and builds numeric sequences", function()
   local graph = tf.Graph.new()
   local filled = tf.fill(graph, { 2, 3 }, 7, "fill_value")

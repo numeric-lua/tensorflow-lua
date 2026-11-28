@@ -19,7 +19,7 @@ test("exposes the public API surface", function()
     "matrix_diag_part", "matrix_band_part", "matrix_set_diag",
     "matrix_inverse", "matrix_determinant", "matrix_solve", "matrix_solve_ls",
     "cholesky", "matrix_triangular_solve", "qr", "self_adjoint_eig", "svd",
-    "batch_matmul", "fill", "zeros", "ones", "random_uniform",
+    "batch_matmul", "einsum", "fill", "zeros", "ones", "random_uniform",
     "random_normal", "random_shuffle", "cumsum", "cumprod",
     "range",
     "linspace", "reduce_mean",
